@@ -102,7 +102,7 @@ hydrodesk-base/
 | Steckbrief | ✅ fertig |
 | Vorkalkulation | ✅ fertig |
 | Gehäuse-CAD (OpenSCAD, STL) | ✅ fertig |
-| Wokwi-Simulation | ✅ fertig (kompiliert, auf wokwi.com testen) |
+| Wokwi-Simulation | ✅ Version 3 fertig (kompiliert, PC-Logiktest OK, auf wokwi.com testen) – inkl. Bluetooth-Symbol und LED-Status |
 | Firmware (PlatformIO) | ⏳ offen |
 | Bau / Integration / Tests | ⏳ offen |
 

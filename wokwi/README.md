@@ -1,7 +1,18 @@
-# HydroDesk Base – Wokwi-Simulation (ESP32) · Version 2
+# HydroDesk Base – Wokwi-Simulation (ESP32) · Version 3
 
 Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im Browser testen,
 **bevor** ihr Teile kauft. Ihr braucht nur einen Browser und die Seite **wokwi.com**.
+
+**Neu in Version 3:**
+
+- **Bluetooth-Symbol** oben rechts, direkt links neben dem Akku: blinkt weiß/blau beim Suchen,
+  fest blau mit zwei Punkten, wenn ein Handy verbunden ist, grau nach Ablauf der Suche.
+- **LED-Status für Bluetooth:** Suchen = **weiß blinken** (gedimmt, 500 ms an / 500 ms aus,
+  höchstens 2 min), Handy verbunden = **genau 2× lila**, danach wieder normal.
+- Wokwi kann kein Bluetooth. In der Simulation steuert ihr den Zustand mit den Befehlen
+  `bt suchen`, `bt verbunden`, `bt getrennt`, `bt aus` (Abschnitt 6).
+- Für das echte Gerät gibt es **echtes BLE** (Bibliothek NimBLE-Arduino) hinter dem Schalter
+  `#define HYDRO_BLE 1`. Das Gerät heißt „HydroDesk“ und sendet „heute/Ziel“ ans Handy.
 
 **Neu in Version 2:**
 
@@ -11,7 +22,7 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 - **Neues Hochformat-Layout** mit Uhrzeit, Datum, Akku, Menge, Fortschritt, Flasche und Erinnerung.
 - **Echte Uhrzeit** über WLAN + NTP, mit automatischem Reset um Mitternacht.
 - **LEDs ruhig:** im Normalbetrieb aus, bei Ereignissen Dauerlicht. Nur die Akku-Warnung
-  blitzt kurz (2× oder 4× rot).
+  blitzt kurz (2× oder 4× rot). (Seit Version 3 blinken außerdem Bluetooth-Suche und -Verbindung.)
 - Die Wasser-Sperre hebt sich nach **5 s trocken** von selbst auf. Den Service-Modus öffnet
   ein **versteckter Langdruck**.
 
@@ -40,7 +51,7 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 
 ```
 ┌──────────────────────────────┐
-│ 14:23                [▮▮▮ ]  │  Uhrzeit groß         Akku-Symbol
+│ 14:23             BT [▮▮▮ ]  │  Uhrzeit groß   Bluetooth + Akku-Symbol
 │ Di, 06.10.2026          88%  │  Datum                Akku in %
 │──────────────────────────────│
 │        heute getrunken       │
@@ -63,6 +74,19 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
   Bei der Ersatzuhr steht hinter dem Datum „(ohne NTP)“.
 - **Akku oben rechts:** grün = ok, **orange unter 20 %**, **rot unter 10 %**
   (3,0 V = 0 %, 4,2 V = 100 %, gerade Linie).
+- **Bluetooth-Symbol** (neu in V3) direkt **links neben dem Akku-Symbol**, aus Linien gezeichnet
+  (klassische Bluetooth-Rune, 11 × 19 Pixel):
+
+  | Zustand | Symbol |
+  |---|---|
+  | aus (`bt aus`) | wird **nicht gezeichnet** |
+  | sucht | **blinkt** weiß/blau im Takt der LEDs (500 ms) |
+  | verbunden | **fest blau**, links und rechts ein kleiner Punkt (siehe Bild oben) |
+  | nicht verbunden (Suche nach 2 min beendet) | **grau** |
+
+  Platz in der oberen Zeile: Uhrzeit x 6–126, Bluetooth x 168–191, Akku-Symbol x 196–231,
+  Prozent darunter (y 28–43). Nichts überlappt, auch nicht bei „100%“ oder dem längsten Datum
+  „Di, 06.10.2026 (ohne NTP)“ (endet bei x 158).
 - **Statusfeld unten**, wichtigste Meldung zuerst:
   1. „Service-Modus: noch X s halten“ (während des Langdrucks)
   2. roter Balken **„Bitte laden“**, solange der Akku unter 10 % ist (bleibt stehen)
@@ -151,17 +175,20 @@ Gewicht **1,5 s ruhig**, wird verglichen:
 
 Im Normalbetrieb sind **alle LEDs aus**. Sie leuchten in ruhigen Farben mit mittlerer Helligkeit
 (`LED_HELLIGKEIT = 60` von 255), immer **alle 10 gleich**.
-**Dauerlicht, kein Blinken.** Einzige Ausnahme ist die Akku-Warnung: Sie blitzt kurz und geht
-dann aus.
+**Dauerlicht, kein Blinken** – geblinkt wird **nur** in drei Fällen: Akku-Warnung (rot),
+Bluetooth sucht (weiß) und Handy verbunden (2× lila). In der **Pause** eines Blinkmusters sind die
+LEDs aus (keine Mischfarbe).
 
 | Priorität | Farbe | Wann | Wie lange |
 |---|---|---|---|
 | 1 (höchste) | **bernstein** | Wasser erkannt (`NAESSE_SPERRE`) | solange die Sperre aktiv ist |
 | 2 | **rot, 2× blitzen** (300 ms an / 300 ms aus) | Akku fällt **unter 20 %** | einmal, dann aus |
 | 2 | **rot, 4× blitzen** (300 ms an / 300 ms aus) | Akku fällt **unter 10 %** | einmal, dann aus |
-| 2 | rot (Dauerlicht) | Fehler beginnt (Waage antwortet nicht / Gewicht negativ) | 5 s, dann aus |
-| 3 | **blau** | Erinnerung („trink was!“) | bis getrunken wurde |
-| 4 | **grün** | Tagesziel erreicht | 10 s, dann aus |
+| 3 | **lila, 2× blinken** (300 ms an / 300 ms aus) | Handy hat sich per Bluetooth verbunden | einmal, dann normal |
+| 4 | **weiß blinken, gedimmt** (500 ms an / 500 ms aus) | Bluetooth sucht das Handy | bis verbunden, höchstens **2 min** |
+| 5 | rot (Dauerlicht) | Fehler beginnt (Waage antwortet nicht / Gewicht negativ) | 5 s, dann aus |
+| 6 | **blau** | Erinnerung („trink was!“) | bis getrunken wurde |
+| 7 | **grün** | Tagesziel erreicht | 10 s, dann aus |
 | – | aus | sonst | – |
 
 **Akku-Warnung genauer:**
@@ -177,9 +204,92 @@ dann aus.
 - Fällt der Akku direkt von „ok“ auf unter 10 %, blitzt es nur **4×**, nicht 2× + 4×.
 - Wasser hat Vorrang: Während der Sperre bleibt der Streifen bernstein.
 
+**Bluetooth-Blinken genauer (neu in V3):**
+
+- **Akku vor Bluetooth:** Während die Akku-Warnung blitzt, gibt es kein Weiß und kein Lila.
+  Verbindet sich das Handy genau dann, **wartet** das 2× Lila, bis das Rot fertig ist.
+- **Bernstein vor allem:** Während der Wasser-Sperre bleibt der Streifen bernstein. Danach blinkt
+  er wieder weiß, falls die Suche noch läuft.
+- **Weiß verdeckt blau/grün/rot (Fehler):** Solange die Suche läuft, sieht man die ruhigen Farben
+  nicht. Darum endet die Suche nach `BT_SUCH_TIMEOUT_MS` (2 min). Danach erscheinen z. B. die
+  blaue Erinnerung oder das Grün wieder.
+- Das Weiß ist **gedimmt**: Farbwert `BT_WEISS_WERT = 90` je Kanal, zusätzlich `LED_HELLIGKEIT`.
+- Der Serielle Monitor meldet nur, **wer** die LEDs gerade steuert (z. B.
+  `[LED] weiß blinken (Bluetooth sucht)`), nicht jedes einzelne An/Aus.
+
 ---
 
-## 6. Uhrzeit, WLAN und Tageswechsel
+## 6. Bluetooth (neu in Version 3)
+
+### Zustände
+
+| Zustand | Bedeutung | Symbol | LEDs |
+|---|---|---|---|
+| `aus` | Bluetooth ausgeschaltet (`bt aus`) | nicht gezeichnet | – |
+| `suchen` | Gerät ist sichtbar und wartet auf das Handy | blinkt weiß/blau | **weiß blinken** |
+| `verbunden` | Handy verbunden | fest blau + 2 Punkte | **2× lila**, dann normal |
+| `nicht verbunden` | 2 min lang hat sich niemand verbunden | grau | – |
+
+```
+Start / "bt suchen" ──► suchen ──Handy verbindet──► verbunden
+                         │  ▲                          │
+          2 min niemand  │  └──────Handy getrennt──────┘
+                         ▼
+                  nicht verbunden ──"bt suchen"──► suchen
+jeder Zustand ──"bt aus"──► aus
+```
+
+- Beim Einschalten sucht das Gerät sofort (`BT_START_SUCHEN = true`, für die Vorführung).
+- Trennt sich das Handy, sucht das Gerät **wieder** (weiß blinken, wieder max. 2 min).
+- `bt suchen` startet die Suche neu, auch wenn sie schon läuft (der 2-min-Timer beginnt von vorn).
+
+### Simulation (Wokwi, `HYDRO_BLE 0` = Standard)
+
+Wokwi kann **kein Bluetooth** simulieren. Den Zustand stellt ihr im Seriellen Monitor ein:
+
+| Befehl | Wirkung |
+|---|---|
+| `bt suchen` | Suche starten (sichtbar, weiß blinken, max. 2 min) |
+| `bt verbunden` | so tun, als hätte sich ein Handy verbunden → 2× lila, Symbol blau. Geht nur, wenn gerade gesucht wird. |
+| `bt getrennt` | Handy weg → wieder suchen |
+| `bt aus` | Bluetooth aus, Symbol weg |
+
+`status` zeigt am Ende z. B. `BT=suchen (noch 87 s) [simuliert]`.
+
+### Echtes Gerät (`HYDRO_BLE 1`)
+
+- Bibliothek **NimBLE-Arduino** (h2zero, getestet mit 2.5.1) im Library Manager installieren.
+  Sie braucht viel weniger Flash als die eingebaute ESP32-BLE-Bibliothek (Bluedroid).
+- Ganz oben im Sketch `#define HYDRO_BLE 1` setzen (für das CYD zusätzlich `HYDRO_CYD 1`).
+- Das Gerät wirbt als **„HydroDesk“** (Name in der Scan-Antwort) mit einem eigenen Dienst:
+
+  | | UUID | Eigenschaft | Inhalt |
+  |---|---|---|---|
+  | Dienst | `4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10` | – | HydroDesk |
+  | Werte | `4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10` | lesen + notify | Text, z. B. `1250/2750 ml` (heute/Ziel) |
+
+  Testen z. B. mit der App **nRF Connect**: „HydroDesk“ verbinden, Werte lesen, Notify
+  einschalten, trinken → der neue Wert kommt (höchstens 1× pro Sekunde, `BT_NOTIFY_MS`).
+- Verbinden und Trennen melden die NimBLE-**Callbacks** (`onConnect`/`onDisconnect`). Sie laufen
+  in einer eigenen Task und setzen nur einen Merker. Ausgewertet wird er in `btVerwalten()` im
+  `loop()`. Nach 2 min ohne Verbindung wird die Werbung (Advertising) gestoppt.
+- `bt suchen` und `bt aus` gehen auch am echten Gerät, `bt verbunden`/`bt getrennt` nicht
+  (das meldet das Handy selbst).
+- **Speicher / Partition:** Mit WLAN + NimBLE belegt der Sketch **96 %** der Standard-Partition
+  „Default 4MB with spiffs (1.2MB APP)“. Das passt, aber es bleiben nur ca. 42 KB frei. Kommt
+  später Telegram (TLS) dazu, wird es zu knapp. Darum fürs echte Gerät **„Huge APP (3MB No
+  OTA/1MB SPIFFS)“** wählen (dann 40 %):
+  - Arduino-IDE: *Werkzeuge → Partition Scheme → Huge APP (3MB No OTA/1MB SPIFFS)*
+  - arduino-cli: `-b esp32:esp32:esp32:PartitionScheme=huge_app`
+  - PlatformIO: `board_build.partitions = huge_app.csv`
+  - Wer Updates über WLAN (OTA) behalten will: „Minimal SPIFFS (1.9MB APP with OTA)“ (`min_spiffs`).
+
+  Zum Vergleich: Mit der eingebauten Bluedroid-BLE-Bibliothek ist schon ein kleiner Test (nur
+  WLAN + BLE-Dienst) **1,62 MB groß (123 %)** und passt nicht in die Standard-Partition.
+- WLAN und Bluetooth teilen sich am ESP32 **eine Antenne** (Coexistence). Das geht, beide werden
+  aber etwas langsamer. Am echten Gerät testen!
+
+## 7. Uhrzeit, WLAN und Tageswechsel
 
 - Der ESP32 verbindet sich mit **„Wokwi-GUEST“** (kein Passwort, Kanal 6) und holt die Zeit von
   `pool.ntp.org`. Die Zeitzone ist `CET-1CEST,M3.5.0,M10.5.0/3`, also Deutschland mit
@@ -202,7 +312,7 @@ dann aus.
 
 ---
 
-## 7. Bedienung in der Simulation
+## 8. Bedienung in der Simulation
 
 | Was | Wie |
 |---|---|
@@ -217,12 +327,16 @@ dann aus.
 
 | Befehl | Wirkung |
 |---|---|
-| `status` | eine Zeile mit allen Werten (Zustand, Menge/Ziel, Profil, Gewicht, Flasche, Leergewicht, Akku, Nässe, Last, Uhr) |
+| `status` | eine Zeile mit allen Werten (Zustand, Menge/Ziel, Profil, Gewicht, Flasche, Leergewicht, Akku, Nässe, Last, Uhr, Bluetooth) |
 | `reset` | Tageszähler auf 0 |
 | `gewicht 75` | Körpergewicht in kg (30–250, Komma oder Punkt), Ziel neu, wird gespeichert |
 | `groesse 180` | Körpergröße in cm (120–230), Ziel neu, wird gespeichert |
 | `zeit 23:59` | Uhr von Hand stellen, z. B. um den Mitternachts-Reset zu testen. Die nächste NTP-Meldung korrigiert sie wieder. |
-| `hilfe` | Befehlsliste |
+| `bt suchen` | Bluetooth-Suche starten (weiß blinken, max. 2 min), siehe Abschnitt 6 |
+| `bt verbunden` | (nur Simulation) Handy verbunden → 2× lila, Symbol fest blau |
+| `bt getrennt` | (nur Simulation) Handy getrennt → wieder suchen |
+| `bt aus` | Bluetooth aus, Symbol verschwindet |
+| `hilfe` | Befehlsliste (zweite Zeile: Bluetooth-Befehle) |
 
 Die Erinnerung kommt in der Simulation schon nach **30 Sekunden** ohne Trinken
 (`ERINNERUNG_MS`, echt z. B. 45 Minuten).
@@ -234,22 +348,30 @@ Die Erinnerung kommt in der Simulation schon nach **30 Sekunden** ohne Trinken
 3. Tab `diagram.json`: alles ersetzen durch unsere `diagram.json` (gleich wie Version 1).
 4. **Library Manager** → „+“ → `Adafruit GFX Library`, `Adafruit ILI9341`, `Adafruit FT6206 Library`,
    `Adafruit BusIO`, `Adafruit NeoPixel`, `HX711` (wie `libraries.txt`). WLAN und Zeit sind im
-   ESP32-Kern enthalten, dafür braucht ihr **keine** weitere Bibliothek.
+   ESP32-Kern enthalten, dafür braucht ihr **keine** weitere Bibliothek. NimBLE-Arduino braucht
+   Wokwi **nicht** (nur das echte Gerät mit `HYDRO_BLE 1`).
 5. ▶ drücken. Der Waagen-Regler muss beim Start auf **0** stehen (automatische Tara).
 6. Im Seriellen Monitor erscheint u. a.:
    ```
-   === HydroDesk Base – Wokwi-Simulation (V2) ===
+   === HydroDesk Base – Wokwi-Simulation (V3) ===
    [+00:00] [ZIEL] Profil 70.0 kg, 175 cm -> KOF 1.845 m² -> Tagesziel 2750 ml (Richtwert)
    [+00:00] [UHR] Verbinde mit WLAN "Wokwi-GUEST" ...
+   [+00:00] [BT] Bluetooth wird nur simuliert (Befehle: bt suchen | bt verbunden | bt getrennt | bt aus)
+   [+00:00] [BT] aus -> suchen  (Start, max. 120 s)
+   [+00:00] [LED] weiß blinken (Bluetooth sucht)
    [+00:02] [UHR] WLAN verbunden
    [14:23:05] [UHR] NTP-Zeit empfangen
    ```
 
 ---
 
-## 8. Testfälle (zum Abhaken und für die Doku)
+## 9. Testfälle (zum Abhaken und für die Doku)
 
 Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wie geladen (88 %).
+
+> **Wichtig seit V3:** Nach dem Start sucht Bluetooth 2 min lang und die LEDs blinken weiß. Das
+> Weiß verdeckt Blau, Grün und das Fehler-Rot. Für **T1–T24** deshalb zuerst `bt aus` eingeben
+> (oder 2 min warten). Die Bluetooth-Tests stehen in **T25–T36**.
 
 | Nr. | Aktion | Erwartet (Display / LEDs / Serieller Monitor) |
 |---|---|---|
@@ -277,10 +399,22 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | T22 | **3 s** drücken → Waage 0 → „1. Pad leer: Tara“ → 0,50 kg → „2. 500 g liegt: OK“ → „Fertig“ | `KALIBRIERUNG`, `neuer Faktor 0.4200 Rohwert/g`, zurück zum Hauptbildschirm |
 | T23 | etwas trinken, dann `zeit 23:59` und 1 min warten | um 00:00 `Tageszähler auf 0 (neuer Tag)`, Datum springt weiter |
 | T24 | `status` | eine Zeile mit allen Werten |
+| T25 | Simulation neu starten, nichts tun | `[BT] aus -> suchen  (Start, max. 120 s)`, Bluetooth-Symbol links neben dem Akku **blinkt weiß/blau**, LEDs **blinken weiß (gedimmt)** 500 ms an / 500 ms aus |
+| T26 | `bt verbunden` | `suchen -> verbunden`, Symbol **fest blau mit 2 Punkten**, LEDs **genau 2× lila**, dann aus |
+| T27 | `bt getrennt` | `verbunden -> suchen`, Symbol blinkt wieder, LEDs blinken wieder weiß |
+| T28 | 2 min warten, ohne zu verbinden | `120 s kein Handy -> Suche beendet`, `suchen -> nicht verbunden`, Symbol **grau**, LEDs aus (oder blau, falls inzwischen die Erinnerung läuft) |
+| T29 | `bt verbunden` (Suche ist beendet) | Meldung „Nicht sichtbar - erst "bt suchen" …“, nichts ändert sich |
+| T30 | `bt suchen`, 1 min warten, nochmal `bt suchen`, `status` | `Suche neu gestartet`, `status` zeigt z. B. `BT=suchen (noch 118 s) [simuliert]` (Timer wieder fast 120 s) |
+| T31 | während der Suche AKKU auf **19 %** | genau **2 rote Blitze ohne Weiß** dazwischen, danach wieder weiß blinken. AKKU zurück auf 88 %. |
+| T32 | während der Suche AKKU auf **9 %**, sofort `bt verbunden` | erst **4× rot**, danach **2× lila**, dann aus. Unten „Bitte laden“. AKKU zurück auf 88 %. |
+| T33 | `bt getrennt`, dann NÄSSE **rechts** | LEDs **durchgehend bernstein** (kein Weiß). NÄSSE links: nach 5 s Freigabe, danach wieder weiß blinken |
+| T34 | `bt aus` | `-> aus`, Symbol **verschwindet**, LEDs aus. `status` endet mit `BT=aus [simuliert]` |
+| T35 | `hilfe` | zweite Zeile: `Bluetooth (simuliert):  bt suchen \| bt verbunden \| bt getrennt \| bt aus` |
+| T36 | **nur echtes Gerät** (`HYDRO_BLE 1`): Handy-App nRF Connect, „HydroDesk“ verbinden, Werte lesen, Notify an, trinken, trennen | verbinden: 2× lila + Symbol blau. Werte `1250/2750 ml`, nach dem Trinken neuer Wert per Notify. Trennen: wieder weiß blinken. Nach 2 min ohne Handy: grau, „HydroDesk“ verschwindet aus der Liste. |
 
 ---
 
-## 9. Der Zustandsautomat
+## 10. Der Zustandsautomat
 
 | Zustand | Bedeutung | LEDs |
 |---|---|---|
@@ -292,7 +426,9 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | `KALIBRIERUNG` | Service-Modus „Waage“ (Tara + 500-g-Gewicht). Messung pausiert. | aus |
 
 Akku-Warnung und Fehler sind **keine eigenen Zustände**. Sie werden zusätzlich angezeigt, weil
-das Gerät dabei weiter messen soll.
+das Gerät dabei weiter messen soll. **Bluetooth** hat einen eigenen kleinen Automaten
+(`btZustand`: aus / suchen / verbunden / nicht verbunden, siehe Abschnitt 6). Er läuft unabhängig
+vom Haupt-Zustand weiter, auch während der Wasser-Sperre.
 
 ```mermaid
 stateDiagram-v2
@@ -316,12 +452,12 @@ stateDiagram-v2
 ```
 
 Ablauf in `loop()` (Sicherheit zuerst):
-`naesseLesen()` → `akkuLesen()` → `waageLesen()` → `uhrVerwalten()` → `touchAuswerten()` →
+`naesseLesen()` → `akkuLesen()` → `waageLesen()` → `uhrVerwalten()` → `btVerwalten()` → `touchAuswerten()` →
 `zustandAktualisieren()` → `ledsAktualisieren()` → `drawUI()` → `serielleBefehle()`.
 
 ---
 
-## 10. Pin-Tabelle (unverändert gegenüber Version 1)
+## 11. Pin-Tabelle (unverändert gegenüber Version 1)
 
 | Signal | Bauteil in Wokwi (Pin) | Wokwi-Pin (ESP32) | Vorschlag CYD-Pin | Bemerkung |
 |---|---|---|---|---|
@@ -355,7 +491,7 @@ In Wokwi sind die Pin-Nummern **gleich** gewählt wie am CYD (außer Display-RST
 
 ---
 
-## 11. Unterschiede zur echten Hardware (CYD ESP32-2432S028R)
+## 12. Unterschiede zur echten Hardware (CYD ESP32-2432S028R)
 
 | Thema | Simulation | Echt (CYD) |
 |---|---|---|
@@ -370,10 +506,11 @@ In Wokwi sind die Pin-Nummern **gleich** gewählt wie am CYD (außer Display-RST
 | Uhrzeit / Tageswechsel | WLAN „Wokwi-GUEST“ + NTP (im Browser meist nach wenigen Sekunden) | Heim-/Schul-WLAN aus `secrets.h` + NTP |
 | Einstellungen | werden in `Preferences` (NVS) gespeichert, gehen beim Neustart der Simulation verloren | bleiben nach Stromausfall erhalten |
 | Telegram | nur `[TELEGRAM-STUB]`-Text | WLAN + Bot (z. B. Bibliothek „UniversalTelegramBot“) in `telegramSenden()` |
+| Bluetooth | nicht simulierbar → Befehle `bt suchen/verbunden/getrennt/aus` (`HYDRO_BLE 0`) | echtes BLE mit NimBLE-Arduino (`HYDRO_BLE 1`), Partition „Huge APP“ empfohlen |
 
 ---
 
-## 12. Umstieg auf das CYD (später)
+## 13. Umstieg auf das CYD (später)
 
 Das Programm ist so gebaut, dass sich nur **ein Block** ändert:
 „HARDWARE-ABSTRAKTION DISPLAY + TOUCH“ mit `anzeigeInit()` und `readTouch()`.
@@ -412,13 +549,16 @@ benutzt werden, die **Adafruit_GFX und TFT_eSPI beide** kennen
    Evtl. `touch.setRotation(...)` ändern, wenn x/y vertauscht oder gespiegelt sind.
 5. **Waage kalibrieren:** 3 s auf das Display drücken → Pad leer → Taste 1 → genau 500 g auflegen →
    Taste 2 → Fertig. Der Faktor wird gespeichert.
-6. **WLAN:** Zugangsdaten in `secrets.h` (siehe Abschnitt 6), nicht in den Sketch.
+6. **WLAN:** Zugangsdaten in `secrets.h` (siehe Abschnitt 7), nicht in den Sketch.
+7. **Bluetooth:** Bibliothek **NimBLE-Arduino** installieren, `#define HYDRO_BLE 1` setzen und als
+   Partition **„Huge APP (3MB No OTA/1MB SPIFFS)“** wählen (siehe Abschnitt 6).
 
-Die CYD-Variante wurde **nur kompiliert** (siehe Abschnitt 15), nicht auf echter Hardware getestet.
+Die CYD-Variante und die BLE-Variante wurden **nur kompiliert** (siehe Abschnitt 16), nicht auf
+echter Hardware getestet.
 
 ---
 
-## 13. Einstellungen im Sketch (ganz oben)
+## 14. Einstellungen im Sketch (ganz oben)
 
 | Konstante | Standard | Bedeutung |
 |---|---|---|
@@ -437,6 +577,14 @@ Die CYD-Variante wurde **nur kompiliert** (siehe Abschnitt 15), nicht auf echter
 | `AKKU_HINWEIS_MS` | 5 s | oranger Hinweis „Akku unter 20 %“ |
 | `LED_HELLIGKEIT` / `LED_GRUEN_MS` / `LED_ROT_MS` | 60 / 10 s / 5 s | LED-Streifen |
 | `LANGDRUCK_MS` | 3 s | Langdruck für den Service-Modus |
+| `HYDRO_BLE` | 0 | 0 = Bluetooth simuliert (Wokwi), 1 = echtes BLE (NimBLE-Arduino) |
+| `BT_START_SUCHEN` | true | beim Einschalten gleich suchen (Demo) |
+| `BT_SUCH_TIMEOUT_MS` | 2 min | so lange suchen, dann „nicht verbunden“ (Symbol grau, LEDs aus) |
+| `BT_WEISS_AN_MS` / `BT_WEISS_AUS_MS` | 500 / 500 ms | weißes Such-Blinken |
+| `BT_WEISS_WERT` | 90 | Helligkeit des Weiß je Farbkanal (0–255, gedimmt) |
+| `BT_LILA_ANZAHL` / `BT_LILA_AN_MS` / `BT_LILA_AUS_MS` | 2 / 300 / 300 ms | lila Blinken beim Verbinden |
+| `BT_NOTIFY_MS` | 1 s | echtes BLE: Werte höchstens 1× pro Sekunde senden |
+| `BT_NAME` / `BT_SERVICE_UUID` / `BT_WERTE_UUID` | HydroDesk / … | Name und UUIDs des BLE-Dienstes |
 | `WOKWI_FAKTOR` | 0.42 | Rohwert pro Gramm (Wokwi-HX711 „5kg“) |
 | `FLASCHE_DA_G` / `FLASCHE_WEG_G` | 40 / 25 g | ab wann die Flasche als „steht“ / „abgehoben“ gilt |
 | `STABIL_MS` / `STABIL_TOLERANZ_G` | 1500 ms / 6 g | wann das Gewicht als „ruhig“ gilt |
@@ -445,7 +593,7 @@ Die CYD-Variante wurde **nur kompiliert** (siehe Abschnitt 15), nicht auf echter
 
 ---
 
-## 14. Grenzen / Problemlösung
+## 15. Grenzen / Problemlösung
 
 - **Andere Flasche (Regel 3) ist eine Schätzung:** Trinkt oder füllt jemand mehr als 250 g
   nach, während die Flasche länger als 60 s weg ist, hält das Gerät das für eine **andere
@@ -475,27 +623,45 @@ Die CYD-Variante wurde **nur kompiliert** (siehe Abschnitt 15), nicht auf echter
 - **„Gewicht negativ: Kalibrierung!“:** Waage auf 0, Service-Modus (3 s drücken) → „1. Pad leer: Tara“.
 - Das erste Kompilieren dauert durch WLAN länger (ca. 1 min). Das Display baut sich in der
   Simulation langsamer auf als in echt.
+- **Bluetooth in Wokwi:** wird nur über die `bt`-Befehle simuliert. Ob ein echtes Handy sich
+  verbindet, Notify ankommt und WLAN + BLE gleichzeitig stabil laufen, kann nur das echte Gerät
+  zeigen (Test T36).
+- **„NimBLEDevice.h not found“** (nur mit `HYDRO_BLE 1`): Bibliothek „NimBLE-Arduino“ installieren.
+  Für Wokwi (`HYDRO_BLE 0`) wird sie **nicht** gebraucht.
+- **„Sketch too big“** mit `HYDRO_BLE 1`: Partition „Huge APP“ wählen (Abschnitt 6).
 - Falls `wokwi-led-strip` fehlt: in `diagram.json` durch `wokwi-led-ring` ersetzen (`VDD`→`VCC`,
   `VSS`→`GND`).
 
 ---
 
-## 15. Nachweis: Kompilieren und PC-Test (Stand 06.10.2026)
+## 16. Nachweis: Kompilieren und PC-Test (Stand 06.10.2026, Version 3)
 
 `arduino-cli 1.5.1`, Kern `esp32:esp32 3.3.12`, Board `esp32:esp32:esp32`, `--warnings all`:
 
 ```
-Sketch uses 1005619 bytes (76%) of program storage space. Maximum is 1310720 bytes.
-Global variables use 50332 bytes (15%) of dynamic memory, leaving 277348 bytes for local variables. Maximum is 327680 bytes.
+Sketch uses 1009343 bytes (77%) of program storage space. Maximum is 1310720 bytes.
+Global variables use 50372 bytes (15%) of dynamic memory, leaving 277308 bytes for local variables. Maximum is 327680 bytes.
 ```
 
-**0 Fehler, 0 Warnungen.** Der Speicher ist durch WLAN/NTP größer als in Version 1 (28 % → 76 %),
-das passt aber gut. Bibliotheken: Adafruit GFX 1.12.6, Adafruit ILI9341 1.6.4, Adafruit FT6206 1.1.1,
+**0 Fehler, 0 Warnungen** (Wokwi-Build, `HYDRO_BLE 0`). Der Speicher ist durch WLAN/NTP größer
+als in Version 1 (28 % → 77 %), das passt aber gut.
+
+| Variante | Partition | Flash | RAM (global) |
+|---|---|---|---|
+| Wokwi (Standard) | Default (1,25 MB App) | 1 009 343 B = **77 %** | 50 372 B (15 %) |
+| CYD (`HYDRO_CYD=1`) | Default | 1 017 491 B = **77 %** | 49 676 B (15 %) |
+| CYD + BLE (`HYDRO_CYD=1`, `HYDRO_BLE=1`) | Default | 1 268 223 B = **96 %** | 59 832 B (18 %) |
+| CYD + BLE | **Huge APP** (3 MB App) | 1 268 255 B = **40 %** | 59 832 B (18 %) |
+| Wokwi-Display + BLE (`HYDRO_BLE=1`) | Default | 1 260 167 B = **96 %** | 60 528 B (18 %) |
+
+Die BLE-Varianten nutzen NimBLE-Arduino 2.5.1. Sketch und NimBLE kompilieren ohne Warnungen. Bibliotheken: Adafruit GFX 1.12.6, Adafruit ILI9341 1.6.4, Adafruit FT6206 1.1.1,
 Adafruit BusIO 1.17.4, Adafruit NeoPixel 1.15.5, HX711 (Rob Tillaart) 0.6.5. WiFi, Preferences und
 SNTP gehören zum ESP32-Kern.
 
-CYD-Variante (`HYDRO_CYD=1`, TFT_eSPI 2.5.43 + XPT2046_Touchscreen 1.4): kompiliert ohne Warnungen
-(1000019 Bytes, 76 %).
+CYD-Variante (`HYDRO_CYD=1`, TFT_eSPI 2.5.43 + XPT2046_Touchscreen 1.4): kompiliert, keine Warnung
+aus dem Sketch. Die einzige Meldung `TOUCH_CS pin not defined` kommt aus der unveränderten
+`User_Setup.h` von TFT_eSPI (wir nutzen für den Touch die XPT2046-Bibliothek, nicht TFT_eSPI). Sie
+kam schon in Version 2 und verschwindet mit der CYD-`User_Setup.h` aus Abschnitt 13.
 
 **PC-Logiktest:** Der Sketch wurde zusätzlich auf dem PC mit nachgebauten Bauteilen (Stubs)
 übersetzt. Dann wurden Gewichte, Touch, Nässe, Akku, WLAN/NTP und die Uhr simuliert. Geprüft
@@ -503,12 +669,16 @@ wurden: Zielformel (5 Beispiele + ungültige Eingabe), Leergewicht-Regeln 1–3,
 Erinnerung blau, Ziel grün 10 s, Wasser bernstein + automatische Freigabe nach 5 s,
 Akku 2×/4× rot inkl. Hysterese, „Bitte laden“ und 10-min-Wiederholung, Langdruck 1 s / 3 s,
 Kalibrierung, Mitternachts-Reset.
-Ergebnis: **alle Prüfungen OK**. Ein Lauf im echten Wokwi-Simulator (wokwi-cli) war nicht
-möglich (kein Wokwi-Token). Bitte einmal auf wokwi.com mit den Testfällen aus Abschnitt 8 prüfen.
+Neu in V3 (Bluetooth): Suche beim Start (3× weiß in 3 s), `bt aus/suchen/verbunden/getrennt`,
+genau 2× lila, Symbol weiß/blau pulsierend → blau mit Punkten → grau, 2-min-Timeout, Neustart des
+Timers mit `bt suchen`, Verbinden ohne Suche abgelehnt, blaue Erinnerung nach dem Timeout sichtbar,
+Akku-Rot ohne Weiß dazwischen, 4× rot und **danach** 2× lila, bernstein ohne Weiß.
+Ergebnis: **alle 85 Prüfungen OK**. Ein Lauf im echten Wokwi-Simulator (wokwi-cli) war nicht
+möglich (kein Wokwi-Token). Bitte einmal auf wokwi.com mit den Testfällen aus Abschnitt 9 prüfen.
 
 ---
 
-## 16. VS Code (optional)
+## 17. VS Code (optional)
 
 Mit der Erweiterung „Wokwi Simulator“: Ordner `sketch` mit `sketch.ino`, daneben `diagram.json` und
 `wokwi.toml`, dann `arduino-cli compile -b esp32:esp32:esp32 --output-dir build sketch` und
@@ -521,10 +691,10 @@ F1 → „Wokwi: Start Simulator“. Das WLAN „Wokwi-GUEST“ funktioniert auc
 
 | Datei | Inhalt |
 |---|---|
-| `sketch.ino` | Programm (Arduino, ESP32) mit deutschen Kommentaren |
+| `sketch.ino` | Programm (Arduino, ESP32), Version 3, mit deutschen Kommentaren |
 | `diagram.json` | Schaltung für Wokwi (unverändert seit Version 1) |
 | `libraries.txt` | Bibliotheksliste für den Wokwi Library Manager |
 | `wokwi.toml` | nur für Wokwi in VS Code |
 | `verdrahtung.png` | Verdrahtungsplan als Bild |
-| `screen_mockup.png` | Entwurf des Hauptbildschirms |
+| `screen_mockup.png` | Entwurf des Hauptbildschirms (mit Bluetooth-Symbol „verbunden“) |
 | `README.md` | diese Anleitung |

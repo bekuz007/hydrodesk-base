@@ -1,12 +1,14 @@
 /*
  * ============================================================================
- *  HydroDesk Base – Wokwi-Simulation (ESP32, Arduino)          Version 2
+ *  HydroDesk Base – Wokwi-Simulation (ESP32, Arduino)          Version 3
  * ============================================================================
  *  Schulprojekt FI-AE: Trink-Tracker für den Schreibtisch.
  *  Eine Flasche steht auf einem Pad über einer Wägezelle (HX711). Das Display
  *  zeigt Uhrzeit, Akku, heute getrunkene Menge, Tagesziel und Flascheninhalt.
  *  Es gibt KEINE Tasten: alles wird aus dem Gewicht abgeleitet.
- *  LEDs (WS2812) leuchten nur bei Ereignissen (Akku-Warnung: kurz rot blitzen).
+ *  LEDs (WS2812) leuchten nur bei Ereignissen (Dauerlicht). Blinken NUR bei:
+ *  Akku-Warnung (rot), Bluetooth sucht (weiß), Handy verbunden (2x lila).
+ *  Oben rechts: Bluetooth-Symbol links neben dem Akku (neu in V3).
  *  Ein Nässe-Sensor schaltet bei
  *  Wasser die Last ab.
  *
@@ -20,11 +22,13 @@
  *  LED "LAST"                              | MOSFET, der die Last schaltet
  *  WLAN "Wokwi-GUEST" + NTP                | Heim-/Schul-WLAN (secrets.h) + NTP
  *  Telegram: nur Serial-Ausgabe (Stub)     | Telegram-Bot über WLAN
+ *  Bluetooth: per Serial-Befehl simuliert   | BLE (NimBLE), HYDRO_BLE 1
  *
  *  Versteckte Bedienung: 3 s irgendwo auf das Display drücken
  *  -> Service-Modus "Kalibrierung" (nur dort gibt es Tasten).
  *  Serieller Monitor (115200 Baud): "hilfe", "status", "reset",
- *  "gewicht 75", "groesse 180", "zeit 23:59"
+ *  "gewicht 75", "groesse 180", "zeit 23:59",
+ *  "bt suchen", "bt verbunden", "bt getrennt", "bt aus"
  * ============================================================================
  */
 
@@ -37,6 +41,18 @@
   #define HYDRO_CYD 0
 #endif
 
+// ----------------------------------------------------------------------------
+//  BLUETOOTH-AUSWAHL
+//  0 = Bluetooth nur simuliert (Serial-Befehle "bt ...")  <- Standard für Wokwi
+//      (Wokwi kann kein Bluetooth simulieren)
+//  1 = echtes BLE mit der Bibliothek NimBLE-Arduino (Gerät heißt "HydroDesk")
+//      Echtes Gerät: HYDRO_CYD 1 UND HYDRO_BLE 1. Speicher: siehe README
+//      (passt in "Default 4MB", für mehr Reserve Partition "Huge APP" wählen).
+// ----------------------------------------------------------------------------
+#ifndef HYDRO_BLE
+  #define HYDRO_BLE 0
+#endif
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <WiFi.h>               // WLAN (im ESP32-Kern enthalten)
@@ -46,6 +62,10 @@
 #include <Preferences.h>        // Einstellungen dauerhaft im Flash (NVS)
 #include <HX711.h>              // Wägezellen-Verstärker
 #include <Adafruit_NeoPixel.h>  // LED-Streifen WS2812
+
+#if HYDRO_BLE
+  #include <NimBLEDevice.h>        // Bibliothek "NimBLE-Arduino" (h2zero), nur für echtes BLE
+#endif
 
 #if HYDRO_CYD
   #include <TFT_eSPI.h>            // Display-Pins stehen in User_Setup.h der Bibliothek
@@ -115,12 +135,28 @@ const uint32_t AKKU_BLINK_AUS_MS    = 300;
 const uint32_t AKKU_WIEDERHOLUNG_MS = 10UL * 60UL * 1000UL; // Blinkmuster alle 10 min wiederholen (0 = nie)
 const uint32_t AKKU_HINWEIS_MS      = 5000;   // Hinweis "Akku unter 20 %" so lange im Statusfeld
 
-// --- LED-Streifen: leuchtet NUR bei Ereignissen. Dauerlicht, nie blinkend -
-//     EINZIGE Ausnahme: die kurze Akku-Warnung (2x bzw. 4x rot, dann aus)
+// --- LED-Streifen: leuchtet NUR bei Ereignissen, sonst Dauerlicht.
+//     Blinken gibt es NUR bei: Akku-Warnung (rot), Bluetooth sucht (weiß),
+//     Handy verbunden (2x lila). Alles andere leuchtet ruhig.
 const uint8_t  LED_ANZAHL           = 10;
 const uint8_t  LED_HELLIGKEIT       = 60;     // 0..255 (mittel)
 const uint32_t LED_GRUEN_MS         = 10000;  // "Ziel erreicht" 10 s grün
 const uint32_t LED_ROT_MS           = 5000;   // Waagen-Fehler: 5 s rot
+
+// --- Bluetooth (Symbol oben rechts + LED-Status)
+const bool     BT_START_SUCHEN      = true;   // beim Einschalten gleich nach dem Handy suchen (Demo)
+const uint32_t BT_SUCH_TIMEOUT_MS   = 2UL * 60UL * 1000UL; // so lange suchen, dann "nicht verbunden" (Symbol grau, LEDs aus)
+const uint32_t BT_WEISS_AN_MS       = 500;    // Suchen: weiß blinken 500 ms an ...
+const uint32_t BT_WEISS_AUS_MS      = 500;    // ... 500 ms aus
+const uint8_t  BT_WEISS_WERT        = 90;     // gedimmtes Weiß: 0..255 je Farbkanal (zusätzlich LED_HELLIGKEIT)
+const uint8_t  BT_LILA_ANZAHL       = 2;      // verbunden: genau 2x lila blinken, dann normal
+const uint32_t BT_LILA_AN_MS        = 300;
+const uint32_t BT_LILA_AUS_MS       = 300;
+const uint32_t BT_NOTIFY_MS         = 1000;   // nur echtes BLE: Werte höchstens 1x pro Sekunde senden
+const char*    BT_NAME              = "HydroDesk"; // so heißt das Gerät in der Bluetooth-Liste des Handys
+// Eigene 128-Bit-UUIDs (zufällig erzeugt) für den HydroDesk-Dienst
+const char*    BT_SERVICE_UUID      = "4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10";
+const char*    BT_WERTE_UUID        = "4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // lesen + notify: "1250/2750 ml"
 
 // --- Versteckter Service-Modus
 const uint32_t LANGDRUCK_MS         = 3000;   // 3 s drücken -> Kalibrierung
@@ -193,6 +229,23 @@ enum Zustand : uint8_t {
 // Woher kommt die Uhrzeit?
 enum UhrQuelle : uint8_t { UHR_KEINE, UHR_ERSATZ, UHR_NTP };
 
+/*
+ *  Bluetooth-Zustand (eigener kleiner Automat, unabhängig vom Haupt-Zustand):
+ *    BT_AUS              Bluetooth ausgeschaltet         Symbol: nicht gezeichnet  LEDs: -
+ *    BT_SUCHEN           sichtbar, wartet auf das Handy  Symbol: blinkt weiß/blau  LEDs: weiß blinken
+ *    BT_VERBUNDEN        Handy verbunden                 Symbol: blau + Punkte     LEDs: 2x lila, dann normal
+ *    BT_NICHT_VERBUNDEN  Suche nach 2 min abgebrochen    Symbol: grau              LEDs: -
+ *  Übergänge:  "bt suchen" / Start ----------> BT_SUCHEN
+ *              BT_SUCHEN --Handy verbindet---> BT_VERBUNDEN
+ *              BT_SUCHEN --2 min niemand-----> BT_NICHT_VERBUNDEN
+ *              BT_VERBUNDEN --Handy weg------> BT_SUCHEN (sucht wieder 2 min)
+ *              jeder Zustand --"bt aus"------> BT_AUS
+ */
+enum BtZustand : uint8_t { BT_AUS, BT_SUCHEN, BT_VERBUNDEN, BT_NICHT_VERBUNDEN };
+
+// Wer bestimmt gerade die LED-Farbe? (nur für das Protokoll im Seriellen Monitor)
+enum LedQuelle : uint8_t { L_AUS, L_BERNSTEIN, L_AKKU, L_LILA, L_WEISS, L_ROT, L_BLAU, L_GRUEN };
+
 // Eine Taste (gibt es NUR im Service-Modus)
 struct Taste {
   int16_t x, y, w, h;
@@ -202,7 +255,7 @@ struct Taste {
 // Bildschirm-Bereiche, die einzeln neu gezeichnet werden (gegen Flackern)
 enum Bereich : uint8_t {
   B_ZEIT, B_DATUM, B_AKKU, B_MENGE, B_VON, B_BALKEN, B_ZIELTEXT,
-  B_FLASCHE, B_LEER, B_ZULETZT, B_NAECHSTE, B_STATUS, B_ANZAHL
+  B_FLASCHE, B_LEER, B_ZULETZT, B_NAECHSTE, B_STATUS, B_BT, B_ANZAHL
 };
 
 const char* zustandName(Zustand z) {
@@ -213,6 +266,16 @@ const char* zustandName(Zustand z) {
     case ZIEL_ERREICHT: return "ZIEL_ERREICHT";
     case NAESSE_SPERRE: return "NAESSE_SPERRE";
     case KALIBRIERUNG:  return "KALIBRIERUNG";
+  }
+  return "?";
+}
+
+const char* btName(BtZustand b) {
+  switch (b) {
+    case BT_AUS:             return "aus";
+    case BT_SUCHEN:          return "suchen";
+    case BT_VERBUNDEN:       return "verbunden";
+    case BT_NICHT_VERBUNDEN: return "nicht verbunden";
   }
   return "?";
 }
@@ -272,6 +335,13 @@ uint32_t gruenBisMs       = 0;
 uint32_t rotBisMs         = 0;
 uint32_t blinkStartMs     = 0;    // Akku-Blinkmuster: Start ...
 uint8_t  blinkAnzahl      = 0;    // ... und Anzahl Blitze (0 = kein Blinken)
+
+// Bluetooth
+BtZustand btZustand       = BT_AUS;
+uint32_t btSuchStartMs    = 0;    // Beginn der Suche (für Timeout + Blinktakt)
+bool     lilaAusstehend   = false; // 2x lila wartet, bis das Akku-Blinken fertig ist
+bool     lilaLaeuft       = false;
+uint32_t lilaStartMs      = 0;
 
 // Anzeige / Touch
 bool     bildschirmNeu    = true;
@@ -481,6 +551,19 @@ void haken(int16_t x, int16_t y, uint16_t farbe) {
     tft.drawLine(x, y + 6 + d, x + 4, y + 10 + d, farbe);
     tft.drawLine(x + 4, y + 10 + d, x + 12, y + d, farbe);
   }
+}
+
+// Bluetooth-Rune aus Linien. cx = senkrechter Strich (2 px breit), y0 = oben,
+// 19 px hoch, von cx-5 bis cx+5 breit. Die Schrägen sind 1 px breit (wirkt sauberer).
+void btSymbol(int16_t cx, int16_t y0, uint16_t farbe) {
+  const int16_t h = 18, r = 5;
+  const int16_t y1 = y0 + h;
+  tft.drawLine(cx, y0, cx, y1, farbe);                   // senkrechter Strich ...
+  tft.drawLine(cx + 1, y0, cx + 1, y1, farbe);           // ... doppelt
+  tft.drawLine(cx, y0, cx + r, y0 + r, farbe);           // oben nach rechts
+  tft.drawLine(cx + r, y0 + r, cx - r, y1 - r, farbe);   // Diagonale nach links unten
+  tft.drawLine(cx, y1, cx + r, y1 - r, farbe);           // unten nach rechts
+  tft.drawLine(cx + r, y1 - r, cx - r, y0 + r, farbe);   // Diagonale nach links oben
 }
 
 bool getroffen(const Taste& t, int16_t x, int16_t y) {
@@ -958,15 +1041,151 @@ void touchAuswerten() {
 }
 
 // ============================================================================
-//  LED-STREIFEN: aus im Normalbetrieb, nur bei Ereignissen, Dauerlicht
-//  (einzige Ausnahme: Akku-Warnung 2x bzw. 4x rot blitzen, dann aus)
-//  Priorität: bernstein (Wasser) > rot (Akku-Blinken 2x/4x bzw. Fehler 5 s)
-//             > blau (Erinnerung) > grün (Ziel erreicht, 10 s)
+//  BLUETOOTH
+//  HYDRO_BLE 1: echtes BLE (NimBLE). Die Callbacks laufen in einer eigenen
+//               BLE-Task -> dort nur Merker setzen, ausgewertet wird im loop().
+//  HYDRO_BLE 0: Wokwi kann kein Bluetooth -> Zustand per Serial-Befehl "bt ...".
 // ============================================================================
+#if HYDRO_BLE
+NimBLEServer*         bleServer   = nullptr;
+NimBLECharacteristic* bleWerte    = nullptr;
+volatile bool         bleVerbunden = false;   // von den Callbacks gesetzt
+volatile uint16_t     bleTrennGrund = 0;
+
+class HydroServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer* server, NimBLEConnInfo& info) override {
+    (void)server; (void)info;
+    bleVerbunden = true;
+  }
+  void onDisconnect(NimBLEServer* server, NimBLEConnInfo& info, int grund) override {
+    (void)info;
+    bleTrennGrund = (uint16_t)grund;
+    bleVerbunden = server->getConnectedCount() > 0;
+  }
+};
+HydroServerCallbacks bleCallbacks;
+
+String bleWerteText() {
+  return String(getrunkenHeute) + "/" + String(tagesziel) + " ml";
+}
+
+void bleStarten() {
+  NimBLEDevice::init(BT_NAME);
+  bleServer = NimBLEDevice::createServer();
+  bleServer->setCallbacks(&bleCallbacks, false);
+  bleServer->advertiseOnDisconnect(false);      // Suchen steuert der Sketch selbst (Timeout!)
+  NimBLEService* dienst = bleServer->createService(BT_SERVICE_UUID);
+  bleWerte = dienst->createCharacteristic(BT_WERTE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+  bleWerte->setValue(bleWerteText().c_str());
+  bleServer->start();
+
+  // Werbepaket: Flags + Dienst-UUID; Name in der Scan-Antwort (zusammen > 31 Byte)
+  NimBLEAdvertising* werbung = NimBLEDevice::getAdvertising();
+  NimBLEAdvertisementData daten;
+  daten.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
+  daten.addServiceUUID(BT_SERVICE_UUID);
+  NimBLEAdvertisementData antwort;
+  antwort.setName(BT_NAME);
+  werbung->setAdvertisementData(daten);
+  werbung->setScanResponseData(antwort);
+  werbung->enableScanResponse(true);
+  logZeile("BT", String("BLE bereit (NimBLE), Name \"") + BT_NAME + "\"");
+}
+#endif
+
+void btSetzen(BtZustand neu, const String& grund) {
+  if (neu == btZustand) return;
+  logZeile("BT", String(btName(btZustand)) + " -> " + btName(neu) + "  (" + grund + ")");
+  BtZustand alt = btZustand;
+  btZustand = neu;
+  if (neu == BT_VERBUNDEN) {
+    lilaAusstehend = true;          // 2x lila (startet nach einem laufenden Akku-Blinken)
+    lilaLaeuft = false;
+  } else if (alt == BT_VERBUNDEN) {
+    lilaAusstehend = false;         // getrennt, bevor lila fertig war -> abbrechen
+    lilaLaeuft = false;
+  }
+}
+
+// Sichtbar werden und auf das Handy warten (Timeout BT_SUCH_TIMEOUT_MS)
+void btSuchenStarten(const String& grund) {
+  btSuchStartMs = millis();         // auch bei erneutem "bt suchen": Timeout neu starten
+#if HYDRO_BLE
+  if (bleServer && bleServer->getConnectedCount() > 0) {
+    btSetzen(BT_VERBUNDEN, "Handy ist schon verbunden");
+    return;
+  }
+  NimBLEDevice::startAdvertising();
+#endif
+  if (btZustand == BT_SUCHEN) logZeile("BT", "Suche neu gestartet (" + grund + ")");
+  btSetzen(BT_SUCHEN, grund + ", max. " + String(BT_SUCH_TIMEOUT_MS / 1000) + " s");
+}
+
+void btAusschalten() {
+#if HYDRO_BLE
+  NimBLEDevice::stopAdvertising();
+  if (bleServer) {
+    for (uint16_t h : bleServer->getPeerDevices()) bleServer->disconnect(h);
+  }
+#endif
+  btSetzen(BT_AUS, "Befehl bt aus");
+}
+
+void btVerwalten() {
+#if HYDRO_BLE
+  bool v = bleVerbunden;
+  if (v && btZustand != BT_VERBUNDEN && btZustand != BT_AUS) {
+    btSetzen(BT_VERBUNDEN, "Handy hat sich verbunden");
+  } else if (!v && btZustand == BT_VERBUNDEN) {
+    btSuchenStarten("Handy getrennt, Grund " + String(bleTrennGrund));
+  }
+  // Werte aktuell halten (lesen) und bei Änderung an das Handy schicken (notify)
+  static String letzterWert;
+  static uint32_t letzteNotify = 0;
+  String wert = bleWerteText();
+  if (bleWerte && wert != letzterWert && millis() - letzteNotify >= BT_NOTIFY_MS) {
+    letzterWert = wert;
+    letzteNotify = millis();
+    bleWerte->setValue(wert.c_str());
+    if (btZustand == BT_VERBUNDEN) bleWerte->notify();
+  }
+#endif
+  if (btZustand == BT_SUCHEN && millis() - btSuchStartMs >= BT_SUCH_TIMEOUT_MS) {
+#if HYDRO_BLE
+    NimBLEDevice::stopAdvertising();
+#endif
+    btSetzen(BT_NICHT_VERBUNDEN, String(BT_SUCH_TIMEOUT_MS / 1000) + " s kein Handy -> Suche beendet");
+  }
+}
+
+// ============================================================================
+//  LED-STREIFEN: aus im Normalbetrieb, nur bei Ereignissen, Dauerlicht.
+//  Blinken NUR bei Akku-Warnung (rot), Bluetooth sucht (weiß), verbunden (2x lila).
+//  Priorität: bernstein (Wasser) > Akku rot blitzen (2x/4x) > lila 2x (Handy verbunden)
+//             > weiß blinken (Bluetooth sucht) > rot (Fehler 5 s)
+//             > blau (Erinnerung) > grün (Ziel erreicht, 10 s)
+//  In der Pause eines Blinkmusters sind die LEDs aus (keine Mischfarben).
+// ============================================================================
+const char* ledQuelleName(LedQuelle q) {
+  switch (q) {
+    case L_AUS:       return "aus";
+    case L_BERNSTEIN: return "bernstein (Wasser)";
+    case L_AKKU:      return "rot blitzen (Akku)";
+    case L_LILA:      return "lila 2x blinken (Handy verbunden)";
+    case L_WEISS:     return "weiß blinken (Bluetooth sucht)";
+    case L_ROT:       return "rot (Fehler)";
+    case L_BLAU:      return "blau (Erinnerung)";
+    case L_GRUEN:     return "grün (Ziel erreicht)";
+  }
+  return "?";
+}
+
 void ledsAktualisieren() {
   static uint32_t letzteFarbe = 0xFFFFFFFF;
+  static LedQuelle letzteQuelle = L_AUS;
   uint32_t jetzt = millis();
   uint32_t farbe = 0;   // aus
+  LedQuelle quelle = L_AUS;
   // Akku-Blinkmuster: läuft im Hintergrund weiter, auch wenn bernstein Vorrang hat
   bool blinkAn = false;
   if (blinkAnzahl > 0) {
@@ -977,17 +1196,40 @@ void ledsAktualisieren() {
   }
   bool blinkLaeuft = blinkAnzahl > 0;
 
-  if (zustand == NAESSE_SPERRE)                 farbe = leds.Color(255, 110, 0);  // bernstein
-  else if (blinkLaeuft)                         farbe = blinkAn ? leds.Color(255, 0, 0) : 0; // Akku: rot / Pause
-  else if ((int32_t)(rotBisMs - jetzt) > 0)     farbe = leds.Color(255, 0, 0);    // rot (Fehler)
-  else if (zustand == ERINNERUNG)               farbe = leds.Color(0, 0, 255);    // blau
-  else if ((int32_t)(gruenBisMs - jetzt) > 0)   farbe = leds.Color(0, 255, 0);    // grün
+  // 2x lila nach dem Verbinden: wartet, bis das Akku-Blinken fertig ist
+  if (lilaAusstehend && !blinkLaeuft) {
+    lilaAusstehend = false;
+    lilaLaeuft = true;
+    lilaStartMs = jetzt;
+  }
+  bool lilaAn = false;
+  if (lilaLaeuft) {
+    uint32_t periode = BT_LILA_AN_MS + BT_LILA_AUS_MS;
+    uint32_t t = jetzt - lilaStartMs;
+    if (t >= periode * BT_LILA_ANZAHL) lilaLaeuft = false;
+    else lilaAn = (t % periode) < BT_LILA_AN_MS;
+  }
+  // weiß blinken, solange Bluetooth sucht (Takt ab Suchbeginn)
+  bool weissAn = btZustand == BT_SUCHEN &&
+                 (jetzt - btSuchStartMs) % (BT_WEISS_AN_MS + BT_WEISS_AUS_MS) < BT_WEISS_AN_MS;
 
+  if (zustand == NAESSE_SPERRE)               { quelle = L_BERNSTEIN; farbe = leds.Color(255, 110, 0); }
+  else if (blinkLaeuft)                       { quelle = L_AKKU;  farbe = blinkAn ? leds.Color(255, 0, 0) : 0; }
+  else if (lilaLaeuft)                        { quelle = L_LILA;  farbe = lilaAn ? leds.Color(150, 0, 255) : 0; }
+  else if (btZustand == BT_SUCHEN)            { quelle = L_WEISS; farbe = weissAn ? leds.Color(BT_WEISS_WERT, BT_WEISS_WERT, BT_WEISS_WERT) : 0; }
+  else if ((int32_t)(rotBisMs - jetzt) > 0)   { quelle = L_ROT;   farbe = leds.Color(255, 0, 0); }
+  else if (zustand == ERINNERUNG)             { quelle = L_BLAU;  farbe = leds.Color(0, 0, 255); }
+  else if ((int32_t)(gruenBisMs - jetzt) > 0) { quelle = L_GRUEN; farbe = leds.Color(0, 255, 0); }
+
+  // Protokoll nur, wenn sich die QUELLE ändert (nicht bei jedem Blinken)
+  if (quelle != letzteQuelle) {
+    letzteQuelle = quelle;
+    logZeile("LED", ledQuelleName(quelle));
+  }
   if (farbe == letzteFarbe) return;   // nur senden, wenn sich etwas ändert
   letzteFarbe = farbe;
   for (uint8_t i = 0; i < LED_ANZAHL; i++) leds.setPixelColor(i, farbe);
   leds.show();
-  logZeile("LED", farbe == 0 ? "aus" : "Farbe 0x" + String(farbe, HEX));
 }
 
 // ============================================================================
@@ -1036,11 +1278,35 @@ void hauptbildschirmZeichnen() {
     text(8, 43, datum, 1, uhrQuelle == UHR_NTP ? HELLGRAU : GELB, SCHWARZ);
   }
 
-  // --- Oben rechts: Akku-Symbol + Prozent
+  // --- Oben rechts: [Bluetooth] [Akku-Symbol], darunter Akku-Prozent
+  //     Bereiche: Bluetooth x 168..191 / y 2..25, Akku-Symbol x 194..239 / y 0..25,
+  //     Prozent x 184..239 / y 26..45. Uhrzeit endet bei x 126, Datum spätestens bei x 158.
+  uint16_t btFarbe = SCHWARZ;   // SCHWARZ = nicht zeichnen (aus)
+  bool btPunkte = false;
+  if (btZustand == BT_SUCHEN) {
+    bool hell = (millis() - btSuchStartMs) % (BT_WEISS_AN_MS + BT_WEISS_AUS_MS) < BT_WEISS_AN_MS;
+    btFarbe = hell ? WEISS : BLAU;                        // pulsiert im LED-Takt
+  } else if (btZustand == BT_VERBUNDEN) {
+    btFarbe = BLAU; btPunkte = true;                      // fest blau + Punkte links/rechts
+  } else if (btZustand == BT_NICHT_VERBUNDEN) {
+    btFarbe = GRAU;                                       // Suche abgelaufen
+  }
+  if (geaendert(B_BT, String(btFarbe) + (btPunkte ? "p" : ""))) {
+    tft.fillRect(168, 2, 24, 24, SCHWARZ);
+    if (btFarbe != SCHWARZ) {
+      btSymbol(179, 6, btFarbe);
+      if (btPunkte) {
+        tft.fillRect(169, 14, 3, 3, btFarbe);
+        tft.fillRect(188, 14, 3, 3, btFarbe);
+      }
+    }
+  }
+
   if (geaendert(B_AKKU, String(akkuProzent) + "/" + String(akkuStufe))) {
     // grün = ok, orange = unter 20 %, rot = unter 10 %
     uint16_t f = akkuStufe == 2 ? ROT : (akkuStufe == 1 ? ORANGE : GRUEN);
-    tft.fillRect(176, 0, 64, 50, SCHWARZ);
+    tft.fillRect(194, 0, 46, 26, SCHWARZ);
+    tft.fillRect(184, 26, 56, 20, SCHWARZ);
     tft.drawRect(196, 8, 32, 15, WEISS);
     tft.fillRect(228, 12, 3, 7, WEISS);
     tft.fillRect(198, 10, 28 * akkuProzent / 100, 11, f);
@@ -1224,6 +1490,44 @@ void drawUI() {
 // ============================================================================
 void hilfeAusgeben() {
   Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | hilfe"));
+#if HYDRO_BLE
+  Serial.println(F("Bluetooth (echtes BLE): bt suchen | bt aus   (verbunden/getrennt meldet das Handy)"));
+#else
+  Serial.println(F("Bluetooth (simuliert):  bt suchen | bt verbunden | bt getrennt | bt aus"));
+#endif
+}
+
+String btText() {
+  String t = btName(btZustand);
+  if (btZustand == BT_SUCHEN) {
+    uint32_t rest = (BT_SUCH_TIMEOUT_MS - min(BT_SUCH_TIMEOUT_MS, millis() - btSuchStartMs)) / 1000;
+    t += " (noch " + String(rest) + " s)";
+  }
+  return t + (HYDRO_BLE ? " [BLE]" : " [simuliert]");
+}
+
+// Befehle "bt suchen | verbunden | getrennt | aus"
+void btBefehl(const String& wert) {
+  if (wert == "suchen") {
+    btSuchenStarten("Befehl bt suchen");
+  } else if (wert == "aus") {
+    btAusschalten();
+  } else if (wert == "verbunden" || wert == "getrennt") {
+#if HYDRO_BLE
+    Serial.println(F("Mit echtem BLE meldet das Handy selbst verbunden/getrennt (nur in der Simulation per Befehl)."));
+#else
+    if (wert == "verbunden") {
+      if (btZustand == BT_SUCHEN) btSetzen(BT_VERBUNDEN, "Befehl bt verbunden (simuliert)");
+      else if (btZustand == BT_VERBUNDEN) Serial.println(F("Schon verbunden."));
+      else Serial.println(F("Nicht sichtbar - erst \"bt suchen\", dann \"bt verbunden\"."));
+    } else {
+      if (btZustand == BT_VERBUNDEN) btSuchenStarten("Befehl bt getrennt (simuliert)");
+      else Serial.println(F("Kein Handy verbunden."));
+    }
+#endif
+  } else {
+    Serial.println(F("bt suchen | bt verbunden | bt getrennt | bt aus"));
+  }
 }
 
 void statusAusgeben() {
@@ -1241,7 +1545,8 @@ void statusAusgeben() {
            (akkuStufe == 2 ? " (unter 10 %)" : (akkuStufe == 1 ? " (unter 20 %)" : "")) +
            " | nass=" + String(nass ? "ja" : "nein") +
            " | Last=" + String(digitalRead(PIN_LAST) ? "AN" : "AUS") +
-           " | Uhr=" + uhr + (uhrQuelle == UHR_NTP ? " (NTP)" : (uhrQuelle == UHR_ERSATZ ? " (Ersatz)" : "")));
+           " | Uhr=" + uhr + (uhrQuelle == UHR_NTP ? " (NTP)" : (uhrQuelle == UHR_ERSATZ ? " (Ersatz)" : "")) +
+           " | BT=" + btText());
 }
 
 void serielleBefehle() {
@@ -1294,6 +1599,8 @@ void serielleBefehle() {
       } else {
         Serial.println(F("Format: zeit HH:MM, z. B. \"zeit 23:59\""));
       }
+    } else if (befehl == "bt") {
+      btBefehl(wert);
     } else if (zeile.length() > 0) {
       hilfeAusgeben();
     }
@@ -1308,7 +1615,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
   Serial.println();
-  Serial.println(F("=== HydroDesk Base – Wokwi-Simulation (V2) ==="));
+  Serial.println(F("=== HydroDesk Base – Wokwi-Simulation (V3) ==="));
 
   pinMode(PIN_NAESSE, INPUT_PULLUP);
   pinMode(PIN_LAST, OUTPUT);
@@ -1340,6 +1647,13 @@ void setup() {
            (leergewichtGelernt ? "(gelernt)" : "(Startwert, wird beim Nachfüllen gelernt)"));
 
   uhrStarten();
+#if HYDRO_BLE
+  bleStarten();
+#else
+  logZeile("BT", "Bluetooth wird nur simuliert (Befehle: bt suchen | bt verbunden | bt getrennt | bt aus)");
+#endif
+  if (BT_START_SUCHEN) btSuchenStarten("Start");
+  else btSetzen(BT_NICHT_VERBUNDEN, "Start ohne Suche");
   letzterSchluckMs = millis();
   naesseLesen();
   logZeile("SYSTEM", "Erinnerung nach " + String(ERINNERUNG_MS / 1000) + " s ohne Trinken");
@@ -1352,6 +1666,7 @@ void loop() {
   akkuLesen();
   waageLesen();
   uhrVerwalten();
+  btVerwalten();
   touchAuswerten();       // 2. versteckte Bedienung
   zustandAktualisieren(); // 3. Zustandsautomat
   ledsAktualisieren();    // 4. Ausgaben

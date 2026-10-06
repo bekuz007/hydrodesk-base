@@ -24,6 +24,8 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **Akkubetrieb**: LiPo 2000 mAh, Laden per USB-C (TC4056), 5-V-Step-up
 - **Optional: Telegram-Bot** für Erinnerungen und Status (`/status`, `/ziel`, `/hilfe`)
 - **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, drei Teile, ohne Stützmaterial druckbar)
+- **Android-App** ([`app-android/`](app-android/)): Login (Supabase), Bluetooth-LE-Verbindung zum Gerät,
+  Tagesziel aus Körperdaten, Verlauf mit Wochendiagramm, offline-fähig mit Sync, Admin-Übersicht, Demo-Modus
 
 ## 📐 Aufbau / Layout
 
@@ -91,6 +93,9 @@ hydrodesk-base/
 ├── firmware/                               # PlatformIO-Firmware (folgt)
 │   └── secrets.example.h                   # Vorlage für Zugangsdaten
 ├── wokwi/                                  # Wokwi-Simulation (Sketch, Diagramm, Anleitung)
+├── app-android/                            # Android-App (Kotlin, Compose) – eigene Anleitung
+│   ├── README.md                           # Einrichtung Schritt für Schritt (Supabase, Android Studio)
+│   └── supabase/schema.sql                 # Datenbank-Schema mit Row Level Security
 ├── LICENSE
 └── README.md
 ```
@@ -103,6 +108,7 @@ hydrodesk-base/
 | Vorkalkulation | ✅ fertig |
 | Gehäuse-CAD (OpenSCAD, STL) | ✅ fertig |
 | Wokwi-Simulation | ✅ Version 3 fertig (kompiliert, PC-Logiktest OK, auf wokwi.com testen) – inkl. Bluetooth-Symbol und LED-Status |
+| Android-App (Kotlin, Compose, Supabase) | ✅ Version 1.0 – baut (`assembleDebug`), Unit-Tests grün, Demo-Modus; BLE mit echtem Gerät noch zu testen – siehe [`app-android/README.md`](app-android/README.md) |
 | Firmware (PlatformIO) | ⏳ offen |
 | Bau / Integration / Tests | ⏳ offen |
 
@@ -110,6 +116,9 @@ hydrodesk-base/
 
 WLAN-Daten und der optionale Telegram-Bot-Token kommen in `firmware/secrets.h` – diese Datei ist per `.gitignore` ausgeschlossen.
 Als Vorlage dient [`firmware/secrets.example.h`](firmware/secrets.example.h).
+
+Supabase-URL und -Key der App kommen in `app-android/local.properties` (ebenfalls nicht im Git),
+Vorlage: [`app-android/local.properties.example`](app-android/local.properties.example).
 
 ## 👥 Team
 

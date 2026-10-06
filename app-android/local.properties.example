@@ -1,0 +1,9 @@
+# Kopie dieser Datei unter dem Namen "local.properties" anlegen und ausfüllen.
+# local.properties wird NICHT ins Git übernommen (.gitignore)!
+#
+# Pfad zum Android-SDK (trägt Android Studio normalerweise selbst ein):
+# sdk.dir=/Users/DEINNAME/Library/Android/sdk
+#
+# Supabase: Dashboard -> Project Settings -> API (bzw. "API Keys")
+SUPABASE_URL=https://DEIN-PROJEKT.supabase.co
+SUPABASE_ANON_KEY=dein-anon-oder-publishable-key

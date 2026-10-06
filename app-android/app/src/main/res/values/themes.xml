@@ -1,0 +1,4 @@
+<resources>
+    <!-- Grund-Theme für das Fenster; das eigentliche Design macht Compose (Material 3) -->
+    <style name="Theme.HydroDesk" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

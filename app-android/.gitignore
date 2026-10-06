@@ -1,0 +1,24 @@
+# Gradle / Build
+.gradle/
+build/
+**/build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.navigation/
+
+# Geheimnisse – NIEMALS committen
+local.properties
+*.jks
+*.keystore
+
+# Betriebssystem
+.DS_Store
+Thumbs.db

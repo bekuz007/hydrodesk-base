@@ -1,0 +1,23 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code (nur empfohlene Extensions einchecken)
+.vscode/*
+!.vscode/extensions.json
+
+# Arduino / Build-Artefakte
+build/
+*.bin
+*.elf
+*.hex
+*.map
+
+# Zugangsdaten – niemals einchecken!
+secrets.h
+**/secrets.h
+
+# macOS
+.DS_Store
+._*

@@ -14,24 +14,25 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 - **Wokwi-Demo-Zeiten:** `#define WOKWI_DEMO_ERINNERUNG 1` (Standard in der Simulation) nutzt
   kurze Zeiten (Pause 90 s, Abstand 60 s, Fenster 20 s), damit Tests machbar sind. Auf dem
   echten Gerät: `WOKWI_DEMO_ERINNERUNG 0` → lange Zeiten. Der alte ~30-s-Trigger ist entfernt.
-- **Flaschen-Kalibrierung:** Service-Modus (3 s Langdruck oder Serial `kalib`):
-  „Leere Flasche aufstellen“ → bestätigen (`leer` / Taste / 3 s) → „Volle Flasche aufstellen“
-  → bestätigen (`voll`) → Anzeige „Kapazität: X ml“. Leergewicht und Kapazität werden in
-  Preferences gespeichert und haben Vorrang vor dem automatischen Lernen.
+- **Flaschen-Kalibrierung mit sichtbaren Touch-Tasten „Leer“ und „Voll“** (Hauptbildschirm
+  und Kalibrier-Bildschirm, FT6206). Ablauf: leere Flasche aufstellen → **Leer** tippen
+  (Gewicht ~1 s ruhig) → volle Flasche → **Voll** tippen → Kapazität = voll − leer (1 g ≈ 1 ml).
+  Anzeige „Flasche x/y ml“. Fehler (kein Leer, Voll ≤ Leer, unruhig) erscheinen **auf dem
+  Display** auf Deutsch. Serial `kalib` / `leer` / `voll` funktioniert weiter. Werte in Preferences.
 - **Bluetooth-Symbol** und LED-Status wie bisher (Suchen weiß, verbunden 2× lila). Wokwi:
   `bt suchen` / `bt verbunden` / `bt getrennt` / `bt aus`. Echtes BLE: `HYDRO_BLE 1`.
 
 **Neu in Version 2:**
 
-- **Keine Tasten** mehr auf dem Hauptbildschirm. Den Flascheninhalt rechnet das Gerät selbst aus,
-  das Leergewicht der Flasche **lernt** es automatisch.
+- Den Flascheninhalt rechnet das Gerät selbst aus; das Leergewicht **lernt** es automatisch,
+  oder ihr kalibriert es mit den Tasten **Leer** / **Voll**.
 - Das **Tagesziel** wird aus Körpergewicht und Körpergröße berechnet (Mosteller-Formel).
 - **Neues Hochformat-Layout** mit Uhrzeit, Datum, Akku, Menge, Fortschritt, Flasche und Erinnerung.
 - **Echte Uhrzeit** über WLAN + NTP, mit automatischem Reset um Mitternacht.
 - **LEDs ruhig:** im Normalbetrieb aus, bei Ereignissen Dauerlicht. Nur die Akku-Warnung
   blitzt kurz (2× oder 4× rot). (Seit Version 3 blinken außerdem Bluetooth-Suche und -Verbindung.)
-- Die Wasser-Sperre hebt sich nach **5 s trocken** von selbst auf. Den Service-Modus öffnet
-  ein **versteckter Langdruck**.
+- Die Wasser-Sperre hebt sich nach **5 s trocken** von selbst auf. Die Flaschen-Kalibrierung
+  läuft über die sichtbaren Tasten **Leer** / **Voll** (optional Langdruck → Kalibrier-Bildschirm).
 
 ![Verdrahtung](verdrahtung.png)
 
@@ -67,12 +68,13 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 │ [██████████░░░░░░░░░] 45 %   │  Fortschrittsbalken
 │         noch 1.500 ml        │  bzw. grün „Ziel erreicht ✓“
 │──────────────────────────────│
-│ Flasche: 420 ml              │  oder „Keine Flasche“
+│ Flasche: 420/750 ml          │  oder „Keine Flasche“ / ohne Kap. nur ml
 │ Leer 250 g (kalibriert) | Kap. 750 ml │  oder „(gelernt)“ / „(Schätzwert)“
-│ Zuletzt getrunken: vor 12 min│
-│ Nächste Erinnerung: 14:30    │  unter 2 min: „in 45 s“
+│ ┌──────────┐  ┌──────────┐   │
+│ │   Leer   │  │   Voll   │   │  große Touch-Tasten (FT6206 / Wokwi)
+│ └──────────┘  └──────────┘   │
 │ ┌──────────────────────────┐ │
-│ │  MESSEN | WLAN ok | NTP  │ │  Statusfeld (siehe unten)
+│ │ Zuletzt: vor 12 min | …  │ │  Status: Kalib-Meldung / Erinnerung / Warnung
 │ └──────────────────────────┘ │
 └──────────────────────────────┘
 ```
@@ -94,13 +96,15 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
   Platz in der oberen Zeile: Uhrzeit x 6–126, Bluetooth x 168–191, Akku-Symbol x 196–231,
   Prozent darunter (y 28–43). Nichts überlappt, auch nicht bei „100%“ oder dem längsten Datum
   „Di, 06.10.2026 (ohne NTP)“ (endet bei x 158).
+- **Touch-Tasten „Leer“ / „Voll“** immer sichtbar auf dem Hauptbildschirm (große Treffflächen).
 - **Statusfeld unten**, wichtigste Meldung zuerst:
-  1. „Service-Modus: noch X s halten“ (während des Langdrucks)
-  2. roter Balken **„Bitte laden“**, solange der Akku unter 10 % ist (bleibt stehen)
-  3. „Fehler: Waage antwortet nicht“ / „Gewicht negativ: Kalibrierung!“
-  4. blau „Zeit zu trinken!“ (Erinnerung)
-  5. orange „Akku unter 20 %“ (5 s nach dem Unterschreiten)
-  6. sonst grau: Zustand | WLAN | Uhrquelle
+  1. Kalibrier-Feedback / Fehler (z. B. „Zuerst Leer kalibrieren“, „Gewicht unruhig …“)
+  2. „Kalib-Screen: noch X s“ (während des optionalen Langdrucks)
+  3. roter Balken **„Bitte laden“**, solange der Akku unter 10 % ist (bleibt stehen)
+  4. „Fehler: Waage antwortet nicht“ / „Gewicht negativ: Kalibrierung!“
+  5. blau „Zeit zu trinken!“ (Erinnerung)
+  6. orange „Akku unter 20 %“ (5 s nach dem Unterschreiten)
+  7. sonst: zuletzt getrunken | Erinnerungs-Kurzinfo
 - Es wird **nur neu gezeichnet, was sich geändert hat** (jeder Bereich merkt sich seinen letzten Text).
   Das verhindert Flackern.
 - Bei Wasser erscheint weiterhin das **rote Vollbild** „WASSER ERKANNT · STROM AUS“, nach dem
@@ -328,8 +332,8 @@ Wokwi kann **kein Bluetooth** simulieren. Den Zustand stellt ihr im Seriellen Mo
 | Was | Wie |
 |---|---|
 | **Gewicht** ändern (Flasche abstellen / abheben) | Auf das **HX711-Bauteil** klicken → Schieberegler. 0,70 kg = 700 g. **0 kg = Flasche abgehoben.** |
-| **Touch** | Es gibt **keine Tasten** auf dem Hauptbildschirm. **3 s irgendwo gedrückt halten** öffnet den Service-Modus „Waage“. Nach 1 s erscheint unten „Service-Modus: noch X s halten“. |
-| **Service-Modus** | Tasten „1. Pad leer: Tara“, „2. 500 g liegt: OK“, „Fertig“. Nur hier gibt es Tasten. |
+| **Touch / Kalibrierung** | Große Tasten **„Leer“** und **„Voll“** auf dem Hauptbildschirm. Leere Flasche → **Leer** tippen (Gewicht ~1 s ruhig) → volle Flasche → **Voll**. Optional: **3 s** Langdruck oder Serial `kalib` öffnet den Kalibrier-Bildschirm (gleiche Tasten + „Fertig“). |
+| **Kalibrier-Bildschirm** | Tasten „Leer“, „Voll“, „Fertig“. Fehler/Erfolg auf Deutsch auf dem Display. |
 | **Wasser** simulieren | Schiebeschalter **NÄSSE** nach **rechts** = nass. Nach links = trocken, nach **5 s** trocken gibt das Gerät **von selbst** frei (kein Quittieren mehr). |
 | **Akku** | Auf den Drehregler **AKKU** klicken und drehen. Ganz links = 0 %. 20 % ≈ ein Fünftel aufgedreht, 10 % ≈ ein Zehntel. |
 | **Befehle** | Im Seriellen Monitor eintippen + Enter (siehe Tabelle) |
@@ -411,8 +415,8 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | T18 | AKKU auf 11 %, dann 12 % | bei 11 % bleibt „Bitte laden“; ab 12 % verschwindet der Balken (ohne Blitzen) |
 | T19 | 10 min unter 20 % lassen | Blinkmuster wiederholt sich (2× bzw. 4× unter 10 %) |
 | T20 | AKKU auf 30 % | `wieder ok`, Akku-Anzeige grün |
-| T21 | 1 s aufs Display drücken | nichts (nur „Service-Modus: noch 2 s halten“) |
-| T22 | **3 s** drücken (oder `kalib`) → leere Flasche auflegen → `leer` / Taste → volle Flasche → `voll` → „Fertig“ | `KALIBRIERUNG`, Leer/Voll/Kapazität gespeichert, Anzeige „Kapazität: X ml“, zurück zum Hauptbildschirm |
+| T21 | 1 s aufs Display (nicht auf Leer/Voll) drücken | unten „Kalib-Screen: noch 2 s“ |
+| T22 | leere Flasche → Taste **Leer** → volle Flasche → Taste **Voll** (oder Serial `leer`/`voll` / 3 s → Kalib-Screen) | Leer/Voll gespeichert, „Flasche: x/y ml“, Status z. B. „Kapazität: 500 ml“; Fehler auf Display (z. B. „Zuerst Leer kalibrieren“) |
 | T23 | etwas trinken, dann `zeit 23:59` und 1 min warten | um 00:00 `Tageszähler auf 0 (neuer Tag)`, Datum springt weiter |
 | T24 | `status` | eine Zeile mit allen Werten |
 | T25 | Simulation neu starten, nichts tun | `[BT] aus -> suchen  (Start, max. 120 s)`, Bluetooth-Symbol links neben dem Akku **blinkt weiß/blau**, LEDs **blinken weiß (gedimmt)** 500 ms an / 500 ms aus |

@@ -5,7 +5,8 @@
  *  Schulprojekt FI-AE: Trink-Tracker für den Schreibtisch.
  *  Eine Flasche steht auf einem Pad über einer Wägezelle (HX711). Das Display
  *  zeigt Uhrzeit, Akku, heute getrunkene Menge, Tagesziel und Flascheninhalt.
- *  Es gibt KEINE Tasten: alles wird aus dem Gewicht abgeleitet.
+ *  Touch-Tasten „Leer“ und „Voll“ auf dem Hauptbildschirm (Flaschen-Kalibrierung);
+ *  Trinken/Nachfüllen wird weiter aus dem Gewicht abgeleitet.
  *  LEDs (WS2812) leuchten nur bei Ereignissen (Dauerlicht). Blinken NUR bei:
  *  Akku-Warnung (rot), Bluetooth sucht (weiß), Handy verbunden (2x lila).
  *  Oben rechts: Bluetooth-Symbol links neben dem Akku (neu in V3).
@@ -24,8 +25,8 @@
  *  Telegram: nur Serial-Ausgabe (Stub)     | Telegram-Bot über WLAN
  *  Bluetooth: per Serial-Befehl simuliert   | BLE (NimBLE), HYDRO_BLE 1
  *
- *  Versteckte Bedienung: 3 s irgendwo auf das Display drücken
- *  -> Service-Modus "Kalibrierung" (leere/volle Flasche, nur dort Tasten).
+ *  Sichtbare Touch-Tasten „Leer“ / „Voll“ (Haupt- und Kalibrier-Bildschirm).
+ *  Optional: 3 s Langdruck oder Serial „kalib“ öffnet den Kalibrier-Bildschirm.
  *  Serieller Monitor (115200 Baud): "hilfe", "status", "reset",
  *  "gewicht 75", "groesse 180", "zeit 23:59",
  *  "kalib", "leer", "voll",
@@ -130,7 +131,8 @@ const float    KALIBRIER_GEWICHT_G  = 500.0f; // Referenzgewicht für die Kalibr
 const float    FLASCHE_DA_G         = 40.0f;  // ab hier gilt "Flasche steht auf dem Pad"
 const float    FLASCHE_WEG_G        = 25.0f;  // darunter gilt "Flasche abgehoben" (Hysterese)
 const float    STABIL_TOLERANZ_G    = 6.0f;   // so viel darf das Gewicht schwanken und gilt trotzdem als ruhig
-const uint32_t STABIL_MS            = 1500;   // so lange muss das Gewicht ruhig sein
+const uint32_t STABIL_MS            = 1500;   // so lange muss das Gewicht ruhig sein (Trinken)
+const uint32_t KALIB_STABIL_MS      = 1000;   // Kalibrierung: ~1 s ruhiges Gewicht vor Übernahme
 const float    MIN_SCHLUCK_G        = 15.0f;  // kleinere Abnahmen werden ignoriert (Rauschen)
 const float    MIN_NACHFUELL_G      = 20.0f;  // ab dieser Zunahme gilt "nachgefüllt"
 const float    NEGATIV_FEHLER_G     = -30.0f; // deutlich negatives Gewicht = Tara falsch
@@ -224,8 +226,8 @@ const int PIN_LAST      = 18;  // HIGH = Last/Strom an (MOSFET-Gate)
  *  NAESSE_SPERRE  Nässe-Sensor meldet Wasser: Last sofort AUS, LEDs bernstein,
  *                 rote Vollbild-Warnung. Hebt sich AUTOMATISCH auf, wenn der
  *                 Sensor TROCKEN_FREIGABE_MS (5 s) lang trocken ist.
- *  KALIBRIERUNG   Versteckter Service-Modus (3 s / Serial "kalib"):
- *                 leere Flasche → volle Flasche → Kapazität. Messung pausiert.
+ *  KALIBRIERUNG   Kalibrier-Bildschirm (3 s / Serial "kalib"); Tasten Leer/Voll
+ *                 auch auf dem Hauptbildschirm. Messung pausiert.
  *
  *  Übergänge (Priorität von oben nach unten):
  *    jeder Zustand   --Wasser erkannt-----------------> NAESSE_SPERRE
@@ -270,7 +272,7 @@ enum BtZustand : uint8_t { BT_AUS, BT_SUCHEN, BT_VERBUNDEN, BT_NICHT_VERBUNDEN }
 // Wer bestimmt gerade die LED-Farbe? (nur für das Protokoll im Seriellen Monitor)
 enum LedQuelle : uint8_t { L_AUS, L_BERNSTEIN, L_AKKU, L_LILA, L_WEISS, L_ROT, L_BLAU, L_GRUEN };
 
-// Eine Taste (gibt es NUR im Service-Modus)
+// Touch-Taste (sichtbar: Leer / Voll auf Haupt- und Kalibrier-Bildschirm)
 struct Taste {
   int16_t x, y, w, h;
   const char* beschriftung;
@@ -279,7 +281,7 @@ struct Taste {
 // Bildschirm-Bereiche, die einzeln neu gezeichnet werden (gegen Flackern)
 enum Bereich : uint8_t {
   B_ZEIT, B_DATUM, B_AKKU, B_MENGE, B_VON, B_BALKEN, B_ZIELTEXT,
-  B_FLASCHE, B_LEER, B_ZULETZT, B_NAECHSTE, B_STATUS, B_BT, B_ANZAHL
+  B_FLASCHE, B_LEER, B_ZULETZT, B_NAECHSTE, B_TASTEN, B_STATUS, B_BT, B_ANZAHL
 };
 
 const char* zustandName(Zustand z) {
@@ -380,10 +382,12 @@ uint32_t lilaStartMs      = 0;
 
 // Anzeige / Touch
 bool     bildschirmNeu    = true;
-uint8_t  kalSchritt       = 0;
+uint8_t  kalSchritt       = 0;              // 0=warte Leer, 1=warte Voll, 2=fertig
 uint32_t touchStartMs     = 0;
 bool     touchGehalten    = false;
 bool     langdruckErledigt = false;
+String   kalibMeldung     = "";             // deutsche Feedback-/Fehlermeldung auf dem Display
+uint32_t kalibMeldungBisMs = 0;             // Anzeige bis zu diesem millis()-Zeitpunkt
 
 // ============================================================================
 //  HILFSFUNKTIONEN: LOG, TELEGRAM-STUB, ZAHLEN
@@ -606,15 +610,19 @@ bool getroffen(const Taste& t, int16_t x, int16_t y) {
 }
 
 void tasteZeichnen(const Taste& t, uint16_t fuellung, uint16_t schrift) {
-  tft.fillRoundRect(t.x, t.y, t.w, t.h, 6, fuellung);
-  tft.drawRoundRect(t.x, t.y, t.w, t.h, 6, WEISS);
-  textMitte(t.x, t.w, t.y + (t.h - 16) / 2, t.beschriftung, 2, schrift, fuellung);
+  tft.fillRoundRect(t.x, t.y, t.w, t.h, 8, fuellung);
+  tft.drawRoundRect(t.x, t.y, t.w, t.h, 8, WEISS);
+  // Große Tasten: Schriftgröße 3 (besser treffbar in Wokwi / mit Finger)
+  uint8_t g = (t.h >= 46) ? 3 : 2;
+  int16_t th = 8 * g;
+  textMitte(t.x, t.w, t.y + (t.h - th) / 2, t.beschriftung, g, schrift, fuellung);
 }
 
-// Tasten NUR im Service-Modus "Kalibrierung" (leere / volle Flasche)
-const Taste TASTE_KAL_LEER   = { 10, 196, 220, 36, "Leer bestätigen" };
-const Taste TASTE_KAL_VOLL   = { 10, 238, 220, 36, "Voll bestätigen" };
-const Taste TASTE_KAL_FERTIG = { 10, 280, 220, 36, "Fertig" };
+// Große Touch-Tasten „Leer“ / „Voll“ (Hauptbildschirm + Kalibrierung).
+// Treffflächen bewusst groß für FT6206 / Wokwi-Simulated-Touch (Display 240×320).
+const Taste TASTE_LEER       = { 6,   230, 110, 52, "Leer" };   // groß für Wokwi-Touch
+const Taste TASTE_VOLL       = { 124, 230, 110, 52, "Voll" };
+const Taste TASTE_KAL_FERTIG = { 6,   288, 228, 28, "Fertig" };  // nur Kalibrier-Bildschirm
 
 // ============================================================================
 //  UHR: WLAN + NTP, Ersatzuhr, Tageswechsel
@@ -1137,14 +1145,30 @@ void zustandAktualisieren() {
 }
 
 // ============================================================================
-//  FLASCHEN-KALIBRIERUNG (leer / voll)
+//  FLASCHEN-KALIBRIERUNG (leer / voll) – Touch-Tasten + Serial
 // ============================================================================
+void kalibMeldungSetzen(const String& msg, bool alsFehler) {
+  kalibMeldung = msg;
+  kalibMeldungBisMs = millis() + (alsFehler ? 4500UL : 3000UL);
+  logZeile(alsFehler ? "KALIB" : "KALIB", msg);
+}
+
+bool gewichtKalibStabil() {
+  // ~1 s ruhig (eigene Schwelle; Trink-Logik bleibt bei STABIL_MS)
+  return (millis() - ruheSeit >= KALIB_STABIL_MS) &&
+         (fabsf(gewicht - ruheStartGewicht) <= STABIL_TOLERANZ_G);
+}
+
 bool flascheGewichtNehmen(float& g, const char* was) {
   if (gewicht < FLASCHE_DA_G) {
-    logZeile("KALIB", String("Keine Flasche erkannt – bitte ") + was + " aufstellen");
+    kalibMeldungSetzen(String("Keine Flasche – bitte ") + was + " aufstellen", true);
     return false;
   }
-  g = gewichtRuhig ? gewicht : gewicht;
+  if (!gewichtKalibStabil()) {
+    kalibMeldungSetzen("Gewicht unruhig – ca. 1 s warten", true);
+    return false;
+  }
+  g = gewicht;
   return true;
 }
 
@@ -1161,19 +1185,18 @@ void kalibLeerBestaetigen() {
   flascheKalibSpeichern();
   kalSchritt = 1;
   bildschirmNeu = true;
-  logZeile("KALIB", "Leergewicht = " + String(leergewicht, 0) + " g");
+  kalibMeldungSetzen("Leer gespeichert: " + String((int)lroundf(leergewicht)) + " g", false);
 }
 
 void kalibVollBestaetigen() {
-  if (kalSchritt < 1 && !flascheKalibriert) {
-    logZeile("KALIB", "Zuerst leere Flasche bestätigen (Serial: leer)");
+  if (!flascheKalibriert) {
+    kalibMeldungSetzen("Zuerst Leer kalibrieren", true);
     return;
   }
   float g = 0;
   if (!flascheGewichtNehmen(g, "volle Flasche")) return;
   if (g <= leergewicht) {
-    logZeile("KALIB", "Vollgewicht (" + String(g, 0) + " g) muss größer als Leergewicht (" +
-             String(leergewicht, 0) + " g) sein");
+    kalibMeldungSetzen("Voll muss größer als Leer sein", true);
     return;
   }
   vollgewicht = g;
@@ -1183,12 +1206,11 @@ void kalibVollBestaetigen() {
   flascheKalibSpeichern();
   kalSchritt = 2;
   bildschirmNeu = true;
-  logZeile("KALIB", "Vollgewicht = " + String(vollgewicht, 0) + " g, Kapazität = " +
-           String(flaschenKapazitaetMl) + " ml");
+  kalibMeldungSetzen("Kapazität: " + String(flaschenKapazitaetMl) + " ml", false);
 }
 
 // ============================================================================
-//  TOUCH (versteckt): 3 s Langdruck -> Kalibrierung; Tasten nur dort
+//  TOUCH: Tasten Leer/Voll (Haupt + Kalib); optional 3 s -> Kalibrier-Bildschirm
 // ============================================================================
 void touchAuswerten() {
   int16_t x = 0, y = 0;
@@ -1203,29 +1225,40 @@ void touchAuswerten() {
 
   if (zustand == NAESSE_SPERRE) return;           // Bedienung gesperrt
 
+  // Sichtbare Tasten Leer / Voll – auf Haupt- und Kalibrier-Bildschirm
+  if (zustand == KALIBRIERUNG || zustand == IDLE || zustand == MESSEN ||
+      zustand == ERINNERUNG || zustand == ZIEL_ERREICHT) {
+    if (neu) {
+      if (getroffen(TASTE_LEER, x, y)) {
+        langdruckErledigt = true;                 // kein Langdruck nach Tastendruck
+        kalibLeerBestaetigen();
+        return;
+      }
+      if (getroffen(TASTE_VOLL, x, y)) {
+        langdruckErledigt = true;
+        kalibVollBestaetigen();
+        return;
+      }
+      if (zustand == KALIBRIERUNG && getroffen(TASTE_KAL_FERTIG, x, y)) {
+        langdruckErledigt = true;
+        zustandWechseln(IDLE, kalSchritt >= 2 ? "Kalibrierung beendet" : "Kalibrierung abgebrochen");
+        return;
+      }
+    }
+  }
+
   if (zustand == KALIBRIERUNG) {
-    // Langdruck bestätigt den aktuellen Schritt (leer bzw. voll)
+    // Langdruck im Kalibrier-Bildschirm: aktuellen Schritt bestätigen
     if (gedrueckt && !langdruckErledigt && millis() - touchStartMs >= LANGDRUCK_MS) {
       langdruckErledigt = true;
       if (kalSchritt == 0) kalibLeerBestaetigen();
       else if (kalSchritt == 1) kalibVollBestaetigen();
-      return;
-    }
-    if (!neu) return;
-    if (getroffen(TASTE_KAL_LEER, x, y) && kalSchritt == 0) {
-      kalibLeerBestaetigen();
-    } else if (getroffen(TASTE_KAL_VOLL, x, y) && kalSchritt >= 1) {
-      kalibVollBestaetigen();
-    } else if (getroffen(TASTE_KAL_FERTIG, x, y) && kalSchritt >= 2) {
-      zustandWechseln(IDLE, "Kalibrierung beendet");
-    } else if (getroffen(TASTE_KAL_FERTIG, x, y) && kalSchritt < 2) {
-      // Abbruch jederzeit möglich
-      zustandWechseln(IDLE, "Kalibrierung abgebrochen");
+      else zustandWechseln(IDLE, "Kalibrierung beendet");
     }
     return;
   }
 
-  // Normalbetrieb: keine Tasten, nur der versteckte Langdruck
+  // Normalbetrieb: 3 s irgendwo (außer auf den Tasten) -> Kalibrier-Bildschirm
   if (gedrueckt && !langdruckErledigt && millis() - touchStartMs >= LANGDRUCK_MS) {
     langdruckErledigt = true;
     zustandWechseln(KALIBRIERUNG, "3 s Langdruck");
@@ -1552,7 +1585,7 @@ void hauptbildschirmZeichnen() {
     }
   }
 
-  // --- Unten: Flasche, Leergewicht/Kapazität, zuletzt getrunken, nächste Erinnerung
+  // --- Unten: Flasche x/y ml, Leer-Info, große Touch-Tasten Leer/Voll, Status
   String fl;
   if (!flascheSteht) {
     fl = "Keine Flasche";
@@ -1562,61 +1595,74 @@ void hauptbildschirmZeichnen() {
     fl = "Flasche: " + mitPunkt(flascheninhaltMl()) + " ml";
   }
   if (geaendert(B_FLASCHE, fl)) {
-    tft.fillRect(0, 204, BREITE, 22, SCHWARZ);
-    tft.drawFastHLine(8, 203, BREITE - 16, DUNKELGRAU);
-    // size 2 passt für „Flasche: 420 ml“ / „420/750 ml“; bei großen Zahlen (mit Punkt) size 1
+    tft.fillRect(0, 198, BREITE, 20, SCHWARZ);
+    tft.drawFastHLine(8, 197, BREITE - 16, DUNKELGRAU);
     uint8_t fg = textBreite(fl, 2) <= (BREITE - 20) ? 2 : 1;
-    text(10, fg == 2 ? 210 : 214, fl, fg, flascheSteht ? CYAN : GRAU, SCHWARZ);
+    text(10, fg == 2 ? 202 : 206, fl, fg, flascheSteht ? CYAN : GRAU, SCHWARZ);
   }
   String leer = "Leer " + String((int)lroundf(leergewicht)) + " g " +
                 (flascheKalibriert ? "(kalibriert)" :
                  (leergewichtGelernt ? "(gelernt)" : "(Schätzwert)"));
   if (kapazitaetKalibriert) leer += " | Kap. " + String(flaschenKapazitaetMl) + " ml";
   if (geaendert(B_LEER, leer)) {
-    tft.fillRect(0, 230, BREITE, 10, SCHWARZ);
-    text(10, 231, leer, 1, GRAU, SCHWARZ);
+    tft.fillRect(0, 218, BREITE, 10, SCHWARZ);
+    text(10, 219, leer, 1, GRAU, SCHWARZ);
   }
 
+  // Erinnerungs-Hinweis (Logik unverändert) – eine Zeile über den Tasten entfällt;
+  // Kurzinfo wandert bei Bedarf in das Statusfeld (siehe unten).
   uint32_t seit = (millis() - letzterSchluckMs) / 1000;
-  String zl = heuteGetrunken ? "Zuletzt getrunken: vor " + dauerText(seit) : "Heute noch nichts getrunken";
-  if (geaendert(B_ZULETZT, zl)) {
-    tft.fillRect(0, 246, BREITE, 10, SCHWARZ);
-    text(10, 247, zl, 1, WEISS, SCHWARZ);
-  }
-
+  String zl = heuteGetrunken ? "Zuletzt: vor " + dauerText(seit) : "Heute noch nichts";
   String ne;
-  if (zielErreicht)               ne = "Ziel erreicht - keine Erinnerung";
+  if (zielErreicht)               ne = "Ziel ok";
   else if (erinnerungenHeute >= ERINNERUNG_MAX_PRO_TAG)
-                                  ne = "Max. Erinnerungen heute erreicht";
-  else if (zustand == ERINNERUNG) ne = "Erinnerung aktiv!";
-  else if (inRuhezeit())          ne = "Ruhezeit - keine Erinnerung";
-  else if (!hinterPlan() && uhrOk) ne = "Im Plan - keine Erinnerung";
+                                  ne = "Max. Erinnerungen";
+  else if (zustand == ERINNERUNG) ne = "Erinnerung!";
+  else if (inRuhezeit())          ne = "Ruhezeit";
+  else if (!hinterPlan() && uhrOk) ne = "Im Plan";
   else {
     uint32_t rest = erinnerungRestSekunden();
-    if (rest == 0 && erinnerungMoeglich()) {
-      ne = "Erinnerung steht bevor";
-    } else if (rest < 120 || !uhrOk) {
-      ne = "Nächste Erinnerung: in " + dauerText(rest > 0 ? rest : 1);
-    } else {
+    if (rest == 0 && erinnerungMoeglich()) ne = "Erinnerung bald";
+    else if (rest < 120 || !uhrOk)         ne = "in " + dauerText(rest > 0 ? rest : 1);
+    else {
       time_t t = time(nullptr) + rest;
       struct tm e;
       localtime_r(&t, &e);
-      ne = "Nächste Erinnerung: " + zweistellig(e.tm_hour) + ":" + zweistellig(e.tm_min);
+      ne = zweistellig(e.tm_hour) + ":" + zweistellig(e.tm_min);
     }
   }
-  if (geaendert(B_NAECHSTE, ne)) {
-    tft.fillRect(0, 262, BREITE, 10, SCHWARZ);
-    text(10, 263, ne, 1, WEISS, SCHWARZ);
+  // B_ZULETZT / B_NAECHSTE weiter befüllen (Cache), Anzeige steckt in Status/Tasten-Bereich
+  geaendert(B_ZULETZT, zl);
+  geaendert(B_NAECHSTE, ne);
+
+  // Große Touch-Tasten Leer | Voll (immer sichtbar auf dem Hauptbildschirm)
+  String tk = String(kalSchritt) + "|" + String(flascheKalibriert ? 1 : 0) + "|" +
+              String(kapazitaetKalibriert ? 1 : 0) + "|" +
+              (gewichtKalibStabil() ? "1" : "0") + "|" + kalibMeldung;
+  if (bildschirmNeu || geaendert(B_TASTEN, tk)) {
+    tft.fillRect(0, 228, BREITE, 56, SCHWARZ);
+    uint16_t leerFarbe = flascheKalibriert ? DUNKELGRUEN : DUNKELBLAU;
+    uint16_t vollFarbe = (!flascheKalibriert) ? DUNKELGRAU :
+                         (kapazitaetKalibriert ? DUNKELGRUEN : DUNKELBLAU);
+    tasteZeichnen(TASTE_LEER, leerFarbe, WEISS);
+    tasteZeichnen(TASTE_VOLL, vollFarbe, WEISS);
   }
 
-  // --- Ganz unten: Statusfeld (Erinnerung / Warnung / Service-Hinweis)
+  // --- Ganz unten: Statusfeld (Kalib-Meldung / Erinnerung / Warnung)
   String st;
   uint16_t sf = SCHWARZ, sc = GRAU;
-  if (touchGehalten && !langdruckErledigt && millis() - touchStartMs >= 1000) {
-    st = "Service-Modus: noch " + String((LANGDRUCK_MS - min(LANGDRUCK_MS, millis() - touchStartMs) + 999) / 1000) + " s halten";
+  bool meldungAktiv = kalibMeldung.length() > 0 && (int32_t)(kalibMeldungBisMs - millis()) > 0;
+  if (meldungAktiv) {
+    st = kalibMeldung;
+    bool fehler = kalibMeldung.indexOf("muss") >= 0 || kalibMeldung.indexOf("Zuerst") >= 0 ||
+                  kalibMeldung.indexOf("Keine") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
+    sf = fehler ? DUNKELROT : DUNKELGRUEN;
+    sc = WEISS;
+  } else if (touchGehalten && !langdruckErledigt && millis() - touchStartMs >= 1000) {
+    st = "Kalib-Screen: noch " + String((LANGDRUCK_MS - min(LANGDRUCK_MS, millis() - touchStartMs) + 999) / 1000) + " s";
     sf = DUNKELGRAU; sc = WEISS;
   } else if (akkuStufe == 2) {
-    st = "Bitte laden";                    sf = ROT;       sc = WEISS;   // bleibt, bis > 12 %
+    st = "Bitte laden";                    sf = ROT;       sc = WEISS;
   } else if (!waageOk) {
     st = "Fehler: Waage antwortet nicht";  sf = DUNKELROT; sc = WEISS;
   } else if (gewicht < NEGATIV_FEHLER_G) {
@@ -1624,16 +1670,15 @@ void hauptbildschirmZeichnen() {
   } else if (zustand == ERINNERUNG) {
     st = "Zeit zu trinken!";               sf = BLAU;      sc = WEISS;
   } else if (akkuStufe == 1 && (int32_t)(akkuHinweisBisMs - millis()) > 0) {
-    st = "Akku unter 20 %";                sf = ORANGE;    sc = SCHWARZ; // 5 s, dann normal
+    st = "Akku unter 20 %";                sf = ORANGE;    sc = SCHWARZ;
   } else {
-    st = String(zustandName(zustand)) + "  |  WLAN " + (wlanVerbunden ? "ok" : "-") + "  |  " +
-         (uhrQuelle == UHR_NTP ? "NTP" : (uhrQuelle == UHR_ERSATZ ? "Ersatzuhr" : "keine Zeit"));
+    st = zl + " | Err. " + ne;
   }
   if (geaendert(B_STATUS, st + String(sf))) {
-    tft.fillRect(0, 282, BREITE, 38, SCHWARZ);
+    tft.fillRect(0, 284, BREITE, 36, SCHWARZ);
     bool gross = textBreite(st, 2) <= 224;
-    if (sf != SCHWARZ) tft.fillRoundRect(6, 284, 228, 32, 6, sf);
-    textMitte(6, 228, gross ? 293 : 297, st, gross ? 2 : 1, sc, sf);
+    if (sf != SCHWARZ) tft.fillRoundRect(6, 286, 228, 30, 6, sf);
+    textMitte(6, 228, gross ? 294 : 297, st, gross ? 2 : 1, sc, sf);
   }
 }
 
@@ -1661,47 +1706,62 @@ void kalibrierbildschirmZeichnen() {
     tft.fillScreen(SCHWARZ);
     tft.fillRect(0, 0, BREITE, 28, DUNKELBLAU);
     text(6, 7, "Kalibrierung", 2, WEISS, DUNKELBLAU);
-    if (kalSchritt == 0) {
-      text(8, 36,  "Schritt 1/2:", 1, CYAN, SCHWARZ);
-      text(8, 50,  "Leere Flasche aufstellen", 2, WEISS, SCHWARZ);
-      text(8, 76,  "Dann Taste, 3 s halten", 1, GRAU, SCHWARZ);
-      text(8, 88,  "oder Serial: leer", 1, GRAU, SCHWARZ);
-    } else if (kalSchritt == 1) {
-      text(8, 36,  "Schritt 2/2:", 1, CYAN, SCHWARZ);
-      text(8, 50,  "Volle Flasche aufstellen", 2, WEISS, SCHWARZ);
-      text(8, 76,  "Dann Taste, 3 s halten", 1, GRAU, SCHWARZ);
-      text(8, 88,  "oder Serial: voll", 1, GRAU, SCHWARZ);
-      text(8, 104, "Leer: " + String((int)lroundf(leergewicht)) + " g", 1, HELLGRAU, SCHWARZ);
-    } else {
-      text(8, 36,  "Fertig!", 2, GRUEN, SCHWARZ);
-      text(8, 60,  "Kapazität: " + String(flaschenKapazitaetMl) + " ml", 2, CYAN, SCHWARZ);
-      text(8, 88,  "Leer " + String((int)lroundf(leergewicht)) +
-                   " g  Voll " + String((int)lroundf(vollgewicht)) + " g", 1, HELLGRAU, SCHWARZ);
-      text(8, 104, "Taste Fertig oder warten.", 1, GRAU, SCHWARZ);
-    }
-    tasteZeichnen(TASTE_KAL_LEER, kalSchritt == 0 ? DUNKELBLAU : DUNKELGRUEN, WEISS);
-    tasteZeichnen(TASTE_KAL_VOLL, kalSchritt == 1 ? DUNKELBLAU : (kalSchritt >= 2 ? DUNKELGRUEN : DUNKELGRAU), WEISS);
-    tasteZeichnen(TASTE_KAL_FERTIG, kalSchritt >= 2 ? DUNKELBLAU : DUNKELGRAU, WEISS);
+    text(8, 36, "Leere Flasche → Taste Leer", 1, CYAN, SCHWARZ);
+    text(8, 50, "Volle Flasche → Taste Voll", 1, CYAN, SCHWARZ);
+    text(8, 66, "1 g = 1 ml  |  Serial: leer/voll", 1, GRAU, SCHWARZ);
   }
+
   String werte = String(kalSchritt) + "|" + String((int)lroundf(gewicht)) + "|" +
-                 String((int)lroundf(leergewicht)) + "|" + String(flaschenKapazitaetMl);
-  if (geaendert(B_STATUS, werte)) {
-    tft.fillRect(0, 118, BREITE, 70, SCHWARZ);
-    text(8, 122, "Gewicht: " + String((int)lroundf(gewicht)) + " g" +
-                 (gewichtRuhig ? " (ruhig)" : ""), 2, WEISS, SCHWARZ);
-    text(8, 146, "Leer: " + String((int)lroundf(leergewicht)) + " g" +
-                 (flascheKalibriert ? " ok" : ""), 1, GRAU, SCHWARZ);
+                 String((int)lroundf(leergewicht)) + "|" + String(flaschenKapazitaetMl) + "|" +
+                 (gewichtKalibStabil() ? "1" : "0") + "|" + kalibMeldung + "|" +
+                 String(flascheKalibriert ? 1 : 0) + "|" + String(kapazitaetKalibriert ? 1 : 0);
+  if (bildschirmNeu || geaendert(B_STATUS, werte)) {
+    tft.fillRect(0, 84, BREITE, 140, SCHWARZ);
+    text(8, 88, "Gewicht: " + String((int)lroundf(gewicht)) + " g" +
+                (gewichtKalibStabil() ? " (ruhig)" : " ..."), 2, WEISS, SCHWARZ);
+    text(8, 112, "Leer: " + String((int)lroundf(leergewicht)) + " g" +
+                 (flascheKalibriert ? " ok" : " – Taste Leer"), 1, GRAU, SCHWARZ);
     if (kapazitaetKalibriert) {
-      text(8, 160, "Kapazität: " + String(flaschenKapazitaetMl) + " ml", 1, CYAN, SCHWARZ);
+      text(8, 126, "Kapazität: " + String(flaschenKapazitaetMl) + " ml", 1, CYAN, SCHWARZ);
     } else {
-      text(8, 160, "Kapazität: noch offen", 1, GRAU, SCHWARZ);
+      text(8, 126, "Kapazität: noch offen – Taste Voll", 1, GRAU, SCHWARZ);
     }
-    text(8, 174, "Serial: kalib | leer | voll", 1, DUNKELGRAU, SCHWARZ);
+    if (flascheSteht) {
+      text(8, 142, "Inhalt jetzt: " + String(flascheninhaltMl()) + " ml", 1, HELLGRAU, SCHWARZ);
+    }
+
+    bool meldungAktiv = kalibMeldung.length() > 0 && (int32_t)(kalibMeldungBisMs - millis()) > 0;
+    if (meldungAktiv) {
+      bool fehler = kalibMeldung.indexOf("muss") >= 0 || kalibMeldung.indexOf("Zuerst") >= 0 ||
+                    kalibMeldung.indexOf("Keine") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
+      uint16_t mf = fehler ? DUNKELROT : DUNKELGRUEN;
+      tft.fillRoundRect(6, 160, 228, 28, 6, mf);
+      uint8_t mg = textBreite(kalibMeldung, 2) <= 220 ? 2 : 1;
+      textMitte(6, 228, mg == 2 ? 168 : 170, kalibMeldung, mg, WEISS, mf);
+    } else if (kalSchritt == 0) {
+      text(8, 168, "Schritt 1: leere Flasche, dann Leer", 1, HELLGRAU, SCHWARZ);
+    } else if (kalSchritt == 1) {
+      text(8, 168, "Schritt 2: volle Flasche, dann Voll", 1, HELLGRAU, SCHWARZ);
+    } else {
+      text(8, 168, "Fertig – Taste Fertig oder warten", 1, GRUEN, SCHWARZ);
+    }
+
+    uint16_t leerFarbe = (kalSchritt == 0) ? DUNKELBLAU : (flascheKalibriert ? DUNKELGRUEN : DUNKELBLAU);
+    uint16_t vollFarbe = (kalSchritt == 1) ? DUNKELBLAU :
+                         (kapazitaetKalibriert ? DUNKELGRUEN :
+                          (flascheKalibriert ? DUNKELBLAU : DUNKELGRAU));
+    tasteZeichnen(TASTE_LEER, leerFarbe, WEISS);
+    tasteZeichnen(TASTE_VOLL, vollFarbe, WEISS);
+    tasteZeichnen(TASTE_KAL_FERTIG, kalSchritt >= 2 ? DUNKELBLAU : DUNKELGRAU, WEISS);
   }
 }
 
+
 void drawUI() {
   static uint32_t letzte = 0;
+  if (kalibMeldung.length() > 0 && (int32_t)(kalibMeldungBisMs - millis()) <= 0) {
+    kalibMeldung = "";
+  }
   if (!bildschirmNeu && millis() - letzte < 200) return;   // max. 5x pro Sekunde
   letzte = millis();
   if (bildschirmNeu) {

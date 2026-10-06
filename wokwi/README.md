@@ -192,7 +192,7 @@ LEDs aus (keine Mischfarbe).
 |---|---|---|---|
 | 1 (höchste) | **bernstein** | Wasser erkannt (`NAESSE_SPERRE`) | solange die Sperre aktiv ist |
 | 2 | **rot, 2× blitzen** (300 ms an / 300 ms aus) | Akku fällt **unter 20 %** | einmal, dann aus |
-| 2 | **rot, 4× blitzen** (300 ms an / 300 ms aus) | Akku fällt **unter 10 %** | einmal, dann aus |
+| 2 | **rot, 4× blitzen** (650 ms an / 650 ms aus) | Akku fällt **unter 10 %** | einmal, dann aus (langsamer/normaler Takt) |
 | 3 | **lila, 2× blinken** (300 ms an / 300 ms aus) | Handy hat sich per Bluetooth verbunden | einmal, dann normal |
 | 4 | **weiß blinken, gedimmt** (500 ms an / 500 ms aus) | Bluetooth sucht das Handy | bis verbunden, höchstens **2 min** |
 | 5 | rot (Dauerlicht) | Fehler beginnt (Waage antwortet nicht / Gewicht negativ) | 5 s, dann aus |
@@ -210,6 +210,8 @@ LEDs aus (keine Mischfarbe).
 - **Display unter 20 %:** Akku-Anzeige orange und 5 s lang ein oranger Hinweis „Akku unter 20 %“.
 - **Display unter 10 %:** Akku-Anzeige rot und unten **dauerhaft** ein roter Balken
   **„Bitte laden“**. Er verschwindet erst, wenn der Akku wieder über 12 % liegt (geladen).
+  Die 4 roten Blitze laufen im **normalen** Takt (650 ms an / 650 ms aus), nicht im schnellen
+  300-ms-Takt der 20-%-Warnung.
 - Fällt der Akku direkt von „ok“ auf unter 10 %, blitzt es nur **4×**, nicht 2× + 4×.
 - Wasser hat Vorrang: Während der Sperre bleibt der Streifen bernstein.
 
@@ -405,7 +407,7 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | T14 | NÄSSE **links** | „Freigabe in 5 s ...“, nach 5 s automatisch `-> IDLE`, `[LAST] wieder AN`, LEDs aus |
 | T15 | AKKU auf **19 %** drehen | `[AKKU] NIEDRIG ... -> LEDs 2x rot`: genau **2 rote Blitze**, dann aus. Akku-Anzeige **orange**, 5 s oranger Hinweis „Akku unter 20 %“ |
 | T16 | AKKU bei 18–21 % hin und her | **keine** weiteren Blitze (Hysterese bis 22 %) |
-| T17 | AKKU auf **9 %** | `KRITISCH ... -> LEDs 4x rot`: genau **4 rote Blitze**, dann aus. Akku **rot**, unten dauerhaft roter Balken **„Bitte laden“** |
+| T17 | AKKU auf **9 %** | `KRITISCH ... -> LEDs 4x rot (650/650 ms)`: genau **4 rote Blitze** (langsamer Takt), dann aus. Akku **rot**, unten dauerhaft roter Balken **„Bitte laden“** |
 | T18 | AKKU auf 11 %, dann 12 % | bei 11 % bleibt „Bitte laden“; ab 12 % verschwindet der Balken (ohne Blitzen) |
 | T19 | 10 min unter 20 % lassen | Blinkmuster wiederholt sich (2× bzw. 4× unter 10 %) |
 | T20 | AKKU auf 30 % | `wieder ok`, Akku-Anzeige grün |
@@ -592,7 +594,8 @@ echter Hardware getestet.
 | `TROCKEN_FREIGABE_MS` | 5 s | automatische Freigabe nach Wasser |
 | `AKKU_WARN_PROZENT` / `AKKU_KRITISCH_PROZENT` / `AKKU_HYSTERESE_PROZENT` | 20 / 10 / 2 % | Akku-Schwellen |
 | `AKKU_BLINK_WARN` / `AKKU_BLINK_KRITISCH` | 2 / 4 | Anzahl roter Blitze |
-| `AKKU_BLINK_AN_MS` / `AKKU_BLINK_AUS_MS` | 300 / 300 ms | Blinktakt |
+| `AKKU_BLINK_AN_MS` / `AKKU_BLINK_AUS_MS` | 300 / 300 ms | Blinktakt unter 20 % |
+| `AKKU_BLINK_KRITISCH_AN_MS` / `AKKU_BLINK_KRITISCH_AUS_MS` | 650 / 650 ms | Blinktakt unter 10 % (langsamer) |
 | `AKKU_WIEDERHOLUNG_MS` | 10 min | Blinkmuster wiederholen (0 = nie) |
 | `AKKU_HINWEIS_MS` | 5 s | oranger Hinweis „Akku unter 20 %“ |
 | `LED_HELLIGKEIT` / `LED_GRUEN_MS` / `LED_ROT_MS` | 60 / 10 s / 5 s | LED-Streifen |

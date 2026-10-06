@@ -151,8 +151,10 @@ const int      AKKU_KRITISCH_PROZENT = 10;    // darunter: Balken "Bitte laden" 
 const int      AKKU_HYSTERESE_PROZENT = 2;    // erst bei Schwelle + 2 % gilt die Warnung als vorbei
 const uint8_t  AKKU_BLINK_WARN      = 2;      // Anzahl Blitze unter 20 %
 const uint8_t  AKKU_BLINK_KRITISCH  = 4;      // Anzahl Blitze unter 10 %
-const uint32_t AKKU_BLINK_AN_MS     = 300;
+const uint32_t AKKU_BLINK_AN_MS     = 300;    // Warnung <20 %: kurz blitzen
 const uint32_t AKKU_BLINK_AUS_MS    = 300;
+const uint32_t AKKU_BLINK_KRITISCH_AN_MS  = 650; // kritisch <10 %: normaler Takt (langsamer)
+const uint32_t AKKU_BLINK_KRITISCH_AUS_MS = 650;
 const uint32_t AKKU_WIEDERHOLUNG_MS = 10UL * 60UL * 1000UL; // Blinkmuster alle 10 min wiederholen (0 = nie)
 const uint32_t AKKU_HINWEIS_MS      = 5000;   // Hinweis "Akku unter 20 %" so lange im Statusfeld
 
@@ -366,6 +368,8 @@ uint32_t gruenBisMs       = 0;
 uint32_t rotBisMs         = 0;
 uint32_t blinkStartMs     = 0;    // Akku-Blinkmuster: Start ...
 uint8_t  blinkAnzahl      = 0;    // ... und Anzahl Blitze (0 = kein Blinken)
+uint32_t blinkAnMs        = AKKU_BLINK_AN_MS;   // aktiver An-Takt (Warnung oder kritisch)
+uint32_t blinkAusMs       = AKKU_BLINK_AUS_MS;  // aktiver Aus-Takt
 
 // Bluetooth
 BtZustand btZustand       = BT_AUS;
@@ -977,9 +981,13 @@ void akkuWarnen() {
   akkuWarnMs = millis();
   blinkStartMs = millis();
   blinkAnzahl = akkuStufe == 2 ? AKKU_BLINK_KRITISCH : AKKU_BLINK_WARN;
+  // <10 %: langsamer/normaler Takt; <20 %: weiterhin kurzes Blitzen
+  blinkAnMs  = akkuStufe == 2 ? AKKU_BLINK_KRITISCH_AN_MS  : AKKU_BLINK_AN_MS;
+  blinkAusMs = akkuStufe == 2 ? AKKU_BLINK_KRITISCH_AUS_MS : AKKU_BLINK_AUS_MS;
   if (akkuStufe == 1) akkuHinweisBisMs = millis() + AKKU_HINWEIS_MS;
   logZeile("AKKU", String(akkuStufe == 2 ? "KRITISCH" : "NIEDRIG") + ": " + String(akkuVolt, 2) + " V (" +
-                   String(akkuProzent) + " %) -> LEDs " + String(blinkAnzahl) + "x rot");
+                   String(akkuProzent) + " %) -> LEDs " + String(blinkAnzahl) + "x rot (" +
+                   String(blinkAnMs) + "/" + String(blinkAusMs) + " ms)");
 }
 
 // Waage ohne Daten oder Tara falsch (negativ)
@@ -1373,10 +1381,10 @@ void ledsAktualisieren() {
   // Akku-Blinkmuster: läuft im Hintergrund weiter, auch wenn bernstein Vorrang hat
   bool blinkAn = false;
   if (blinkAnzahl > 0) {
-    uint32_t periode = AKKU_BLINK_AN_MS + AKKU_BLINK_AUS_MS;
+    uint32_t periode = blinkAnMs + blinkAusMs;
     uint32_t t = jetzt - blinkStartMs;
     if (t >= periode * blinkAnzahl) blinkAnzahl = 0;   // fertig -> wieder aus
-    else blinkAn = (t % periode) < AKKU_BLINK_AN_MS;
+    else blinkAn = (t % periode) < blinkAnMs;
   }
   bool blinkLaeuft = blinkAnzahl > 0;
 
@@ -1556,7 +1564,9 @@ void hauptbildschirmZeichnen() {
   if (geaendert(B_FLASCHE, fl)) {
     tft.fillRect(0, 204, BREITE, 22, SCHWARZ);
     tft.drawFastHLine(8, 203, BREITE - 16, DUNKELGRAU);
-    text(10, 210, fl, 2, flascheSteht ? CYAN : GRAU, SCHWARZ);
+    // size 2 passt für „Flasche: 420 ml“ / „420/750 ml“; bei großen Zahlen (mit Punkt) size 1
+    uint8_t fg = textBreite(fl, 2) <= (BREITE - 20) ? 2 : 1;
+    text(10, fg == 2 ? 210 : 214, fl, fg, flascheSteht ? CYAN : GRAU, SCHWARZ);
   }
   String leer = "Leer " + String((int)lroundf(leergewicht)) + " g " +
                 (flascheKalibriert ? "(kalibriert)" :

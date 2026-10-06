@@ -90,7 +90,7 @@ hydrodesk-base/
 │   └── preview/                            # Vorschaubilder
 ├── firmware/                               # PlatformIO-Firmware (folgt)
 │   └── secrets.example.h                   # Vorlage für Zugangsdaten
-├── wokwi/                                  # Wokwi-Simulation (folgt)
+├── wokwi/                                  # Wokwi-Simulation (Sketch, Diagramm, Anleitung)
 ├── LICENSE
 └── README.md
 ```
@@ -102,7 +102,7 @@ hydrodesk-base/
 | Steckbrief | ✅ fertig |
 | Vorkalkulation | ✅ fertig |
 | Gehäuse-CAD (OpenSCAD, STL) | ✅ fertig |
-| Wokwi-Simulation | 🚧 in Arbeit |
+| Wokwi-Simulation | ✅ fertig (kompiliert, auf wokwi.com testen) |
 | Firmware (PlatformIO) | ⏳ offen |
 | Bau / Integration / Tests | ⏳ offen |
 

@@ -25,9 +25,10 @@
  *  Bluetooth: per Serial-Befehl simuliert   | BLE (NimBLE), HYDRO_BLE 1
  *
  *  Versteckte Bedienung: 3 s irgendwo auf das Display drücken
- *  -> Service-Modus "Kalibrierung" (nur dort gibt es Tasten).
+ *  -> Service-Modus "Kalibrierung" (leere/volle Flasche, nur dort Tasten).
  *  Serieller Monitor (115200 Baud): "hilfe", "status", "reset",
  *  "gewicht 75", "groesse 180", "zeit 23:59",
+ *  "kalib", "leer", "voll",
  *  "bt suchen", "bt verbunden", "bt getrennt", "bt aus"
  * ============================================================================
  */
@@ -87,8 +88,28 @@ const float    ML_PRO_M2            = 1500.0f; // Trinkmenge pro m² Körperober
 const int      ZIEL_MIN_ML          = 1500;
 const int      ZIEL_MAX_ML          = 3500;
 
-// --- Erinnerung
-const uint32_t ERINNERUNG_MS        = 30UL * 1000UL; // Demo: 30 s (echt z. B. 45UL*60UL*1000UL)
+// --- Erinnerung (Trink-Plan + Pause nach echtem Schluck)
+// WOKWI_DEMO_ERINNERUNG 1 = kurze Zeiten für die Simulation (README).
+// Auf dem echten Gerät: #define WOKWI_DEMO_ERINNERUNG 0 (oder vor dem Compile setzen).
+#ifndef WOKWI_DEMO_ERINNERUNG
+  #define WOKWI_DEMO_ERINNERUNG 1
+#endif
+#if WOKWI_DEMO_ERINNERUNG
+  const uint32_t ERINNERUNG_PAUSE_MS       = 90UL * 1000UL;          // Demo: 90 s Pause nach ≥100 ml
+  const uint32_t ERINNERUNG_MIN_ABSTAND_MS = 60UL * 1000UL;          // Demo: frühestens alle 60 s
+  const uint32_t TRUNK_FENSTER_MS          = 20UL * 1000UL;          // Demo: 20 s für ≥100 ml-Fenster
+#else
+  const uint32_t ERINNERUNG_PAUSE_MS       = 75UL * 60UL * 1000UL;   // 75 min Pause nach ≥100 ml
+  const uint32_t ERINNERUNG_MIN_ABSTAND_MS = 90UL * 60UL * 1000UL;   // frühestens alle 90 min
+  const uint32_t TRUNK_FENSTER_MS          = 10UL * 60UL * 1000UL;   // ~10 min Trinkfenster
+#endif
+const float    TRUNK_RESET_MIN_ML         = 100.0f;  // ab so viel im Fenster: Pause starten
+const float    SCHLUCK_OHNE_PAUSE_ML      = 40.0f;   // darunter: zählt, setzt Pause NICHT
+const uint8_t  ERINNERUNG_MAX_PRO_TAG     = 6;       // höchstens so viele Erinnerungen/Tag
+const int      RUHE_START_STUNDE          = 22;      // Ruhezeit 22:00 ...
+const int      RUHE_ENDE_STUNDE           = 7;       // ... bis 07:00 (keine Erinnerungen)
+// Zeitplan (Soll-Anteil am Tagesziel): 12:00 → 40 %, 16:00 → 70 %, 20:00 → 100 %
+// (20:00 = ca. 2 h vor Ruhezeit). Erinnerung nur, wenn hinter diesem Plan.
 
 // --- WLAN + Uhrzeit
 // Wokwi: offenes Gast-WLAN "Wokwi-GUEST" auf Kanal 6 (ohne Passwort).
@@ -193,24 +214,25 @@ const int PIN_LAST      = 18;  // HIGH = Last/Strom an (MOSFET-Gate)
  *                 und ist das Gewicht wieder ruhig, zählt die Differenz als
  *                 "getrunken". Wird sie SCHWERER, war es Nachfüllen
  *                 (zählt NICHT negativ, dient aber zum Lernen des Leergewichts).
- *  ERINNERUNG     Seit ERINNERUNG_MS nichts getrunken, Ziel nicht erreicht.
+ *  ERINNERUNG     Hinter dem Trink-Plan, Pause vorbei, Abstand eingehalten,
+ *                 unter Max/Tag, außerhalb Ruhezeit, Ziel nicht erreicht.
  *                 LEDs dauerhaft blau, bis wieder getrunken wird.
  *  ZIEL_ERREICHT  Tagesziel erreicht. LEDs 10 s grün, dann aus.
  *                 Keine Erinnerungen mehr, es wird weiter gezählt.
  *  NAESSE_SPERRE  Nässe-Sensor meldet Wasser: Last sofort AUS, LEDs bernstein,
  *                 rote Vollbild-Warnung. Hebt sich AUTOMATISCH auf, wenn der
  *                 Sensor TROCKEN_FREIGABE_MS (5 s) lang trocken ist.
- *  KALIBRIERUNG   Versteckter Service-Modus (3 s aufs Display drücken):
- *                 Tara + 500-g-Referenz. Messung pausiert.
+ *  KALIBRIERUNG   Versteckter Service-Modus (3 s / Serial "kalib"):
+ *                 leere Flasche → volle Flasche → Kapazität. Messung pausiert.
  *
  *  Übergänge (Priorität von oben nach unten):
  *    jeder Zustand   --Wasser erkannt-----------------> NAESSE_SPERRE
  *    NAESSE_SPERRE   --5 s ununterbrochen trocken-----> IDLE
- *    normale Zustände--3 s Display gedrückt-----------> KALIBRIERUNG
+ *    normale Zustände--3 s Display / "kalib"----------> KALIBRIERUNG
  *    KALIBRIERUNG    --Taste "Fertig"-----------------> IDLE
  *    sonst wird der passende Zustand jedes Mal neu bestimmt:
  *        getrunken >= Ziel                          -> ZIEL_ERREICHT
- *        Zeit seit letztem Schluck >= ERINNERUNG_MS -> ERINNERUNG
+ *        erinnerungMoeglich()                       -> ERINNERUNG
  *        Flasche steht                              -> MESSEN
  *        sonst                                      -> IDLE
  *
@@ -305,6 +327,10 @@ bool     referenzGueltig  = false;
 float    referenzGewicht  = 0;              // letztes ruhiges Gewicht mit Flasche
 float    leergewicht      = LEERGEWICHT_START_G;
 bool     leergewichtGelernt = false;
+bool     flascheKalibriert = false;         // Leergewicht aus Kalibrierung (bevorzugt)
+float    vollgewicht      = 0;              // g bei "volle Flasche"
+int      flaschenKapazitaetMl = 0;          // max(0, voll - leer), 1 g ≈ 1 ml
+bool     kapazitaetKalibriert = false;
 
 // Trinken + Ziel
 int      getrunkenHeute   = 0;              // ml
@@ -313,6 +339,11 @@ int      profilCm         = KOERPERGROESSE_CM;
 int      tagesziel        = 2000;           // wird aus dem Profil berechnet
 uint32_t letzterSchluckMs = 0;
 bool     heuteGetrunken   = false;
+uint32_t erinnerungPauseBisMs = 0;          // Pause nach ≥100 ml (keine Erinnerung)
+uint32_t letzteErinnerungMs   = 0;          // für Mindestabstand
+uint8_t  erinnerungenHeute    = 0;
+uint32_t trunkFensterStartMs  = 0;
+float    trunkFensterMl       = 0;          // Summe im ~10-min-Fenster (≥40-ml-Schlucke)
 
 // Sensoren
 bool     nass             = false;
@@ -576,10 +607,10 @@ void tasteZeichnen(const Taste& t, uint16_t fuellung, uint16_t schrift) {
   textMitte(t.x, t.w, t.y + (t.h - 16) / 2, t.beschriftung, 2, schrift, fuellung);
 }
 
-// Tasten NUR im Service-Modus "Kalibrierung"
-const Taste TASTE_KAL_TARA    = { 10, 196, 220, 36, "1. Pad leer: Tara" };
-const Taste TASTE_KAL_GEWICHT = { 10, 238, 220, 36, "2. 500 g liegt: OK" };
-const Taste TASTE_KAL_FERTIG  = { 10, 280, 220, 36, "Fertig" };
+// Tasten NUR im Service-Modus "Kalibrierung" (leere / volle Flasche)
+const Taste TASTE_KAL_LEER   = { 10, 196, 220, 36, "Leer bestätigen" };
+const Taste TASTE_KAL_VOLL   = { 10, 238, 220, 36, "Voll bestätigen" };
+const Taste TASTE_KAL_FERTIG = { 10, 280, 220, 36, "Fertig" };
 
 // ============================================================================
 //  UHR: WLAN + NTP, Ersatzuhr, Tageswechsel
@@ -639,6 +670,10 @@ void tageswechsel(const char* grund) {
   getrunkenHeute = 0;
   heuteGetrunken = false;
   letzterSchluckMs = millis();
+  erinnerungenHeute = 0;
+  letzteErinnerungMs = 0;
+  trunkFensterMl = 0;
+  trunkFensterStartMs = 0;
   tageszaehlerSpeichern();
   logZeile("TRINKEN", String("Tageszähler auf 0 (") + grund + ")");
 }
@@ -751,6 +786,14 @@ void waageLesen() {
 void leergewichtSpeichern() {
   speicher.putFloat("leer", leergewicht);
   speicher.putBool("leerOk", leergewichtGelernt);
+  speicher.putBool("flKalib", flascheKalibriert);
+  speicher.putFloat("voll", vollgewicht);
+  speicher.putInt("kapMl", flaschenKapazitaetMl);
+  speicher.putBool("kapOk", kapazitaetKalibriert);
+}
+
+void flascheKalibSpeichern() {
+  leergewichtSpeichern();
 }
 
 /*
@@ -772,6 +815,7 @@ void leergewichtSpeichern() {
  *     Leergewicht zurück auf den Startwert, neu lernen.
  */
 void leergewichtKandidat(float kandidat) {
+  if (flascheKalibriert) return;   // kalibriertes Leergewicht hat Vorrang
   if (!leergewichtGelernt || kandidat < leergewicht) {
     logZeile("LEER", "Leergewicht gelernt: " + String(kandidat, 0) + " g (Gewicht vor dem Nachfüllen" +
              (leergewichtGelernt ? ", kleiner als bisher " + String(leergewicht, 0) + " g)" : ")"));
@@ -782,6 +826,7 @@ void leergewichtKandidat(float kandidat) {
 }
 
 void leergewichtUntergrenze(float w) {
+  if (flascheKalibriert) return;   // kalibriertes Leergewicht hat Vorrang
   if (w < leergewicht - 0.5f) {
     logZeile("LEER", "Flasche leichter als Leergewicht -> Leergewicht = " + String(w, 0) + " g");
     leergewicht = w;
@@ -822,6 +867,10 @@ void trinkenAuswerten() {
              " g): andere Flasche, Leergewicht zurück auf " + String(LEERGEWICHT_START_G, 0) + " g");
     leergewicht = LEERGEWICHT_START_G;
     leergewichtGelernt = false;
+    flascheKalibriert = false;
+    kapazitaetKalibriert = false;
+    vollgewicht = 0;
+    flaschenKapazitaetMl = 0;
     leergewichtSpeichern();
     referenzGewicht = gewicht;          // neue Flasche: nichts zählen
     leergewichtUntergrenze(gewicht);
@@ -843,6 +892,25 @@ void trinkenAuswerten() {
     heuteGetrunken = true;
     letzterSchluckMs = millis();
     tageszaehlerSpeichern();
+    // Pause nur nach ≥100 ml im Trinkfenster; Schlucke < 40 ml zählen, setzen Pause nicht
+    if (ml >= (int)SCHLUCK_OHNE_PAUSE_ML) {
+      uint32_t jetzt = millis();
+      if (trunkFensterStartMs == 0 || jetzt - trunkFensterStartMs > TRUNK_FENSTER_MS) {
+        trunkFensterStartMs = jetzt;
+        trunkFensterMl = 0;
+      }
+      trunkFensterMl += ml;
+      if (trunkFensterMl >= TRUNK_RESET_MIN_ML) {
+        erinnerungPauseBisMs = jetzt + ERINNERUNG_PAUSE_MS;
+        trunkFensterMl = 0;
+        trunkFensterStartMs = jetzt;
+        logZeile("ERINNERUNG", "Pause " + String(ERINNERUNG_PAUSE_MS / 1000) +
+                 " s nach ≥" + String((int)TRUNK_RESET_MIN_ML) + " ml im Fenster");
+      }
+    } else {
+      logZeile("ERINNERUNG", "Schluck " + String(ml) + " ml < " +
+               String((int)SCHLUCK_OHNE_PAUSE_ML) + " ml – zählt, Pause unverändert");
+    }
     logZeile("TRINKEN", "+" + String(ml) + " ml getrunken (" + String(referenzGewicht, 0) + " g -> " +
                         String(gewicht, 0) + " g), heute " + String(getrunkenHeute) + " ml");
     referenzGewicht = gewicht;
@@ -920,6 +988,60 @@ bool waageFehler() {
 }
 
 // ============================================================================
+//  ERINNERUNGS-LOGIK (Plan, Pause, Ruhezeit, Abstand, Max/Tag)
+// ============================================================================
+bool inRuhezeit() {
+  struct tm lt;
+  if (!zeitHolen(lt)) return false;   // ohne Uhr: Erinnerungen erlaubt (Demo)
+  return lt.tm_hour >= RUHE_START_STUNDE || lt.tm_hour < RUHE_ENDE_STUNDE;
+}
+
+// Soll-Menge nach Tageszeit: 07:00=0 %, 12:00=40 %, 16:00=70 %, 20:00=100 %
+int sollGetrunkenMl() {
+  struct tm lt;
+  if (!zeitHolen(lt)) return 0;
+  float stunde = lt.tm_hour + lt.tm_min / 60.0f;
+  float anteil;
+  if (stunde <= (float)RUHE_ENDE_STUNDE) anteil = 0.0f;
+  else if (stunde <= 12.0f) anteil = 0.40f * (stunde - (float)RUHE_ENDE_STUNDE) / (12.0f - (float)RUHE_ENDE_STUNDE);
+  else if (stunde <= 16.0f) anteil = 0.40f + 0.30f * (stunde - 12.0f) / 4.0f;
+  else if (stunde <= 20.0f) anteil = 0.70f + 0.30f * (stunde - 16.0f) / 4.0f;
+  else anteil = 1.0f;
+  return (int)lroundf(anteil * (float)tagesziel);
+}
+
+bool hinterPlan() {
+  return getrunkenHeute < sollGetrunkenMl();
+}
+
+bool erinnerungPauseAktiv() {
+  return (int32_t)(erinnerungPauseBisMs - millis()) > 0;
+}
+
+bool erinnerungMoeglich() {
+  if (getrunkenHeute >= tagesziel) return false;
+  if (erinnerungenHeute >= ERINNERUNG_MAX_PRO_TAG) return false;
+  if (inRuhezeit()) return false;
+  if (erinnerungPauseAktiv()) return false;
+  if (letzteErinnerungMs != 0 && millis() - letzteErinnerungMs < ERINNERUNG_MIN_ABSTAND_MS) return false;
+  if (!hinterPlan()) return false;
+  return true;
+}
+
+// Sekunden bis zur nächsten möglichen Erinnerung (Anzeige); 0 = jetzt / aktiv
+uint32_t erinnerungRestSekunden() {
+  if (getrunkenHeute >= tagesziel) return 0;
+  if (erinnerungenHeute >= ERINNERUNG_MAX_PRO_TAG) return 0;
+  uint32_t jetzt = millis();
+  uint32_t rest = 0;
+  if (erinnerungPauseAktiv()) rest = max(rest, (erinnerungPauseBisMs - jetzt + 999) / 1000);
+  if (letzteErinnerungMs != 0 && jetzt - letzteErinnerungMs < ERINNERUNG_MIN_ABSTAND_MS) {
+    rest = max(rest, (ERINNERUNG_MIN_ABSTAND_MS - (jetzt - letzteErinnerungMs) + 999) / 1000);
+  }
+  return rest;
+}
+
+// ============================================================================
 //  ZUSTANDSWECHSEL
 // ============================================================================
 void zustandWechseln(Zustand neu, const String& grund) {
@@ -936,8 +1058,14 @@ void zustandWechseln(Zustand neu, const String& grund) {
       telegramSenden("HydroDesk: WASSER ERKANNT – Strom wurde abgeschaltet!");
       break;
     case ERINNERUNG:
+      erinnerungenHeute++;
+      letzteErinnerungMs = millis();
       telegramSenden("HydroDesk: Zeit zu trinken! Heute " + String(getrunkenHeute) + " von " +
-                     String(tagesziel) + " ml");
+                     String(tagesziel) + " ml (Erinnerung " + String(erinnerungenHeute) + "/" +
+                     String(ERINNERUNG_MAX_PRO_TAG) + ")");
+      logZeile("ERINNERUNG", "ausgelöst (" + String(erinnerungenHeute) + "/" +
+               String(ERINNERUNG_MAX_PRO_TAG) + "), Soll " + String(sollGetrunkenMl()) +
+               " ml, Ist " + String(getrunkenHeute) + " ml");
       break;
     case ZIEL_ERREICHT:
       gruenBisMs = millis() + LED_GRUEN_MS;   // 10 s grün
@@ -984,14 +1112,71 @@ void zustandAktualisieren() {
 
   if (getrunkenHeute >= tagesziel) {
     zustandWechseln(ZIEL_ERREICHT, String(getrunkenHeute) + " >= " + String(tagesziel) + " ml");
-  } else if (millis() - letzterSchluckMs >= ERINNERUNG_MS) {
-    zustandWechseln(ERINNERUNG, String(ERINNERUNG_MS / 1000) + " s nichts getrunken");
+  } else if (zustand == ERINNERUNG) {
+    // Bleibt aktiv, bis nach der Erinnerung wieder getrunken wurde
+    if (letzterSchluckMs > letzteErinnerungMs) {
+      if (flascheSteht) zustandWechseln(MESSEN, "getrunken");
+      else zustandWechseln(IDLE, "getrunken, keine Flasche");
+    }
+  } else if (erinnerungMoeglich()) {
+    zustandWechseln(ERINNERUNG, "hinter Plan (Soll " + String(sollGetrunkenMl()) +
+                    " / Ist " + String(getrunkenHeute) + " ml)");
   } else if (flascheSteht) {
-    zustandWechseln(MESSEN, zustand == ERINNERUNG ? "getrunken"
-                          : (zustand == ZIEL_ERREICHT ? "Ziel höher / neuer Tag" : "Flasche steht"));
+    zustandWechseln(MESSEN, zustand == ZIEL_ERREICHT ? "Ziel höher / neuer Tag" : "Flasche steht");
   } else {
     zustandWechseln(IDLE, "keine Flasche auf dem Pad");
   }
+}
+
+// ============================================================================
+//  FLASCHEN-KALIBRIERUNG (leer / voll)
+// ============================================================================
+bool flascheGewichtNehmen(float& g, const char* was) {
+  if (gewicht < FLASCHE_DA_G) {
+    logZeile("KALIB", String("Keine Flasche erkannt – bitte ") + was + " aufstellen");
+    return false;
+  }
+  g = gewichtRuhig ? gewicht : gewicht;
+  return true;
+}
+
+void kalibLeerBestaetigen() {
+  float g = 0;
+  if (!flascheGewichtNehmen(g, "leere Flasche")) return;
+  leergewicht = g;
+  leergewichtGelernt = true;
+  flascheKalibriert = true;
+  // Kapazität erst nach "voll" gültig; alten Wert verwerfen
+  kapazitaetKalibriert = false;
+  vollgewicht = 0;
+  flaschenKapazitaetMl = 0;
+  flascheKalibSpeichern();
+  kalSchritt = 1;
+  bildschirmNeu = true;
+  logZeile("KALIB", "Leergewicht = " + String(leergewicht, 0) + " g");
+}
+
+void kalibVollBestaetigen() {
+  if (kalSchritt < 1 && !flascheKalibriert) {
+    logZeile("KALIB", "Zuerst leere Flasche bestätigen (Serial: leer)");
+    return;
+  }
+  float g = 0;
+  if (!flascheGewichtNehmen(g, "volle Flasche")) return;
+  if (g <= leergewicht) {
+    logZeile("KALIB", "Vollgewicht (" + String(g, 0) + " g) muss größer als Leergewicht (" +
+             String(leergewicht, 0) + " g) sein");
+    return;
+  }
+  vollgewicht = g;
+  flaschenKapazitaetMl = max(0, (int)lroundf(vollgewicht - leergewicht));
+  kapazitaetKalibriert = true;
+  flascheKalibriert = true;
+  flascheKalibSpeichern();
+  kalSchritt = 2;
+  bildschirmNeu = true;
+  logZeile("KALIB", "Vollgewicht = " + String(vollgewicht, 0) + " g, Kapazität = " +
+           String(flaschenKapazitaetMl) + " ml");
 }
 
 // ============================================================================
@@ -1011,24 +1196,23 @@ void touchAuswerten() {
   if (zustand == NAESSE_SPERRE) return;           // Bedienung gesperrt
 
   if (zustand == KALIBRIERUNG) {
+    // Langdruck bestätigt den aktuellen Schritt (leer bzw. voll)
+    if (gedrueckt && !langdruckErledigt && millis() - touchStartMs >= LANGDRUCK_MS) {
+      langdruckErledigt = true;
+      if (kalSchritt == 0) kalibLeerBestaetigen();
+      else if (kalSchritt == 1) kalibVollBestaetigen();
+      return;
+    }
     if (!neu) return;
-    if (getroffen(TASTE_KAL_TARA, x, y)) {
-      taraSetzen();
-      kalSchritt = 1;
-      bildschirmNeu = true;
-    } else if (getroffen(TASTE_KAL_GEWICHT, x, y) && kalSchritt >= 1) {
-      float f = (rohMittel - tara) / KALIBRIER_GEWICHT_G;
-      if (fabsf(f) > 0.01f) {
-        faktor = f;
-        speicher.putFloat("faktor", faktor);
-        kalSchritt = 2;
-        logZeile("KALIB", "neuer Faktor " + String(faktor, 4) + " Rohwert/g");
-      } else {
-        logZeile("KALIB", "kein Gewicht erkannt – Faktor nicht geändert");
-      }
-      bildschirmNeu = true;
-    } else if (getroffen(TASTE_KAL_FERTIG, x, y)) {
+    if (getroffen(TASTE_KAL_LEER, x, y) && kalSchritt == 0) {
+      kalibLeerBestaetigen();
+    } else if (getroffen(TASTE_KAL_VOLL, x, y) && kalSchritt >= 1) {
+      kalibVollBestaetigen();
+    } else if (getroffen(TASTE_KAL_FERTIG, x, y) && kalSchritt >= 2) {
       zustandWechseln(IDLE, "Kalibrierung beendet");
+    } else if (getroffen(TASTE_KAL_FERTIG, x, y) && kalSchritt < 2) {
+      // Abbruch jederzeit möglich
+      zustandWechseln(IDLE, "Kalibrierung abgebrochen");
     }
     return;
   }
@@ -1360,15 +1544,24 @@ void hauptbildschirmZeichnen() {
     }
   }
 
-  // --- Unten: Flasche, Leergewicht, zuletzt getrunken, nächste Erinnerung
-  String fl = flascheSteht ? "Flasche: " + mitPunkt(flascheninhaltMl()) + " ml" : "Keine Flasche";
+  // --- Unten: Flasche, Leergewicht/Kapazität, zuletzt getrunken, nächste Erinnerung
+  String fl;
+  if (!flascheSteht) {
+    fl = "Keine Flasche";
+  } else if (kapazitaetKalibriert) {
+    fl = "Flasche: " + mitPunkt(flascheninhaltMl()) + "/" + mitPunkt(flaschenKapazitaetMl) + " ml";
+  } else {
+    fl = "Flasche: " + mitPunkt(flascheninhaltMl()) + " ml";
+  }
   if (geaendert(B_FLASCHE, fl)) {
     tft.fillRect(0, 204, BREITE, 22, SCHWARZ);
     tft.drawFastHLine(8, 203, BREITE - 16, DUNKELGRAU);
     text(10, 210, fl, 2, flascheSteht ? CYAN : GRAU, SCHWARZ);
   }
-  String leer = "Leergewicht " + String((int)lroundf(leergewicht)) + " g " +
-                (leergewichtGelernt ? "(gelernt)" : "(Schätzwert)");
+  String leer = "Leer " + String((int)lroundf(leergewicht)) + " g " +
+                (flascheKalibriert ? "(kalibriert)" :
+                 (leergewichtGelernt ? "(gelernt)" : "(Schätzwert)"));
+  if (kapazitaetKalibriert) leer += " | Kap. " + String(flaschenKapazitaetMl) + " ml";
   if (geaendert(B_LEER, leer)) {
     tft.fillRect(0, 230, BREITE, 10, SCHWARZ);
     text(10, 231, leer, 1, GRAU, SCHWARZ);
@@ -1383,11 +1576,17 @@ void hauptbildschirmZeichnen() {
 
   String ne;
   if (zielErreicht)               ne = "Ziel erreicht - keine Erinnerung";
+  else if (erinnerungenHeute >= ERINNERUNG_MAX_PRO_TAG)
+                                  ne = "Max. Erinnerungen heute erreicht";
   else if (zustand == ERINNERUNG) ne = "Erinnerung aktiv!";
+  else if (inRuhezeit())          ne = "Ruhezeit - keine Erinnerung";
+  else if (!hinterPlan() && uhrOk) ne = "Im Plan - keine Erinnerung";
   else {
-    uint32_t rest = (ERINNERUNG_MS - min(ERINNERUNG_MS, millis() - letzterSchluckMs)) / 1000;
-    if (rest < 120 || !uhrOk) {
-      ne = "Nächste Erinnerung: in " + dauerText(rest);
+    uint32_t rest = erinnerungRestSekunden();
+    if (rest == 0 && erinnerungMoeglich()) {
+      ne = "Erinnerung steht bevor";
+    } else if (rest < 120 || !uhrOk) {
+      ne = "Nächste Erinnerung: in " + dauerText(rest > 0 ? rest : 1);
     } else {
       time_t t = time(nullptr) + rest;
       struct tm e;
@@ -1451,23 +1650,43 @@ void kalibrierbildschirmZeichnen() {
   if (bildschirmNeu) {
     tft.fillScreen(SCHWARZ);
     tft.fillRect(0, 0, BREITE, 28, DUNKELBLAU);
-    text(6, 7, "Service: Waage", 2, WEISS, DUNKELBLAU);
-    text(8, 36,  "1. Alles vom Pad nehmen,", 1, WEISS, SCHWARZ);
-    text(8, 48,  "   dann Taste 1 drücken.", 1, WEISS, SCHWARZ);
-    text(8, 64,  "2. Genau 500 g auflegen", 1, WEISS, SCHWARZ);
-    text(8, 76,  "   (Wokwi: Regler 0.5 kg),", 1, WEISS, SCHWARZ);
-    text(8, 88,  "   dann Taste 2 drücken.", 1, WEISS, SCHWARZ);
-    text(8, 104, "In Wokwi ist das NICHT nötig.", 1, GRAU, SCHWARZ);
-    tasteZeichnen(TASTE_KAL_TARA, kalSchritt >= 1 ? DUNKELGRUEN : DUNKELBLAU, WEISS);
-    tasteZeichnen(TASTE_KAL_GEWICHT, kalSchritt >= 2 ? DUNKELGRUEN : (kalSchritt >= 1 ? DUNKELBLAU : DUNKELGRAU), WEISS);
-    tasteZeichnen(TASTE_KAL_FERTIG, DUNKELGRAU, WEISS);
+    text(6, 7, "Kalibrierung", 2, WEISS, DUNKELBLAU);
+    if (kalSchritt == 0) {
+      text(8, 36,  "Schritt 1/2:", 1, CYAN, SCHWARZ);
+      text(8, 50,  "Leere Flasche aufstellen", 2, WEISS, SCHWARZ);
+      text(8, 76,  "Dann Taste, 3 s halten", 1, GRAU, SCHWARZ);
+      text(8, 88,  "oder Serial: leer", 1, GRAU, SCHWARZ);
+    } else if (kalSchritt == 1) {
+      text(8, 36,  "Schritt 2/2:", 1, CYAN, SCHWARZ);
+      text(8, 50,  "Volle Flasche aufstellen", 2, WEISS, SCHWARZ);
+      text(8, 76,  "Dann Taste, 3 s halten", 1, GRAU, SCHWARZ);
+      text(8, 88,  "oder Serial: voll", 1, GRAU, SCHWARZ);
+      text(8, 104, "Leer: " + String((int)lroundf(leergewicht)) + " g", 1, HELLGRAU, SCHWARZ);
+    } else {
+      text(8, 36,  "Fertig!", 2, GRUEN, SCHWARZ);
+      text(8, 60,  "Kapazität: " + String(flaschenKapazitaetMl) + " ml", 2, CYAN, SCHWARZ);
+      text(8, 88,  "Leer " + String((int)lroundf(leergewicht)) +
+                   " g  Voll " + String((int)lroundf(vollgewicht)) + " g", 1, HELLGRAU, SCHWARZ);
+      text(8, 104, "Taste Fertig oder warten.", 1, GRAU, SCHWARZ);
+    }
+    tasteZeichnen(TASTE_KAL_LEER, kalSchritt == 0 ? DUNKELBLAU : DUNKELGRUEN, WEISS);
+    tasteZeichnen(TASTE_KAL_VOLL, kalSchritt == 1 ? DUNKELBLAU : (kalSchritt >= 2 ? DUNKELGRUEN : DUNKELGRAU), WEISS);
+    tasteZeichnen(TASTE_KAL_FERTIG, kalSchritt >= 2 ? DUNKELBLAU : DUNKELGRAU, WEISS);
   }
-  String werte = String((long)rohMittel) + "|" + String((int)lroundf(gewicht)) + "|" + String(faktor, 4);
+  String werte = String(kalSchritt) + "|" + String((int)lroundf(gewicht)) + "|" +
+                 String((int)lroundf(leergewicht)) + "|" + String(flaschenKapazitaetMl);
   if (geaendert(B_STATUS, werte)) {
-    tft.fillRect(0, 122, BREITE, 64, SCHWARZ);
-    text(8, 126, "Rohwert: " + String((long)rohMittel), 2, CYAN, SCHWARZ);
-    text(8, 148, "Gewicht: " + String((int)lroundf(gewicht)) + " g", 2, WEISS, SCHWARZ);
-    text(8, 170, "Faktor:  " + String(faktor, 4) + " /g", 1, GRAU, SCHWARZ);
+    tft.fillRect(0, 118, BREITE, 70, SCHWARZ);
+    text(8, 122, "Gewicht: " + String((int)lroundf(gewicht)) + " g" +
+                 (gewichtRuhig ? " (ruhig)" : ""), 2, WEISS, SCHWARZ);
+    text(8, 146, "Leer: " + String((int)lroundf(leergewicht)) + " g" +
+                 (flascheKalibriert ? " ok" : ""), 1, GRAU, SCHWARZ);
+    if (kapazitaetKalibriert) {
+      text(8, 160, "Kapazität: " + String(flaschenKapazitaetMl) + " ml", 1, CYAN, SCHWARZ);
+    } else {
+      text(8, 160, "Kapazität: noch offen", 1, GRAU, SCHWARZ);
+    }
+    text(8, 174, "Serial: kalib | leer | voll", 1, DUNKELGRAU, SCHWARZ);
   }
 }
 
@@ -1490,6 +1709,7 @@ void drawUI() {
 // ============================================================================
 void hilfeAusgeben() {
   Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | hilfe"));
+  Serial.println(F("Flasche:  kalib | leer | voll"));
 #if HYDRO_BLE
   Serial.println(F("Bluetooth (echtes BLE): bt suchen | bt aus   (verbunden/getrennt meldet das Handy)"));
 #else
@@ -1537,10 +1757,17 @@ void statusAusgeben() {
                              : String("keine");
   logZeile("STATUS", String("Zustand=") + zustandName(zustand) +
            " | heute=" + String(getrunkenHeute) + "/" + String(tagesziel) + " ml" +
+           " | Soll=" + String(sollGetrunkenMl()) + " ml" +
+           " | Erinnerungen=" + String(erinnerungenHeute) + "/" + String(ERINNERUNG_MAX_PRO_TAG) +
+           (erinnerungPauseAktiv() ? " Pause" : "") +
            " | Profil=" + String(profilKg, 1) + " kg/" + String(profilCm) + " cm" +
            " | Gewicht=" + String((int)lroundf(gewicht)) + " g" + (gewichtRuhig ? " (ruhig)" : " (unruhig)") +
-           " | Flasche=" + String(flascheninhaltMl()) + " ml, leer=" + String(leergewicht, 0) + " g" +
-           (leergewichtGelernt ? " (gelernt)" : " (Schätzwert)") +
+           " | Flasche=" + String(flascheninhaltMl()) + " ml" +
+           ", leer=" + String(leergewicht, 0) + " g" +
+           (flascheKalibriert ? " (kalibriert)" : (leergewichtGelernt ? " (gelernt)" : " (Schätzwert)")) +
+           ", voll=" + String(vollgewicht, 0) + " g" +
+           ", Kapazität=" + String(flaschenKapazitaetMl) + " ml" +
+           (kapazitaetKalibriert ? " (kalibriert)" : "") +
            " | Akku=" + String(akkuVolt, 2) + " V, " + String(akkuProzent) + " %" +
            (akkuStufe == 2 ? " (unter 10 %)" : (akkuStufe == 1 ? " (unter 20 %)" : "")) +
            " | nass=" + String(nass ? "ja" : "nein") +
@@ -1599,6 +1826,21 @@ void serielleBefehle() {
       } else {
         Serial.println(F("Format: zeit HH:MM, z. B. \"zeit 23:59\""));
       }
+    } else if (befehl == "kalib" || befehl == "kalibrierung") {
+      if (zustand == NAESSE_SPERRE) {
+        Serial.println(F("Während Nässe-Sperre keine Kalibrierung."));
+      } else if (zustand != KALIBRIERUNG) {
+        zustandWechseln(KALIBRIERUNG, "Befehl kalib");
+      } else {
+        Serial.println(F("Schon in Kalibrierung. Schritte: leer → voll → Fertig"));
+      }
+    } else if (befehl == "leer") {
+      if (zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl leer");
+      kalSchritt = 0;
+      kalibLeerBestaetigen();
+    } else if (befehl == "voll") {
+      if (zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl voll");
+      kalibVollBestaetigen();
     } else if (befehl == "bt") {
       btBefehl(wert);
     } else if (zeile.length() > 0) {
@@ -1631,8 +1873,12 @@ void setup() {
   faktor             = speicher.getFloat("faktor", WOKWI_FAKTOR);
   profilKg           = speicher.getFloat("kg", KOERPERGEWICHT_KG);
   profilCm           = speicher.getInt("cm", KOERPERGROESSE_CM);
-  leergewicht        = speicher.getFloat("leer", LEERGEWICHT_START_G);
-  leergewichtGelernt = speicher.getBool("leerOk", false);
+  leergewicht          = speicher.getFloat("leer", LEERGEWICHT_START_G);
+  leergewichtGelernt   = speicher.getBool("leerOk", false);
+  flascheKalibriert    = speicher.getBool("flKalib", false);
+  vollgewicht          = speicher.getFloat("voll", 0);
+  flaschenKapazitaetMl = speicher.getInt("kapMl", 0);
+  kapazitaetKalibriert = speicher.getBool("kapOk", false);
   zielAktualisieren(true);
 
   anzeigeInit();
@@ -1644,7 +1890,12 @@ void setup() {
     taraSetzen();                        // erster Start: Pad muss leer sein
   }
   logZeile("LEER", "Leergewicht " + String(leergewicht, 0) + " g " +
-           (leergewichtGelernt ? "(gelernt)" : "(Startwert, wird beim Nachfüllen gelernt)"));
+           (flascheKalibriert ? "(kalibriert)" :
+            (leergewichtGelernt ? "(gelernt)" : "(Startwert, wird beim Nachfüllen gelernt)")));
+  if (kapazitaetKalibriert) {
+    logZeile("LEER", "Kapazität " + String(flaschenKapazitaetMl) + " ml (voll " +
+             String(vollgewicht, 0) + " g)");
+  }
 
   uhrStarten();
 #if HYDRO_BLE
@@ -1656,7 +1907,11 @@ void setup() {
   else btSetzen(BT_NICHT_VERBUNDEN, "Start ohne Suche");
   letzterSchluckMs = millis();
   naesseLesen();
-  logZeile("SYSTEM", "Erinnerung nach " + String(ERINNERUNG_MS / 1000) + " s ohne Trinken");
+  logZeile("SYSTEM", String("Erinnerung: Pause ") + String(ERINNERUNG_PAUSE_MS / 1000) +
+           " s nach ≥100 ml, Abstand " + String(ERINNERUNG_MIN_ABSTAND_MS / 1000) +
+           " s, max " + String(ERINNERUNG_MAX_PRO_TAG) + "/Tag, Ruhe " +
+           String(RUHE_START_STUNDE) + ":00-" + String(RUHE_ENDE_STUNDE) + ":00" +
+           (WOKWI_DEMO_ERINNERUNG ? " [WOKWI-DEMO]" : " [Gerät]"));
   logZeile("ZUSTAND", "Start in IDLE");
   hilfeAusgeben();
 }

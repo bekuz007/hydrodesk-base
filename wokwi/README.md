@@ -3,16 +3,23 @@
 Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im Browser testen,
 **bevor** ihr Teile kauft. Ihr braucht nur einen Browser und die Seite **wokwi.com**.
 
-**Neu in Version 3:**
+**Neu in Version 3 (Erinnerung + Flaschen-Kalibrierung):**
 
-- **Bluetooth-Symbol** oben rechts, direkt links neben dem Akku: blinkt weiß/blau beim Suchen,
-  fest blau mit zwei Punkten, wenn ein Handy verbunden ist, grau nach Ablauf der Suche.
-- **LED-Status für Bluetooth:** Suchen = **weiß blinken** (gedimmt, 500 ms an / 500 ms aus,
-  höchstens 2 min), Handy verbunden = **genau 2× lila**, danach wieder normal.
-- Wokwi kann kein Bluetooth. In der Simulation steuert ihr den Zustand mit den Befehlen
-  `bt suchen`, `bt verbunden`, `bt getrennt`, `bt aus` (Abschnitt 6).
-- Für das echte Gerät gibt es **echtes BLE** (Bibliothek NimBLE-Arduino) hinter dem Schalter
-  `#define HYDRO_BLE 1`. Das Gerät heißt „HydroDesk“ und sendet „heute/Ziel“ ans Handy.
+- **Erinnerungslogik:** Nach einem Schluck von ≥100 ml (im ~10-min-Fenster) startet eine
+  **75-min-Pause** (keine Erinnerung, kein blaues LED, kein Telegram-Stub). Schlucke unter
+  40 ml zählen zum Tagesstand, setzen die Pause aber nicht. Erinnerung nur, wenn ihr
+  **hinter dem Tagesplan** liegt, die Pause vorbei ist, der Mindestabstand (90 min) eingehalten
+  ist, höchstens 6×/Tag, und **außerhalb der Ruhezeit 22:00–07:00**. Plan: bis 12:00 ≈40 %,
+  bis 16:00 ≈70 %, bis 20:00 (ca. 2 h vor Ruhezeit) 100 % des Ziels.
+- **Wokwi-Demo-Zeiten:** `#define WOKWI_DEMO_ERINNERUNG 1` (Standard in der Simulation) nutzt
+  kurze Zeiten (Pause 90 s, Abstand 60 s, Fenster 20 s), damit Tests machbar sind. Auf dem
+  echten Gerät: `WOKWI_DEMO_ERINNERUNG 0` → lange Zeiten. Der alte ~30-s-Trigger ist entfernt.
+- **Flaschen-Kalibrierung:** Service-Modus (3 s Langdruck oder Serial `kalib`):
+  „Leere Flasche aufstellen“ → bestätigen (`leer` / Taste / 3 s) → „Volle Flasche aufstellen“
+  → bestätigen (`voll`) → Anzeige „Kapazität: X ml“. Leergewicht und Kapazität werden in
+  Preferences gespeichert und haben Vorrang vor dem automatischen Lernen.
+- **Bluetooth-Symbol** und LED-Status wie bisher (Suchen weiß, verbunden 2× lila). Wokwi:
+  `bt suchen` / `bt verbunden` / `bt getrennt` / `bt aus`. Echtes BLE: `HYDRO_BLE 1`.
 
 **Neu in Version 2:**
 
@@ -61,7 +68,7 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 │         noch 1.500 ml        │  bzw. grün „Ziel erreicht ✓“
 │──────────────────────────────│
 │ Flasche: 420 ml              │  oder „Keine Flasche“
-│ Leergewicht 250 g (gelernt)  │  oder „(Schätzwert)“
+│ Leer 250 g (kalibriert) | Kap. 750 ml │  oder „(gelernt)“ / „(Schätzwert)“
 │ Zuletzt getrunken: vor 12 min│
 │ Nächste Erinnerung: 14:30    │  unter 2 min: „in 45 s“
 │ ┌──────────────────────────┐ │
@@ -146,6 +153,8 @@ Flascheninhalt [ml] = ruhiges Gewicht auf dem Pad − Leergewicht der Flasche   
 
 Das Leergewicht kennt das Gerät am Anfang nicht. Es startet mit **150 g**
 (`LEERGEWICHT_START_G`; übliche Trinkflaschen wiegen leer etwa 100–400 g).
+**Besser:** im Service-Modus kalibrieren (leere + volle Flasche). Kalibrierte Werte aus dem
+Flash haben Vorrang; das automatische Lernen ist nur Fallback, solange nie kalibriert wurde.
 Danach lernt es selbst:
 
 | Regel | Was passiert |
@@ -327,19 +336,23 @@ Wokwi kann **kein Bluetooth** simulieren. Den Zustand stellt ihr im Seriellen Mo
 
 | Befehl | Wirkung |
 |---|---|
-| `status` | eine Zeile mit allen Werten (Zustand, Menge/Ziel, Profil, Gewicht, Flasche, Leergewicht, Akku, Nässe, Last, Uhr, Bluetooth) |
-| `reset` | Tageszähler auf 0 |
+| `status` | eine Zeile mit allen Werten (inkl. Soll-Plan, Erinnerungen, leer/voll/Kapazität) |
+| `reset` | Tageszähler auf 0 (auch Erinnerungszähler) |
 | `gewicht 75` | Körpergewicht in kg (30–250, Komma oder Punkt), Ziel neu, wird gespeichert |
 | `groesse 180` | Körpergröße in cm (120–230), Ziel neu, wird gespeichert |
-| `zeit 23:59` | Uhr von Hand stellen, z. B. um den Mitternachts-Reset zu testen. Die nächste NTP-Meldung korrigiert sie wieder. |
+| `zeit 23:59` | Uhr von Hand stellen, z. B. um den Mitternachts-Reset / die Ruhezeit zu testen |
+| `kalib` | Service-Modus Flaschen-Kalibrierung öffnen |
+| `leer` | leere Flasche bestätigen (speichert Leergewicht) |
+| `voll` | volle Flasche bestätigen (Kapazität = voll − leer) |
 | `bt suchen` | Bluetooth-Suche starten (weiß blinken, max. 2 min), siehe Abschnitt 6 |
 | `bt verbunden` | (nur Simulation) Handy verbunden → 2× lila, Symbol fest blau |
 | `bt getrennt` | (nur Simulation) Handy getrennt → wieder suchen |
 | `bt aus` | Bluetooth aus, Symbol verschwindet |
-| `hilfe` | Befehlsliste (zweite Zeile: Bluetooth-Befehle) |
+| `hilfe` | Befehlsliste |
 
-Die Erinnerung kommt in der Simulation schon nach **30 Sekunden** ohne Trinken
-(`ERINNERUNG_MS`, echt z. B. 45 Minuten).
+**Erinnerung in Wokwi:** Mit `WOKWI_DEMO_ERINNERUNG 1` sind Pause **90 s** und Mindestabstand
+**60 s** (echt: 75 min / 90 min). Zusätzlich müsst ihr **hinter dem Plan** liegen (z. B. mittags
+mit 0 ml) und außerhalb 22:00–07:00. Nach ≥100 ml im Fenster startet die Pause.
 
 ### Simulation auf wokwi.com starten
 
@@ -378,13 +391,14 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | T1 | Start abwarten | `Tagesziel 2750 ml`, `WLAN verbunden`, `NTP-Zeit empfangen`, oben links echte Uhrzeit (weiß) + Datum. LEDs **aus**. |
 | T2 | (ohne Internet) 10 s warten | `keine NTP-Zeit nach 10 s -> Ersatzuhr ab 12:00`, Uhrzeit **gelb**, „(ohne NTP)“ |
 | T3 | `gewicht 80`, dann `groesse 180` | `Tagesziel 3000 ml`, Anzeige „von 3.000 ml“. Danach `gewicht 70` + `groesse 175` → 2750 |
-| T4 | Waage **0,73 kg** | `Flasche steht`, Anzeige „Flasche: 580 ml“, „Leergewicht 150 g (Schätzwert)“ |
+| T4 | Waage **0,73 kg** | `Flasche steht`, Anzeige „Flasche: 580 ml“, „Leer 150 g (Schätzwert)“ |
 | T5 | Waage 0, dann **0,53 kg** | `+200 ml getrunken`, „200 ml“, „Zuletzt getrunken: vor 0 s“ |
 | T6 | Waage 0 → 0,33 → 0 → **0,25 kg** | insgesamt ca. 480 ml getrunken (±2 g Auflösung der Wokwi-Waage) |
 | T7 | Waage 0, dann **0,78 kg** (nachgefüllt) | `Nachgefüllt ... zählt nicht`, `Leergewicht gelernt: 250 g`, „Flasche: 530 ml“, „(gelernt)“ |
 | T8 | Waage 0, dann **0,24 kg** | `Flasche leichter als Leergewicht -> Leergewicht = 240 g` |
-| T9 | 30 s nichts tun | `-> ERINNERUNG`, LEDs **blau (Dauerlicht)**, Statusfeld blau „Zeit zu trinken!“ |
-| T10 | nachfüllen, dann trinken | LEDs **aus**, `ERINNERUNG -> MESSEN` |
+| T9 | `bt aus`, Uhr z. B. 12:00, 0 ml, **>90 s** warten (Demo-Pause/Abstand) | `-> ERINNERUNG` (hinter Plan), LEDs **blau**, Status „Zeit zu trinken!“ |
+| T10 | ≥100 ml trinken (z. B. zwei Schlucke ≥40 ml) | Pause startet, `ERINNERUNG -> MESSEN`, LEDs aus; für ~90 s (Demo) keine neue Erinnerung |
+| T10b | nur ~30 ml trinken während Erinnerung | zählt zum Tag, **keine** Pause; Erinnerung endet trotzdem |
 | T11 | `gewicht 30` + `groesse 120` (Ziel 1500) und trinken, bis Ziel erreicht | `-> ZIEL_ERREICHT`, LEDs **grün 10 s, dann aus**, grün „Ziel erreicht ✓“, Balken grün |
 | T12 | Waage 0, **> 60 s warten**, dann **1,10 kg** | `andere Flasche, Leergewicht zurück auf 150 g`, nichts gezählt |
 | T13 | NÄSSE **rechts** | sofort `NAESSE_SPERRE`, LED „LAST“ aus, LEDs **bernstein**, rotes Vollbild. Langdruck tut nichts. |
@@ -396,7 +410,7 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 | T19 | 10 min unter 20 % lassen | Blinkmuster wiederholt sich (2× bzw. 4× unter 10 %) |
 | T20 | AKKU auf 30 % | `wieder ok`, Akku-Anzeige grün |
 | T21 | 1 s aufs Display drücken | nichts (nur „Service-Modus: noch 2 s halten“) |
-| T22 | **3 s** drücken → Waage 0 → „1. Pad leer: Tara“ → 0,50 kg → „2. 500 g liegt: OK“ → „Fertig“ | `KALIBRIERUNG`, `neuer Faktor 0.4200 Rohwert/g`, zurück zum Hauptbildschirm |
+| T22 | **3 s** drücken (oder `kalib`) → leere Flasche auflegen → `leer` / Taste → volle Flasche → `voll` → „Fertig“ | `KALIBRIERUNG`, Leer/Voll/Kapazität gespeichert, Anzeige „Kapazität: X ml“, zurück zum Hauptbildschirm |
 | T23 | etwas trinken, dann `zeit 23:59` und 1 min warten | um 00:00 `Tageszähler auf 0 (neuer Tag)`, Datum springt weiter |
 | T24 | `status` | eine Zeile mit allen Werten |
 | T25 | Simulation neu starten, nichts tun | `[BT] aus -> suchen  (Start, max. 120 s)`, Bluetooth-Symbol links neben dem Akku **blinkt weiß/blau**, LEDs **blinken weiß (gedimmt)** 500 ms an / 500 ms aus |
@@ -420,10 +434,10 @@ Startzustand: Simulation neu gestartet, Waage 0 kg, NÄSSE links, AKKU-Regler wi
 |---|---|---|
 | `IDLE` | Keine Flasche auf dem Pad (oder gerade abgehoben). Änderungen werden ignoriert. | aus |
 | `MESSEN` | Flasche steht, Trinken wird gezählt. | aus |
-| `ERINNERUNG` | Seit `ERINNERUNG_MS` nichts getrunken, Ziel noch nicht erreicht. | blau (Dauerlicht) |
+| `ERINNERUNG` | Hinter Plan, Pause/Abstand ok, max. 6/Tag, nicht Ruhezeit, Ziel offen. | blau (Dauerlicht) |
 | `ZIEL_ERREICHT` | Tagesziel erreicht, keine Erinnerungen mehr (zählt weiter). | 10 s grün, dann aus |
 | `NAESSE_SPERRE` | Wasser erkannt: Strom aus, Touch gesperrt. | bernstein |
-| `KALIBRIERUNG` | Service-Modus „Waage“ (Tara + 500-g-Gewicht). Messung pausiert. | aus |
+| `KALIBRIERUNG` | Service-Modus: leere → volle Flasche → Kapazität. Messung pausiert. | aus |
 
 Akku-Warnung und Fehler sind **keine eigenen Zustände**. Sie werden zusätzlich angezeigt, weil
 das Gerät dabei weiter messen soll. **Bluetooth** hat einen eigenen kleinen Automaten
@@ -435,8 +449,8 @@ stateDiagram-v2
     [*] --> IDLE
     IDLE --> MESSEN : Flasche steht ruhig
     MESSEN --> IDLE : Flasche abgehoben
-    IDLE --> ERINNERUNG : X min nichts getrunken
-    MESSEN --> ERINNERUNG : X min nichts getrunken
+    IDLE --> ERINNERUNG : hinter Plan + Pause/Abstand ok
+    MESSEN --> ERINNERUNG : hinter Plan + Pause/Abstand ok
     ERINNERUNG --> MESSEN : Schluck erkannt
     MESSEN --> ZIEL_ERREICHT : getrunken >= Ziel
     ZIEL_ERREICHT --> MESSEN : Ziel höher / neuer Tag
@@ -547,8 +561,8 @@ benutzt werden, die **Adafruit_GFX und TFT_eSPI beide** kennen
    (Startwerte 200/3700 und 240/3800). Die vier Ecken antippen, die Koordinaten im Seriellen Monitor
    (`[TOUCH] x=.. y=..`) ansehen und die Werte anpassen, bis die Tasten im Service-Modus stimmen.
    Evtl. `touch.setRotation(...)` ändern, wenn x/y vertauscht oder gespiegelt sind.
-5. **Waage kalibrieren:** 3 s auf das Display drücken → Pad leer → Taste 1 → genau 500 g auflegen →
-   Taste 2 → Fertig. Der Faktor wird gespeichert.
+5. **Flasche kalibrieren:** 3 s auf das Display drücken (oder Serial `kalib`) → leere Flasche
+   aufstellen → bestätigen → volle Flasche aufstellen → bestätigen → Kapazität wird gespeichert.
 6. **WLAN:** Zugangsdaten in `secrets.h` (siehe Abschnitt 7), nicht in den Sketch.
 7. **Bluetooth:** Bibliothek **NimBLE-Arduino** installieren, `#define HYDRO_BLE 1` setzen und als
    Partition **„Huge APP (3MB No OTA/1MB SPIFFS)“** wählen (siehe Abschnitt 6).
@@ -564,7 +578,13 @@ echter Hardware getestet.
 |---|---|---|
 | `KOERPERGEWICHT_KG` / `KOERPERGROESSE_CM` | 70 / 175 | Profil für das Tagesziel (Serial überschreibt) |
 | `ML_PRO_M2`, `ZIEL_MIN_ML` / `ZIEL_MAX_ML` | 1500, 1500 / 3500 | Formel und Grenzen für das Tagesziel |
-| `ERINNERUNG_MS` | 30 s | Zeit ohne Trinken bis zur Erinnerung (echt z. B. 45 min) |
+| `WOKWI_DEMO_ERINNERUNG` | 1 (Wokwi) | 1 = kurze Demo-Zeiten, 0 = Geräte-Zeiten (75 min / 90 min) |
+| `ERINNERUNG_PAUSE_MS` | 90 s / 75 min | Pause nach ≥100 ml (keine Erinnerung/LED/Telegram) |
+| `ERINNERUNG_MIN_ABSTAND_MS` | 60 s / 90 min | Mindestabstand zwischen Erinnerungen |
+| `TRUNK_FENSTER_MS` | 20 s / 10 min | Fenster, in dem ≥100 ml die Pause auslösen |
+| `TRUNK_RESET_MIN_ML` / `SCHLUCK_OHNE_PAUSE_ML` | 100 / 40 ml | Pause-Schwelle / Schluck ohne Pause |
+| `ERINNERUNG_MAX_PRO_TAG` | 6 | höchstens so viele Erinnerungen pro Tag |
+| `RUHE_START_STUNDE` / `RUHE_ENDE_STUNDE` | 22 / 7 | Ruhezeit ohne Erinnerungen |
 | `WLAN_SSID` / `WLAN_PASS` / `WLAN_KANAL` | Wokwi-GUEST / „“ / 6 | WLAN (echt: `secrets.h`) |
 | `ZEITZONE` / `NTP_SERVER` / `NTP_WARTEZEIT_MS` | CET/CEST / pool.ntp.org / 10 s | Uhrzeit, danach Ersatzuhr |
 | `LEERGEWICHT_START_G` | 150 g | Startwert Leergewicht |

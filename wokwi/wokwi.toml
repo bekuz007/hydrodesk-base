@@ -1,0 +1,7 @@
+# Nur für Wokwi in VS Code (für wokwi.com NICHT nötig).
+# Vorher kompilieren, z. B. im Ordner "sketch" (Ordnername = Name der .ino):
+#   arduino-cli compile -b esp32:esp32:esp32 --output-dir build sketch
+[wokwi]
+version = 1
+firmware = 'build/sketch.ino.bin'
+elf = 'build/sketch.ino.elf'

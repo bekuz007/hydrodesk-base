@@ -1,0 +1,8 @@
+# Wokwi Library List
+# Bibliotheken für HydroDesk Base (Wokwi lädt sie automatisch)
+Adafruit GFX Library
+Adafruit ILI9341
+Adafruit FT6206 Library
+Adafruit BusIO
+Adafruit NeoPixel
+HX711

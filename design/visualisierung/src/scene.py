@@ -624,6 +624,7 @@ elif MODE == 'produkt':
     for i, (x, y) in enumerate(cyd_holes + cov_bosses): sc += m3('M3_%d' % i, x, y, H)
     group('m3', sc)
     for i, yy in enumerate([15, 30]): screw_down('M4_%d' % i, pad_cx, yy, pad_top_z, 4, 10, 8.4)
+    for i, yy in enumerate([85, 70]): screw_up('M5_%d' % i, pad_cx, yy, 0.0, 5, 12, 10.5)
     ft = []
     for i, (x, y) in enumerate(feet_pos): ft += foot('Fuss%d' % i, x, y, 1.0)
     # Geisterflasche
@@ -708,6 +709,7 @@ for k, (g, p) in ANCH.items():
     v = world_to_camera_view(scn, cam, pw)
     proj[k] = [v.x*RES[0]*PCT/100, (1-v.y)*RES[1]*PCT/100, v.z]
 json.dump(proj, open(OUT.replace('.png', '.json'), 'w'), indent=1)
-scn.render.filepath = OUT
-bpy.ops.render.render(write_still=True)
-print('DONE', OUT)
+if not os.environ.get('HD_NO_RENDER'):
+    scn.render.filepath = OUT
+    bpy.ops.render.render(write_still=True)
+    print('DONE', OUT)

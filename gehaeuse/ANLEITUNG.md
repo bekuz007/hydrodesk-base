@@ -12,8 +12,9 @@ Du musst **nichts konstruieren**: Die STL-Dateien sind fertig zum Drucken.
 | `stl/base.stl` | **Bodenwanne**: Boden mit allen Haltern, LED-Rille vorne, USB-Öffnungen hinten, Mulden für die Gummifüße | **1×** |
 | `stl/cover.stl` | **Deckel**: mit Display-Fenster und Öffnung für das Pad | **1×** |
 | `stl/pad.stl` | **Flaschen-Pad**: 90 × 90 mm Platte, liegt nur auf der Wägezelle | **1×** |
+| `stl/kappe_usb.stl` | **Abdeckkappe**: steckbarer Deckel für die breite USB-Öffnung des Displays hinten (Programmier-Anschluss) | **1×** (am besten 2×, falls eine verloren geht) |
 | `hydrodesk_base.scad` | Die „Bauzeichnung“ für OpenSCAD. Hier stehen alle Maße oben als Zahlen. Nur nötig, wenn etwas geändert werden muss. | – |
-| `preview/*.png` | Vorschaubilder (Zusammenbau, Explosionsansicht, Draufsicht, Einzelteile) | – |
+| `preview/*.png` | Vorschaubilder (Zusammenbau, Explosionsansicht, Draufsicht, Einzelteile, Abdeckkappe `kappe_eingesteckt.png` / `kappe_offen.png`) | – |
 | `QUELLEN.md` | Links zu den Maßzeichnungen/Datenblättern, die für die Konstruktion benutzt wurden (CYD, Wägezelle) | – |
 | `render.sh` | Skript, das die Vorschaubilder neu erzeugt (nur für Fortgeschrittene) | – |
 
@@ -55,9 +56,11 @@ Wie die Teile auf dem Druckbett liegen – **die STL-Dateien sind schon richtig 
 | base | Boden nach unten (offene Seite oben) | nein | ca. 5 h 12 min | ca. 78 g |
 | cover | **Oberseite nach unten** (schöne glatte Sichtfläche) | nein | ca. 1 h 06 min | ca. 16 g |
 | pad | flache Unterseite nach unten, Rand oben | nein | ca. 1 h 26 min | ca. 27 g |
+| kappe_usb | **Sichtseite (Flansch) nach unten**, Stopfen zeigt nach oben | nein | ca. 10 min** | ca. 1 g** |
 
 \* Schätzung von PrusaSlicer 2.9 mit einem allgemeinen PLA-Profil (0,2 mm, 20 %, 3 Wände).
 Dein Drucker kann schneller oder langsamer sein.
+\*\* Kappe: grob aus dem Volumen geschätzt (0,57 cm³), nicht gesliced.
 
 Hinweise:
 * Der Boden ist 180 × 100 mm groß → das Druckbett muss mindestens ca. 190 × 110 mm haben (fast alle Drucker schaffen das).
@@ -124,6 +127,8 @@ Rückseite sind. Die Öffnung hinten ist absichtlich breit, damit beide bekannte
 * Hinten gibt es also **zwei** Öffnungen: links die breite für das CYD (Programmieren),
   rechts daneben die kleine USB-C-Öffnung für den Lader.
   Die kleine Öffnung hat außen eine Mulde, damit auch dicke Stecker ganz hineinpassen.
+* Die breite CYD-Öffnung wird im fertigen Gerät mit der **Abdeckkappe** verschlossen (siehe Abschnitt 7a).
+  Zum Programmieren Kappe abziehen, danach wieder einstecken. Die USB-C-Ladebuchse bleibt immer offen.
 
 **Wasser-Erkennung (einfache Lösung):** Das Pad hat einen Tropfrand. Auf der linken Seite (zum Display hin)
 hat der Rand eine kleine **Kerbe**. Läuft Wasser auf dem Pad über, läuft es dort ab, tropft durch den
@@ -159,18 +164,37 @@ Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anl�
     Mit 2× M4 × 10 Senkkopf festschrauben. Prüfen: Das Pad darf **nirgends** den Deckel berühren
     (rundherum ca. 1 mm Spalt) – sonst misst die Waage falsch.
 13. **Silikonmatte** auf 86 × 86 mm zuschneiden und innen in das Pad kleben (deckt die Schraubenköpfe ab).
-14. Fertig! Waage in der Software tarieren und kalibrieren (z. B. mit einer vollen 0,5-l-Flasche = ca. 500 g Wasser + Flasche).
+14. **Abdeckkappe** hinten in die breite USB-Öffnung drücken, bis der Flansch an der Wand anliegt
+    (die Kerbe im Flansch zeigt nach **unten**).
+15. Fertig! Waage in der Software tarieren und kalibrieren (z. B. mit einer vollen 0,5-l-Flasche = ca. 500 g Wasser + Flasche).
+
+### 7a. Abdeckkappe für den USB-Anschluss
+
+| Maß | Wert |
+|---|---|
+| Flansch (außen sichtbar) | 35 × 10,6 mm, 1,2 mm dick, Ecken R 3,5, Kante 0,5 mm gefast – steht 1,2 mm über die Rückwand |
+| Stopfen (steckt in der Wand) | 31,7 × 7,3 mm, 2,2 mm tief, hohl mit 1 mm Wand |
+| Spiel Stopfen ↔ Öffnung (32 × 7,6 mm) | **0,15 mm je Seite** |
+| Halt | 10 Quetschrippen (4 oben, 4 unten, je 1 links/rechts), 0,3 mm hoch → **0,15 mm Übermaß** je Seite; die Rippen drücken sich beim ersten Einstecken etwas zusammen und klemmen die Kappe |
+| Abziehen | Kerbe 8 mm breit unten in der Flansch-Rückseite: Fingernagel hineinstecken und Kappe heraushebeln |
+| Abstand zur USB-Buchse | Der Stopfen endet 0,2 mm **vor** der Wand-Innenseite und ist hohl. Die Buchse(n) liegen in der Höhe innerhalb des Hohlraums → keine Berührung (in OpenSCAD geprüft: `part = "cap_check_cyd"` ist leer) |
+
+**Erst eine Kappe zur Probe drucken!** Jeder Drucker druckt etwas anders.
+* Kappe zu locker → in der .scad `cap_rib_h` auf 0.35–0.4 erhöhen (mehr Übermaß).
+* Kappe zu stramm → `cap_rib_h` auf 0.2 senken oder `cap_clr` auf 0.2 erhöhen.
+* Eine Außenmulde für einen bündigen Flansch gibt es absichtlich nicht: Die Rückwand ist nur 2,4 mm dick,
+  daneben blieben bei der breiten Öffnung nur ca. 1 mm Material stehen.
 
 ---
 
 ## 8. Drucken lassen – so geht’s
 
 **Möglichkeit A – Schule / FabLab / Makerspace (meist am günstigsten):**
-Die drei Dateien `base.stl`, `cover.stl`, `pad.stl` auf einen USB-Stick kopieren und diese Anleitung
+Die vier Dateien `base.stl`, `cover.stl`, `pad.stl`, `kappe_usb.stl` auf einen USB-Stick kopieren und diese Anleitung
 (Abschnitt 3 Druckeinstellungen) zeigen. Material: PLA.
 
 **Möglichkeit B – Craftcloud (craftcloud3d.com):**
-1. Webseite öffnen → „Upload“ und die drei STL-Dateien hochladen.
+1. Webseite öffnen → „Upload“ und die vier STL-Dateien hochladen.
 2. Material wählen: **PLA** (Verfahren FDM). Farbe nach Wunsch (z. B. Hellgrau / Weiß, Pad Blau).
 3. Anzahl jeweils **1**.
 4. Die Seite zeigt nun Angebote verschiedener Druckereien mit Preis und Lieferzeit → vergleichen und bestellen.
@@ -189,9 +213,9 @@ Preise werden erst **nach dem Hochladen** angezeigt – sie hängen von Material
 1. OpenSCAD installieren (kostenlos, openscad.org).
 2. `hydrodesk_base.scad` öffnen. Oben stehen alle Maße mit Kommentaren.
 3. Zahl ändern → **F6** (Rendern) → `Datei > Exportieren > STL`.
-4. Ganz oben `part = "base";` (oder `"cover"`, `"pad"`) einstellen, um das jeweilige Teil zu exportieren.
+4. Ganz oben `part = "base";` (oder `"cover"`, `"pad"`, `"cap"`) einstellen, um das jeweilige Teil zu exportieren.
    `"assembly"` zeigt alles zusammengebaut, `"exploded"` die Explosionsansicht, `"inside"` das Innere ohne Deckel,
-   `"section"` einen Schnitt.
+   `"section"` einen Schnitt. `cap_pull = 14` zieht die Abdeckkappe in der Vorschau heraus.
 
 Oder einfach dem Assistenten die gemessenen Werte schicken – er erzeugt neue STL-Dateien.
 

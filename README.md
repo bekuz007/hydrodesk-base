@@ -23,7 +23,7 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **Wasser-Sicherheitsabschaltung**: Regensensor + FET-Modul schalten bei Nässe den Strom ab → Sperrbildschirm **„WASSER ERKANNT · STROM AUS“**
 - **Akkubetrieb**: LiPo 2000 mAh, Laden per USB-C (TC4056), 5-V-Step-up
 - **Optional: Telegram-Bot** für Erinnerungen und Status (`/status`, `/ziel`, `/hilfe`)
-- **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, drei Teile, ohne Stützmaterial druckbar)
+- **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, vier Teile: Bodenwanne, Deckel, Pad, steckbare USB-Abdeckkappe; ohne Stützmaterial druckbar)
 - **Android-App** ([`app-android/`](app-android/)): Login (Supabase), Bluetooth-LE-Verbindung zum Gerät,
   Tagesziel aus Körperdaten, Verlauf mit Wochendiagramm, offline-fähig mit Sync, Admin-Übersicht, Demo-Modus
 
@@ -42,7 +42,7 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **Links:** ESP32-Touch-Display („Cheap Yellow Display“ ESP32-2432S028R) im Hochformat, darunter Akku und Step-up-Wandler
 - **Mitte:** TC4056-USB-C-Lader an der Rückwand, FET-Schaltmodul, Auswertemodul des Regensensors
 - **Rechts:** 90 × 90 mm Flaschen-Pad, liegt nur auf der Wägezelle (1 mm Spalt rundherum); darunter Wägezelle, HX711 und Regensensor
-- **Hinten:** USB-Öffnungen (Programmieren + Laden), **vorne:** LED-Rille
+- **Hinten:** USB-Öffnungen – Programmier-Öffnung des CYD mit **steckbarer Abdeckkappe**, USB-C zum Laden offen; **vorne:** LED-Rille
 
 | Explosionsansicht | Innenansicht ohne Deckel |
 |---|---|
@@ -82,13 +82,15 @@ hydrodesk-base/
 │   ├── Steckbrief_HydroDesk_Base.docx      # Projekt-Steckbrief
 │   └── Vorkalkulation_HydroDesk_Base.xlsx  # Kostenkalkulation / Stückliste
 ├── design/
-│   └── claude_design_prompt_aufbau.md      # Prompt für Aufbau-/Teile-Illustrationen
+│   ├── claude_design_prompt_aufbau.md      # Prompt für Aufbau-/Teile-Illustrationen
+│   ├── visualisierung/                     # Gerenderte Bilder: Explosion, Innen, Teile, Produkt
+│   └── 3d_modell/                          # Komplettes 3D-Modell (GLB/STL/3MF) zum Anschauen
 ├── gehaeuse/
 │   ├── hydrodesk_base.scad                 # Parametrisches OpenSCAD-Modell
 │   ├── ANLEITUNG.md                        # Druck- und Montageanleitung
 │   ├── QUELLEN.md                          # Quellen der Bauteil-Maße
 │   ├── render.sh                           # Erzeugt die Vorschaubilder neu
-│   ├── stl/                                # Druckfertige Teile: base, cover, pad
+│   ├── stl/                                # Druckfertige Teile: base, cover, pad, kappe_usb
 │   └── preview/                            # Vorschaubilder
 ├── firmware/                               # PlatformIO-Firmware (folgt)
 │   └── secrets.example.h                   # Vorlage für Zugangsdaten

@@ -1,7 +1,8 @@
 // =====================================================================
 //  HydroDesk Base  -  parametrisches 3D-Druck-Gehaeuse (OpenSCAD)
-//  Teile:  part = "base" | "cover" | "pad" | "assembly" | "exploded"
-//                 | "inside" (Boden + Bauteile, ohne Deckel/Pad)
+//  Teile:  part = "base" | "cover" | "pad" | "cap" | "assembly" | "exploded"
+//                 | "inside" (Boden + Bauteile, ohne Deckel/Pad) | "section"
+//                 | "cap_check_cyd" / "cap_check_base" (Kollisionstests der Abdeckkappe)
 //  Koordinaten: X = Breite (links->rechts), Y = Tiefe (vorne=0 -> hinten),
 //               Z = Hoehe (Tischflaeche = 0).  Alle Masse in mm.
 //  Drucker: FDM, PLA, 0,4-mm-Duese.  Alle Teile ohne Stuetzmaterial.
@@ -59,6 +60,26 @@ cyd_holes    = [ for (ix=[0,1]) for (iy=[0,1])
 cyd_usb_w    = 32;
 cyd_usb_h    = 7.6;
 cyd_usb_zc   = cyd_pcb_z - 1.6;
+cyd_usb_r    = 2;      // Eckradius des USB-Ausschnitts
+
+/* ===================== Abdeckkappe fuer den CYD-USB-Ausschnitt ===================== */
+// Steckbare Kappe: verschliesst den grossen Programmier-Ausschnitt hinten (Kunde sieht ein
+// geschlossenes Geraet). Der USB-C-Ladeanschluss des TC4056 bleibt offen.
+cap_clr      = 0.15;   // Spiel Stopfen <-> Ausschnitt je Seite
+cap_rand     = 1.5;    // Flansch steht je Seite so weit ueber den Ausschnitt
+cap_flange_t = 1.2;    // Flanschdicke (steht aussen 1,2 mm vor)
+cap_chamfer  = 0.5;    // Fase an der sichtbaren Flanschkante
+cap_gap_in   = 0.2;    // Stopfen endet 0,2 mm VOR der Wand-Innenseite (USB-Buchse sitzt nur 0,8 mm dahinter)
+cap_plug_d   = wall - cap_gap_in;   // Stopfentiefe = 2,2 mm
+cap_shell    = 1.0;    // Wandstaerke des hohlen Stopfens (federt beim Einstecken etwas)
+cap_rib_h    = 0.30;   // Quetschrippen: Hoehe ueber Stopfenflaeche -> 0,15 mm Uebermass je Seite
+cap_rib_w    = 0.8;    // Rippenbreite an der Basis (Dreieckprofil)
+cap_rib_x    = [-12, -4, 4, 12];    // Rippenlagen oben/unten (vom Ausschnitt-Mittelpunkt)
+cap_notch_w  = 8;      // Fingernagel-Kerbe unten mittig im Flansch (Wandseite)
+cap_notch_d  = 0.6;    // Kerbentiefe in die Flanschrueckseite
+cap_pull     = 0;      // nur Vorschau: Kappe um so viele mm nach hinten herausgezogen
+cap_fw = cyd_usb_w + 2*cap_rand;    // Flansch 35 x 10,6 mm
+cap_fh = cyd_usb_h + 2*cap_rand;
 
 /* ===================== Akku / Module ===================== */
 bat_w = 34.5; bat_l = 56; bat_h = 10.3;     // EEMB LP103454 2000 mAh (34,5 x 55(+1) x 10,3)
@@ -118,6 +139,9 @@ screw_pilot = 2.5;                         // M3 selbstschneidend (fuer Gewindee
 cov_bosses = [[77,7],[77,93],[175.5,20],[175.5,80]];
 cov_pad_h  = 2;                            // Verdickung unter dem Deckel an Schraubstellen
 assert(pad_rim_top <= H, "Pad ragt ueber das Gehaeuse - H erhoehen");
+assert(D - cap_plug_d >= D - wall, "Kappen-Stopfen ragt nach innen ueber die Wand (USB-Buchse!)");
+assert(cyd_cx + cap_fw/2 < tc_x + tc_w/2 - tc_plug_w/2 - 1, "Kappen-Flansch ueberdeckt die USB-C-Lademulde");
+assert(cyd_usb_zc + cap_fh/2 < base_h, "Kappen-Flansch ragt ueber die Wand");
 assert(lcd_top_z - cyd_front_h - cyd_pcb_t - cyd_back_h > floor_t + bat_h, "Akku stoesst an CYD");
 
 /* ===================== Hilfsmodule ===================== */
@@ -187,7 +211,7 @@ module base(){
     // ---- Schnitte ----
     led_groove();
     // USB des CYD (hinten) und USB-C des Laders (hinten, linke Haelfte)
-    slot_y(cyd_cx, cyd_usb_zc, cyd_usb_w, cyd_usb_h, D-wall-1, wall+2, 2);
+    slot_y(cyd_cx, cyd_usb_zc, cyd_usb_w, cyd_usb_h, D-wall-1, wall+2, cyd_usb_r);
     slot_y(tc_x+tc_w/2, tc_usb_zc, tc_usb_w, tc_usb_h, D-wall-1, wall+2, 1.5);
     slot_y(tc_x+tc_w/2, tc_usb_zc, tc_plug_w, tc_plug_h, D-tc_plug_d, 2, 2);
     // Fuss-Mulden unten
@@ -277,6 +301,49 @@ module pad(){
   }
 }
 
+
+/* ===================== ABDECKKAPPE (USB-Ausschnitt CYD) ===================== */
+// Modelliert in Drucklage: Flansch-Aussenseite auf dem Druckbett (z=0), Stopfen zeigt nach oben.
+// u = Breite (X), v = Hoehe (Z im Geraet), w = Druckhoehe (zeigt im Geraet nach innen, -Y)
+module cap_print(){
+  pw = cyd_usb_w - 2*cap_clr;  ph = cyd_usb_h - 2*cap_clr;  pr = cyd_usb_r - cap_clr;
+  w1 = cap_flange_t + cap_plug_d;
+  difference(){
+    union(){
+      // Flansch mit 45-Grad-Fase an der sichtbaren Aussenkante (liegt auf dem Bett -> ohne Stuetzen)
+      hull(){
+        linear_extrude(e) offset(delta=-cap_chamfer) rrect_c(cap_fw, cap_fh, cyd_usb_r+cap_rand);
+        translate([0,0,cap_chamfer]) linear_extrude(cap_flange_t-cap_chamfer) rrect_c(cap_fw, cap_fh, cyd_usb_r+cap_rand);
+      }
+      // hohler Stopfen mit kleiner Einfuehrfase oben
+      hull(){
+        translate([0,0,cap_flange_t-e]) linear_extrude(cap_plug_d-0.3+e) rrect_c(pw, ph, pr);
+        translate([0,0,w1-e]) linear_extrude(e) offset(delta=-0.3) rrect_c(pw, ph, pr);
+      }
+      // Quetschrippen (oben/unten 4x, links/rechts je 1x), laufen in Steckrichtung, oben angeschraegt
+      for (u=cap_rib_x) for (s=[-1,1]) cap_rib([u, s*ph/2], s>0 ? 0 : 180);
+      for (s=[-1,1]) cap_rib([s*pw/2, 0], s>0 ? -90 : 90);
+    }
+    // Hohlraum (offen zur Geraete-Innenseite = oben beim Druck)
+    translate([0,0,cap_flange_t]) linear_extrude(cap_plug_d+1)
+      rrect_c(pw-2*cap_shell, ph-2*cap_shell, max(0.5, pr-cap_shell));
+    // Fingernagel-Kerbe: unten mittig in der Flanschrueckseite -> Spalt zur Wand zum Aushebeln
+    translate([-cap_notch_w/2, -cap_fh/2-1, cap_flange_t-cap_notch_d]) cube([cap_notch_w, cap_rand+1+e, cap_notch_d+e]);
+  }
+}
+module rrect_c(w,h,r){ translate([-w/2,-h/2]) rrect(w,h,r); }
+module cap_rib(p, ang){            // Dreieckrippe, Spitze cap_rib_h ueber der Flaeche
+  L = cap_plug_d - 0.4;
+  translate([p[0],p[1],cap_flange_t-e]) rotate([0,0,ang]) hull(){
+    linear_extrude(L-0.6) polygon([[-cap_rib_w/2,-0.4],[cap_rib_w/2,-0.4],[0,cap_rib_h]]);
+    translate([0,0,L-e]) linear_extrude(e) polygon([[-cap_rib_w/4,-0.4],[cap_rib_w/4,-0.4],[0,0]]);
+  }
+}
+// Einbaulage: Flansch aussen an der Rueckwand (y = D ... D+1,2), Stopfen in der Wand
+module cap(){
+  translate([cyd_cx, D + cap_flange_t + cap_pull, cyd_usb_zc]) rotate([90,0,0]) cap_print();
+}
+
 /* ===================== Dummy-Bauteile fuer Vorschau ===================== */
 module loadcell(){
   color("silver") difference(){
@@ -314,8 +381,11 @@ pad_col     = [0.15,0.45,0.85];
 if (part == "base") base();
 else if (part == "cover") rotate([180,0,0]) translate([0,0,-H]) cover();   // Oberseite aufs Druckbett
 else if (part == "pad")   translate([0,0,-pad_z0]) pad();                    // Rippen aufs Druckbett
+else if (part == "cap")   cap_print();                                       // Flansch-Aussenseite aufs Druckbett
+else if (part == "cap_check_cyd")  intersection(){ cap(); components(); }    // muss LEER sein
+else if (part == "cap_check_base") intersection(){ cap(); base(); }          // nur Quetschrippen (Uebermass)
 else if (part == "assembly") {
-  color(housing_col) base(); color(housing_col) cover();
+  color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap();
   color(pad_col) pad(); mat(); components();
 }
 else if (part == "inside") {
@@ -325,10 +395,11 @@ else if (part == "exploded") {
   color(housing_col) base(); components();
   translate([0,0,35]) { color(pad_col) pad(); translate([0,0,8]) mat(); }
   translate([0,0,85]) color(housing_col) cover();
+  translate([0,30,0]) color(housing_col) cap();       // Kappe nach hinten herausgezogen
 }
 else if (part == "section") {     // Schnitt bei X = Displaymitte und X = Pad-Mitte (zur Kontrolle)
   for (cx=[cyd_cx, pad_cx]) translate([-cx, 0, cx < 100 ? 0 : 35]) intersection(){
     translate([cx, -1, -1]) cube([W, D+2, H+5]);
-    union(){ color(housing_col) base(); color(housing_col) cover(); color(pad_col) pad(); mat(); components(); }
+    union(){ color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap(); color(pad_col) pad(); mat(); components(); }
   }
 }

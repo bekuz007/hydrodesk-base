@@ -9,7 +9,7 @@ OUTB = os.environ['HD_OUT']
 NAMES = {'base': 'Unterschale', 'cover': 'Deckel', 'pad': 'Flaschenplatte', 'mat': 'Silikonmatte',
          'cyd': 'Display-Board', 'lc': 'Waegezelle', 'hx': 'HX711', 'bat': 'Akku', 'boost': 'Step-up',
          'tc': 'TC4056', 'fet': 'FET-Modul', 'cmp': 'LM393', 'rs': 'Regensensor', 'led': 'LED-Leiste',
-         'm3': 'Schrauben_M3', 'm4': 'Schrauben_M4', 'm5': 'Schrauben_M5', 'feet': 'Gummifuesse'}
+         'cap': 'Abdeckkappe_USB', 'm3': 'Schrauben_M3', 'm4': 'Schrauben_M4', 'm5': 'Schrauben_M5', 'feet': 'Gummifuesse'}
 
 def part_of(o):
     p = o

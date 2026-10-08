@@ -17,6 +17,7 @@ def explosion():
     x0, y0, x1, y1 = content_bbox(raw); W, H = img.size
     specs = [
         ('cover', 'L', 'Deckel', '5-mm-Rahmen, Fenster für Display und Platte'),
+        ('cap', 'L', 'Abdeckkappe USB', 'steckbar, verdeckt den Programmier-Anschluss'),
         ('cyd', 'L', 'Display-Board ESP32 „CYD“ 2,8″', 'Touch-Display + Prozessor, 50 × 86 mm'),
         ('tc', 'L', 'Lademodul TC4056', 'USB-C-Buchse an der Rückwand'),
         ('fet', 'L', 'FET-Schaltmodul', 'trennt den Strom, wenn Wasser erkannt wird'),
@@ -87,13 +88,14 @@ def teile():
         ('led', 'LED-Leiste WS2812', '167 × 10 mm', '10 farbige LEDs'),
         ('screws', 'Schrauben', '8× M3×12, 2× M4×10, 2× M5×12', 'Deckel, Platte, Wägezelle'),
         ('feet', 'Gummifüße', '4×, Ø 13 mm', 'rutschfest unten'),
+        ('cap', 'Abdeckkappe USB', '35 × 10,6 × 3,4 mm', 'steckbar, verdeckt den USB-Ausschnitt'),
     ]
     r = int(19*k); fB = F(int(22*k), 700)
     for i, (key, name, size, fn) in enumerate(parts):
         n = str(i+1)
         x, y = A[key+'_tl'][:2]
         cx, cy = x - int(4*k), y - int(4*k)
-        if key in ('screws', 'feet', 'led'): cx, cy = x - int(26*k), y + int(10*k)
+        if key in ('screws', 'feet', 'led', 'cap'): cx, cy = x - int(26*k), y + int(10*k)
         d.ellipse([cx-r, cy-r, cx+r, cy+r], fill=(250, 250, 250), outline=INK, width=max(2, int(2.5*k)))
         d.text((cx, cy+1), n, font=fB, fill=INK, anchor='mm')
     # Legende rechts
@@ -106,7 +108,9 @@ def teile():
         d.ellipse([lx, yy-r, lx+2*r, yy+r], fill=(250, 250, 250), outline=INK, width=max(2, int(2.5*k)))
         d.text((lx+r, yy+1), str(i+1), font=fB, fill=INK, anchor='mm')
         d.text((lx+2*r+int(14*k), yy-int(11*k)), name, font=F(int(27*k), 650), fill=INK, anchor='lm')
-        d.text((lx+2*r+int(14*k), yy+int(16*k)), size + '  ·  ' + fn, font=F(int(20*k), 450), fill=SUB, anchor='lm')
+        txt = size + '  ·  ' + fn; fs = int(20*k)
+        while fs > int(11*k) and d.textlength(txt, font=F(fs, 450)) > W - (lx+2*r+int(14*k)) - int(24*k): fs -= 1
+        d.text((lx+2*r+int(14*k), yy+int(16*k)), txt, font=F(fs, 450), fill=SUB, anchor='lm')
     img.convert('RGB').save(OUT + 'hydrodesk_teile.png')
 
 def produkt():

@@ -382,7 +382,7 @@ def make_cmp():
     o.append(box('LED1', x+2, y+9, z+1.6, 1.6, 0.8, 0.6, mat('led g', (.1, 1, .2), .3, emis=(.1, 1, .2), estr=2)))
     o += pins('H4', x+w/2-3.81, y+l-1.8, z+1.6, 4, 'x')
     o += pins('H2', x+w-1.8, y+3.5, z+1.6, 2, 'y')
-    g = group('cmp', o); anchor('cmp', 'cmp', (x+w/2, y+12, z+3)); return g
+    g = group('cmp', o); anchor('cmp', 'cmp', (x+3, y+6, z+1.6)); return g
 
 def make_hx():
     x, y, z, w, l = hx; o = []
@@ -535,6 +535,8 @@ def build_all(cables=False):
     anchor('cover', 'cover', (178, 60, 25)); anchor('cover_win', 'cover', (29.4, 85, 25))
     pad = import_stl('Flaschenplatte', SRC+'pad.stl', M['pad']); group('pad', [pad])
     anchor('pad', 'pad', (170, 70, 24.6)); anchor('pad_notch', 'pad', (81.5, 50, 23))
+    cap = import_stl('Abdeckkappe USB', SRC+'cap.stl', M['pla']); group('cap', [cap])
+    anchor('cap', 'cap', (14.5, 101.2, 17))
     make_mat(); make_cyd(); make_battery(); make_boost(); make_tc(); make_fet(); make_cmp()
     make_hx(); make_rs(); make_loadcell(); make_led()
 
@@ -558,8 +560,10 @@ if MODE == 'explosion':
     sun('key', (50, 0, 35), 2.2, 8); sun('fill', (65, 0, -110), 0.7, 30); sun('rim', (60, 0, 200), 1.2, 15)
     Z = dict(feet=-32, m5=-54, base=0, A=36, B=80, pad=122, m4=138, mat=148, cover=174, m3=196)
     for g in ['bat', 'boost']: place(g, Z['A'])
-    for g in ['lc', 'hx', 'tc', 'fet', 'cmp', 'rs']: place(g, Z['B'])
-    place('cyd', Z['B']-8)
+    CYD_DZ = float(os.environ.get('HD_CYD_DZ', '28'))      # Display-Board ueber den Modulstreifen (freie Hinweislinien)
+    for g in ['lc', 'hx', 'rs', 'tc', 'fet', 'cmp']: place(g, Z['B'])
+    place('cap', Z['B']+CYD_DZ, 0, 30)                       # Abdeckkappe (gehoert zum CYD-USB) nach hinten herausgezogen
+    place('cyd', Z['B']+CYD_DZ)
     place('led', 0, 0, -26)
     place('pad', Z['pad']); place('mat', Z['mat']); place('cover', Z['cover'])
     # Schrauben / Fuesse
@@ -579,7 +583,7 @@ if MODE == 'explosion':
     # Hilfslinien
     for (x, y) in cov_bosses: dashed('g', (x, y, 21), (x, y, H+Z['m3']-12))
     for (x, y) in cyd_holes:
-        dashed('g', (x, y, 18.4), (x, y, cyd_pcb_z+Z['B']-8)); dashed('g', (x, y, cyd_pcb_z+Z['B']-8+1.5), (x, y, H+Z['m3']-12))
+        dashed('g', (x, y, 18.4), (x, y, cyd_pcb_z+Z['B']+CYD_DZ)); dashed('g', (x, y, cyd_pcb_z+Z['B']+CYD_DZ+1.5), (x, y, H+Z['m3']-12))
     for yy in [15, 30]: dashed('g', (pad_cx, yy, 17.7+Z['B']), (pad_cx, yy, pad_top_z+Z['m4']-10))
     for yy in [70, 85]: dashed('g', (pad_cx, yy, Z['m5']+12), (pad_cx, yy, 0))
     for (x, y) in feet_pos: dashed('g', (x, y, Z['feet']), (x, y, 0))
@@ -671,6 +675,7 @@ elif MODE == 'teile':
     lay('rs', 238, 118); lay('lc', 300, 162, (0, 0, -90)); lay('hx', 300, 112)
     lay('tc', 398, 140); lay('fet', 432, 138); lay('cmp', 466, 138); lay('boost', 398, 100)
     lay('led', 15, 36, (-90, 0, 0))
+    lay('cap', 452, 27, (-90, 0, 0))
     # Schrauben liegend + Fuesse
     def lying(objs, x, y):
         g = 's%d_%d' % (x, y); group(g, objs); lay(g, x, y, (90, 0, 0)); return g
@@ -685,7 +690,7 @@ elif MODE == 'teile':
     bpy.context.view_layer.update()
     # Anker: obere linke Ecke jeder Gruppe (fuer Nummern) + Mitte
     TE = {}
-    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led']:
+    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led', 'cap']:
         mn, mx = gbbox(g); TE[g] = (mn, mx)
     sx_mn = Vector((sx-1, 22, 0)); sx_mx = Vector((sx+140, 40, 6)); TE['screws'] = (sx_mn, sx_mx)
     TE['feet'] = (Vector((364, 24, 0)), Vector((370+3*17+13, 42, 3)))

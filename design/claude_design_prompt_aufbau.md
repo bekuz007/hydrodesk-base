@@ -19,7 +19,7 @@ TOP VIEW LAYOUT:
 |  [   zone   ]  |          |  [                       ]   |
 +----------------------------------------------------------+
 |  LED strip groove along the whole FRONT edge (10 LEDs)   |
-USB-C openings are on the BACK edge (left half).
+USB openings are on the BACK edge (left half): the wide programming opening of the display board is closed by a small removable plug-in cap, the USB-C charging opening stays open.
 
 PARTS (show each one separately on a "Teileübersicht" board, with name, size and one-line function):
 1. Unterschale (base): 3D-printed PLA tub, 180×100×23 mm, internal standoffs, pockets for all modules, 4 rubber-feet recesses underneath.
@@ -36,10 +36,11 @@ PARTS (show each one separately on a "Teileübersicht" board, with name, size an
 12. HX711 (34×21 mm, green): next to the load cell under the pad.
 13. WS2812-LED-Leiste (10 LEDs, 167 mm): glued into the groove along the front edge.
 14. Gummifüße ×4, Schrauben (8× M3×12, 2× M5×12, 2× M4×10).
+15. Abdeckkappe USB (cap): small 3D-printed PLA plug-in cap, 35×10.6×3.4 mm, same colour as the housing, pressed into the wide USB opening at the back (covers the display board's programming port), pull notch at the bottom.
 
 BOARDS TO CREATE:
 A) "Produkt" – hero isometric of the closed device: display on the left showing "1.250 / 2.000 ml" with a progress bar, ghost bottle on the right pad, LED strip glowing blue.
-B) "Teileübersicht" – all 14 parts laid out flat, labeled, roughly to scale.
+B) "Teileübersicht" – all 15 parts laid out flat, labeled, roughly to scale.
 C) "Explosionsansicht" – vertical exploded view in this order from bottom to top: Gummifüße → Unterschale → Akku + Step-up → Display-Board / Wägezelle + HX711 / Lademodul + FET + Regensensor → Flaschenplatte → Silikonmatte → Deckel. Dashed lines show where each part goes.
 D) "Innenansicht" – top view of the open base WITHOUT cover: where every module sits (color code: display yellow, load cell silver, HX711 green, charger blue, FET red, rain sensor teal, battery dark grey), cable paths as thin colored lines.
 E) "Aufbau in 6 Schritten" – six numbered small isometric panels:
@@ -48,7 +49,7 @@ E) "Aufbau in 6 Schritten" – six numbered small isometric panels:
    3. Akku, Step-up, Lademodul, FET-Modul und Regensensor einsetzen
    4. Display-Board auf die Abstandshalter links legen, Kabel anstecken
    5. Flaschenplatte vorne mit 2× M4 auf die Wägezelle schrauben, Silikonmatte aufkleben, LED-Leiste vorne einkleben
-   6. Deckel auflegen und mit 8× M3 verschrauben (4 Schrauben halten gleichzeitig das Display-Board)
+   6. Deckel auflegen und mit 8× M3 verschrauben (4 Schrauben halten gleichzeitig das Display-Board), Abdeckkappe hinten einstecken
 F) "Schnitt" – side cross-section through the pad showing: floor → load cell (fixed back, free front) → pad floating with 1 mm gap → silicone mat; and through the display zone: battery under the display board under the cover window.
 G) "Verkabelung" – simple block diagram: ESP32-Display-Board in the centre, connected to HX711 (→ Wägezelle), WS2812 LED-Leiste, Regensensor, FET-Schaltmodul (→ Stromversorgung), Akku → TC4056 → Step-up → Board. Use arrows and short German labels.
 H) "Bedienung" – three display screens in portrait: (1) Flaschengröße wählen: Leer / 300 / 500 / 750 / 1000 / 1500 ml / Voll; (2) Tagesfortschritt with ml and goal; (3) red warning screen "WASSER ERKANNT · STROM AUS". Plus an LED color legend: blau = trinken, grün = Ziel erreicht, rot = Akku/Fehler, amber = Wasser erkannt.

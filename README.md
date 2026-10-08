@@ -7,13 +7,13 @@ HydroDesk Base ist ein flaches, rechteckiges Gerät (180 × 100 × 25 mm), auf d
 Eine 5-kg-Wägezelle misst das Gewicht und rechnet es in getrunkene Milliliter um.
 Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen – eine LED-Leiste an der Vorderkante erinnert ans Trinken.
 
-![HydroDesk Base – Zusammenbau (isometrisch)](gehaeuse/preview/01_zusammenbau_iso.png)
+![HydroDesk Base – Produktbild](design/visualisierung/hydrodesk_produkt.png)
 
 ## ✨ Funktionen
 
 - **Jede Flasche passt** – keine teure Smart-Flasche nötig
 - **Gewicht → ml**: 5-kg-Wägezelle + HX711 unter einem schwimmend gelagerten 90 × 90 mm Flaschen-Pad
-- **Touch-Presets** für die Flaschengröße: Leer / 300 / 500 / 750 / 1000 / 1500 ml / Voll
+- **Flaschen-Kalibrierung per Touch-Tasten „Leer“ und „Voll“**: leere Flasche auflegen → Leer, volle Flasche → Voll; Inhalt = aktuelles Gewicht − Leergewicht
 - **Tagesziel, Fortschritt und nächste Erinnerung** immer sichtbar auf dem Display
 - **LED-Leiste (WS2812)** an der Vorderkante:
   - 🔵 blau = trinken
@@ -46,7 +46,15 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 
 | Explosionsansicht | Innenansicht ohne Deckel |
 |---|---|
-| ![Explosionsansicht](gehaeuse/preview/02_explosionsansicht.png) | ![Innenansicht ohne Deckel](gehaeuse/preview/04_innen_ohne_deckel.png) |
+| ![Explosionsansicht](design/visualisierung/hydrodesk_explosion.png) | ![Innenansicht ohne Deckel](design/visualisierung/hydrodesk_innen.png) |
+
+![Alle Einzelteile](design/visualisierung/hydrodesk_teile.png)
+
+| Abdeckkappe eingesteckt | Abdeckkappe herausgezogen |
+|---|---|
+| ![Abdeckkappe eingesteckt](gehaeuse/preview/kappe_eingesteckt.png) | ![Abdeckkappe offen](gehaeuse/preview/kappe_offen.png) |
+
+Renderbilder: [`design/visualisierung/`](design/visualisierung/) · 3D-Modell zum Drehen (GLB/STL/3MF): [`design/3d_modell/`](design/3d_modell/) · technische OpenSCAD-Vorschauen: [`gehaeuse/preview/`](gehaeuse/preview/)
 
 Details zu Druck, Schrauben und Zusammenbau: [`gehaeuse/ANLEITUNG.md`](gehaeuse/ANLEITUNG.md)
 

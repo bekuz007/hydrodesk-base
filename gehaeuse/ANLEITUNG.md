@@ -9,12 +9,13 @@ Du musst **nichts konstruieren**: Die STL-Dateien sind fertig zum Drucken.
 
 | Datei | Was ist das? | Wie oft drucken? |
 |---|---|---|
-| `stl/base.stl` | **Bodenwanne**: Boden mit allen Haltern, LED-Rille vorne, USB-Öffnungen hinten, Mulden für die Gummifüße | **1×** |
+| `stl/base.stl` | **Bodenwanne**: Boden mit allen Haltern, Lichtkammer für den LED-Streifen vorne (mit Falz für den Diffusor), USB-Öffnungen hinten, Mulden für die Gummifüße | **1×** |
 | `stl/cover.stl` | **Deckel**: mit Display-Fenster und Öffnung für das Pad | **1×** |
 | `stl/pad.stl` | **Flaschen-Pad**: 90 × 90 mm Platte, liegt nur auf der Wägezelle | **1×** |
 | `stl/kappe_usb.stl` | **Abdeckkappe**: steckbarer Deckel für die breite USB-Öffnung des Displays hinten (Programmier-Anschluss) | **1×** (am besten 2×, falls eine verloren geht) |
+| `stl/diffusor_led.stl` | **Diffusor-Leiste**: 166,7 × 16,7 × 1 mm, wird vorne in den Falz vor den LED-Streifen gesetzt und macht aus den einzelnen LEDs eine gleichmäßige Lichtlinie | **1×** (weißes PLA oder naturfarbenes PETG, siehe Abschnitt 3) |
 | `hydrodesk_base.scad` | Die „Bauzeichnung“ für OpenSCAD. Hier stehen alle Maße oben als Zahlen. Nur nötig, wenn etwas geändert werden muss. | – |
-| `preview/*.png` | Vorschaubilder (Zusammenbau, Explosionsansicht, Draufsicht, Einzelteile, Abdeckkappe `kappe_eingesteckt.png` / `kappe_offen.png`) | – |
+| `preview/*.png` | Vorschaubilder (Zusammenbau, Explosionsansicht, Draufsicht, Einzelteile, Abdeckkappe `kappe_eingesteckt.png` / `kappe_offen.png`, Diffusor `17_teil_diffusor_druckLage.png`, `diffusor_eingesetzt.png`, `diffusor_offen.png`, Schnitt durch die Lichtkammer `18_led_kammer_schnitt.png`) | – |
 | `QUELLEN.md` | Links zu den Maßzeichnungen/Datenblättern, die für die Konstruktion benutzt wurden (CYD, Wägezelle) | – |
 | `render.sh` | Skript, das die Vorschaubilder neu erzeugt (nur für Fortgeschrittene) | – |
 
@@ -37,7 +38,7 @@ Du musst **nichts konstruieren**: Die STL-Dateien sind fertig zum Drucken.
 
 ## 3. Druckeinstellungen (für dich oder für die Druckerei)
 
-Für alle Teile gilt:
+Für alle Teile gilt (Ausnahme Diffusor, siehe unten):
 
 | Einstellung | Wert |
 |---|---|
@@ -53,14 +54,21 @@ Wie die Teile auf dem Druckbett liegen – **die STL-Dateien sind schon richtig 
 
 | Teil | Lage auf dem Druckbett | Supports | Geschätzte Druckzeit* | Filament* |
 |---|---|---|---|---|
-| base | Boden nach unten (offene Seite oben) | nein | ca. 5 h 12 min | ca. 78 g |
+| base | Boden nach unten (offene Seite oben) | nein | ca. 5 h 20 min*** | ca. 80 g*** |
 | cover | **Oberseite nach unten** (schöne glatte Sichtfläche) | nein | ca. 1 h 06 min | ca. 16 g |
 | pad | flache Unterseite nach unten, Rand oben | nein | ca. 1 h 26 min | ca. 27 g |
 | kappe_usb | **Sichtseite (Flansch) nach unten**, Stopfen zeigt nach oben | nein | ca. 10 min** | ca. 1 g** |
+| diffusor_led | **flach** liegend (1 mm dünne Platte) | nein | ca. 15 min** | ca. 4 g** |
 
 \* Schätzung von PrusaSlicer 2.9 mit einem allgemeinen PLA-Profil (0,2 mm, 20 %, 3 Wände).
 Dein Drucker kann schneller oder langsamer sein.
-\*\* Kappe: grob aus dem Volumen geschätzt (0,57 cm³), nicht gesliced.
+\*\* Kappe und Diffusor: grob aus dem Volumen geschätzt (Kappe 0,57 cm³, Diffusor 2,78 cm³ bei 100 % Füllung), nicht gesliced.
+\*\*\* Bodenwanne mit der neuen Lichtkammer: aus dem Volumen hochgerechnet (+4,5 % gegenüber der gesliceten Version), nicht neu gesliced.
+
+**Diffusor-Leiste – andere Einstellungen:**
+* Material **weißes PLA** oder **naturfarbenes (milchiges) PETG** – kein farbiges oder schwarzes Filament, sonst kommt kein Licht durch.
+* **1,0 mm dick, 100 % Füllung** (Infill 100 %), damit das Licht gleichmäßig durchscheint und keine Wabenmuster zu sehen sind.
+* Flach auf das Druckbett legen (die STL liegt schon richtig). Die Seite, die auf dem Druckbett lag, ist glatter → sie zeigt später nach außen.
 
 Hinweise:
 * Der Boden ist 180 × 100 mm groß → das Druckbett muss mindestens ca. 190 × 110 mm haben (fast alle Drucker schaffen das).
@@ -78,8 +86,9 @@ Hinweise:
 | 2 | **M4 × 10 Senkkopfschraube** (DIN 7991, Innensechskant) | Pad von **oben** an der Wägezelle festschrauben (freie Seite, M4-Löcher) |
 | 4 | **Gummifüße selbstklebend, Ø 12 mm** (max. 13 mm) | in die runden Mulden unten kleben |
 | 1 | Silikonmatte, **auf 86 × 86 mm zuschneiden** (1–1,5 mm dick) | oben in das Pad kleben (innerhalb des Rands) |
-| – | Doppelseitiges Klebeband (Schaumstoff) und/oder Heißkleber | Akku, Module, LED-Streifen festkleben |
+| – | Doppelseitiges Klebeband (Schaumstoff) und/oder Heißkleber | Akku, Module, LED-Streifen festkleben; 2–4 kleine Klebepunkte (Glue Dots) für den Diffusor |
 | – | Kabelbinder (klein), dünne Litze | Kabel ordnen |
+| 1 | **Widerstand 330–470 Ω** | in die Datenleitung direkt am Streifen-Eingang (DIN) löten |
 
 Die M3-Schrauben drehen sich selbst ein Gewinde in den Kunststoff (Löcher 2,5 mm).
 **Nicht zu fest anziehen**, sonst dreht das Gewinde im PLA durch.
@@ -105,24 +114,33 @@ Wenn etwas um mehr als ca. 0,5 mm abweicht: die Zahl oben in `hydrodesk_base.sca
 | Wägezelle 5 kg | 80 × 12,7 × 12,7 mm; Löcher 5 mm und 20 mm von jedem Ende; 2× M4 an einem Ende, 2× M5 am anderen | `lc_*` |
 | HX711 | 34 × 21 mm (kleinere Versionen passen auch) | `hx_w`, `hx_l` |
 | MOSFET-Modul | 30 × 17 mm | `mos_w`, `mos_l` |
-| Boost-Wandler MT3608 (optional) | 37 × 17 mm, max. ca. 8 mm hoch | `boost_w`, `boost_l` |
+| 5-V-Wandler Pololu S13V10F5 | 12,1 × 8,9 × 4,2 mm (das Fach ist 37 × 17 mm groß, der Wandler wird darin mit Klebeband fixiert) | `pol_w`, `pol_l`, `pol_h` (Fach: `boost_w`, `boost_l`) |
 | Regensensor FC-37 / YL-83 | 40 × 54 mm | `rs_w`, `rs_l` |
 | Regensensor-Auswertemodul (LM393) | 16 × 30 mm | `cmp_w`, `cmp_l` |
-| LED-Streifen WS2812 | 10 mm breit, 10 LEDs bei 60 LED/m = 167 mm lang | `led_*` |
+| COB-LED-Streifen BTF-LIGHTING WS2812B FCOB (5 V, 160 LEDs/m) | **5 mm breit**, 13 Segmente à 12,5 mm = **162,5 mm lang, 26 LEDs**; Dicke mit Klebeband **2,5 mm angenommen** | `cob_w`, `cob_len`, `cob_t` |
+| Diffusor-Leiste (gedruckt) | 1,0 mm dick; Falz in der Lichtkammer 1,2 mm tief | `diff_t`, `falz_t` |
 
 **Besonders wichtig beim CYD:** Prüfe, wo genau die USB-Buchse(n) sitzen und wie tief die Bauteile auf der
 Rückseite sind. Die Öffnung hinten ist absichtlich breit, damit beide bekannten Varianten passen.
+
+**Besonders wichtig beim COB-Streifen:** Die Dicke `cob_t` (Streifen + Klebeband) ist mit 2,5 mm als ungünstigster Fall
+angenommen – **nach Lieferung nachmessen!** Aus `cob_t` wird die Tiefe der Lichtkammer berechnet
+(`led_d` = Falz 1,2 + Mischabstand 2,0 + `cob_t` = 5,7 mm). Ist der Streifen dünner, wird der Abstand zum Diffusor
+etwas größer – das schadet nicht, das Licht wird nur noch gleichmäßiger.
 
 ---
 
 ## 6. Wo sitzt was? (Innen, von oben gesehen)
 
 * **Linke Zone:** CYD-Display auf 4 Abstandshaltern, USB-Buchse zeigt **nach hinten** (zum Programmieren erreichbar).
-  **Unter** dem Display: der Akku (hinten) und der Boost-Wandler (vorne).
+  **Unter** dem Display: der Akku (hinten) und der 5-V-Wandler Pololu S13V10F5 (vorne, im Fach 37 × 17 mm).
 * **Streifen zwischen Display und Pad:** TC4056-Lader an der Rückwand (USB-C zum Laden zeigt nach hinten),
   davor das MOSFET-Modul, ganz vorne das Auswertemodul des Regensensors.
 * **Rechte Zone (unter dem Pad):** Wägezelle längs (von vorne nach hinten) in der Mitte,
   rechts daneben der HX711, links daneben der Regensensor in einer flachen Mulde.
+* **Vorne über die ganze Breite:** die Lichtkammer (167 mm lang, 5,7 mm tief). Der COB-LED-Streifen klebt an ihrer
+  Rückwand, vorne sitzt die Diffusor-Leiste im Falz. Alle Module halten dazu Abstand (in OpenSCAD geprüft:
+  `part = "parts_check"` und `part = "diff_check"` sind leer).
 * Zwischen den Zonen gibt es keine Trennwand → Kabel können frei verlegt werden.
 * Hinten gibt es also **zwei** Öffnungen: links die breite für das CYD (Programmieren),
   rechts daneben die kleine USB-C-Öffnung für den Lader.
@@ -150,23 +168,31 @@ Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anl�
    Das LM393-Modul vorne in den Streifen kleben.
 6. **TC4056** von vorne zwischen die beiden Leisten an der Rückwand schieben, bis die USB-C-Buchse in der Öffnung sitzt.
    Mit einem Tropfen Heißkleber sichern. **MOSFET-Modul** davor kleben.
-7. **Akku** hinten links in die Anschläge legen (doppelseitiges Klebeband), **Boost-Wandler** davor.
+7. **Akku** hinten links in die Anschläge legen (doppelseitiges Klebeband), den **5-V-Wandler (Pololu S13V10F5)** davor ins Fach kleben.
    Akku-Kabel zum TC4056 führen. Achtung Polarität!
-8. **LED-Streifen** (10 LEDs) vorne in die Rille kleben (der Streifen hat meist schon Klebeband).
-   Das Kabel geht am **linken Ende** durch das kleine Loch nach innen.
-9. Alle Kabel an das **CYD** anstecken (Stecker P3, CN1, P1 usw. sitzen auf der Rückseite an den Längskanten –
+8. **COB-LED-Streifen** (26 LEDs = 13 Segmente, 162,5 mm; nur an den markierten Schnittstellen alle 12,5 mm schneiden)
+   vorbereiten: 3 Litzen (5 V, GND, Daten) an den **Eingang** (Pfeil zeigt vom Kabel weg) löten,
+   in die Datenleitung direkt am Streifen einen **Widerstand 330–470 Ω** setzen.
+   Den Streifen mit seinem Klebeband an die **Rückwand der Lichtkammer** kleben, mittig (links und rechts je ca. 2 mm Platz),
+   die LEDs zeigen nach vorne.
+   Die Kabel gehen **um das linke Streifenende herum** durch das kleine Loch (Ø 5 mm) nach innen –
+   das Loch liegt direkt hinter dem Streifenanfang, deshalb die Litzen vor dem Aufkleben durchstecken.
+9. **Diffusor-Leiste** vorne in den Falz setzen (glatte Seite nach außen): 2–4 kleine Klebepunkte (Glue Dots) oder
+   ein Hauch Kleber an den Rand, dann leicht andrücken. Sie liegt 0,2 mm vertieft in der Front.
+   Wenn sie ohne Kleber stramm sitzt, reicht leichtes Eindrücken.
+10. Alle Kabel an das **CYD** anstecken (Stecker P3, CN1, P1 usw. sitzen auf der Rückseite an den Längskanten –
    neben dem Akku ist dafür Platz). Kabel mit Kabelbindern ordnen.
-10. **CYD** mit dem Bildschirm nach oben und der USB-Buchse nach hinten auf die 4 Abstandshalter legen.
-11. **Deckel** auflegen (der Rand innen zentriert ihn). Mit 8× M3 × 12 Senkkopf festschrauben:
+11. **CYD** mit dem Bildschirm nach oben und der USB-Buchse nach hinten auf die 4 Abstandshalter legen.
+12. **Deckel** auflegen (der Rand innen zentriert ihn). Mit 8× M3 × 12 Senkkopf festschrauben:
     4 Schrauben gehen durch die Ecklöcher des CYD in die Abstandshalter, 4 in die Dome im Boden.
     **Gefühlvoll anziehen.**
-12. **Pad** von oben in die Öffnung legen. Die zwei Senklöcher müssen vorne über den M4-Löchern der Wägezelle liegen.
+13. **Pad** von oben in die Öffnung legen. Die zwei Senklöcher müssen vorne über den M4-Löchern der Wägezelle liegen.
     Mit 2× M4 × 10 Senkkopf festschrauben. Prüfen: Das Pad darf **nirgends** den Deckel berühren
     (rundherum ca. 1 mm Spalt) – sonst misst die Waage falsch.
-13. **Silikonmatte** auf 86 × 86 mm zuschneiden und innen in das Pad kleben (deckt die Schraubenköpfe ab).
-14. **Abdeckkappe** hinten in die breite USB-Öffnung drücken, bis der Flansch an der Wand anliegt
+14. **Silikonmatte** auf 86 × 86 mm zuschneiden und innen in das Pad kleben (deckt die Schraubenköpfe ab).
+15. **Abdeckkappe** hinten in die breite USB-Öffnung drücken, bis der Flansch an der Wand anliegt
     (die Kerbe im Flansch zeigt nach **unten**).
-15. Fertig! Waage in der Software tarieren und kalibrieren (z. B. mit einer vollen 0,5-l-Flasche = ca. 500 g Wasser + Flasche).
+16. Fertig! Waage in der Software tarieren und kalibrieren (z. B. mit einer vollen 0,5-l-Flasche = ca. 500 g Wasser + Flasche).
 
 ### 7a. Abdeckkappe für den USB-Anschluss
 
@@ -190,12 +216,12 @@ Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anl�
 ## 8. Drucken lassen – so geht’s
 
 **Möglichkeit A – Schule / FabLab / Makerspace (meist am günstigsten):**
-Die vier Dateien `base.stl`, `cover.stl`, `pad.stl`, `kappe_usb.stl` auf einen USB-Stick kopieren und diese Anleitung
-(Abschnitt 3 Druckeinstellungen) zeigen. Material: PLA.
+Die fünf Dateien `base.stl`, `cover.stl`, `pad.stl`, `kappe_usb.stl`, `diffusor_led.stl` auf einen USB-Stick kopieren und diese Anleitung
+(Abschnitt 3 Druckeinstellungen) zeigen. Material: PLA (Diffusor: weißes PLA oder naturfarbenes PETG, 100 % Füllung).
 
 **Möglichkeit B – Craftcloud (craftcloud3d.com):**
-1. Webseite öffnen → „Upload“ und die vier STL-Dateien hochladen.
-2. Material wählen: **PLA** (Verfahren FDM). Farbe nach Wunsch (z. B. Hellgrau / Weiß, Pad Blau).
+1. Webseite öffnen → „Upload“ und die fünf STL-Dateien hochladen.
+2. Material wählen: **PLA** (Verfahren FDM). Farbe nach Wunsch (z. B. Hellgrau / Weiß, Pad Blau). **Diffusor: Weiß**, Füllung 100 %.
 3. Anzahl jeweils **1**.
 4. Die Seite zeigt nun Angebote verschiedener Druckereien mit Preis und Lieferzeit → vergleichen und bestellen.
 
@@ -213,9 +239,10 @@ Preise werden erst **nach dem Hochladen** angezeigt – sie hängen von Material
 1. OpenSCAD installieren (kostenlos, openscad.org).
 2. `hydrodesk_base.scad` öffnen. Oben stehen alle Maße mit Kommentaren.
 3. Zahl ändern → **F6** (Rendern) → `Datei > Exportieren > STL`.
-4. Ganz oben `part = "base";` (oder `"cover"`, `"pad"`, `"cap"`) einstellen, um das jeweilige Teil zu exportieren.
+4. Ganz oben `part = "base";` (oder `"cover"`, `"pad"`, `"cap"`, `"diffusor"`) einstellen, um das jeweilige Teil zu exportieren.
    `"assembly"` zeigt alles zusammengebaut, `"exploded"` die Explosionsansicht, `"inside"` das Innere ohne Deckel,
-   `"section"` einen Schnitt. `cap_pull = 14` zieht die Abdeckkappe in der Vorschau heraus.
+   `"section"` einen Schnitt. `cap_pull = 14` zieht die Abdeckkappe in der Vorschau heraus, `diff_pull = 16` den Diffusor.
+   `"led_section"` zeigt einen Schnitt durch die Lichtkammer.
 
 Oder einfach dem Assistenten die gemessenen Werte schicken – er erzeugt neue STL-Dateien.
 

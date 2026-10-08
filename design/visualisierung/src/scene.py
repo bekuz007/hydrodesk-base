@@ -20,17 +20,20 @@ cyd_pcb_z, cyd_pcb_t = 18.4, 1.5
 lcd_top_z = 23.5
 cyd_holes = [(8.4, 14.8), (8.4, 92.8), (50.4, 14.8), (50.4, 92.8)]
 bat = (12.15, 41.0, 2.0, 34.5, 56, 10.3)
-boost = (10.9, 19.0, 3.0, 37, 17)
+boost = (10.9, 19.0, 3.0, 37, 17)              # Fach 37 x 17 fuer den 5-V-Wandler
+pol = (10.9 + (37-12.1)/2, 19.0 + (17-8.9)/2, 2.0, 12.1, 8.9)   # Pololu S13V10F5 (12,1 x 8,9 x 4,2 mm) mittig im Fach
 tc = (56, 71.6, 3.5, 17, 26)
-fet = (56, 37.5, 2.0, 17, 30)
-cmp_ = (56, 5.3, 2.0, 16, 30)
+fet = (56, 39.4, 2.0, 17, 30)                   # hinter das LM393-Modul geschoben (dickere Frontwand)
+cmp_ = (56, 7.6, 2.0, 16, 30)
 hx = (136, 60, 2.0, 34, 21)
 rs = (75.5, 20, 1.2, 40, 54)
 pad_cx, pad_cy = 126, 50
 lc_x0, lc_y0, lc_z0 = pad_cx - 6.35, 10, 5
 pad_top_z = 22.3
-cov_bosses = [(77, 7), (77, 93), (175.5, 20), (175.5, 80)]
-led_x0, led_x1 = 6.5, 173.5
+cov_bosses = [(77, 9.2), (77, 93), (175.5, 20), (175.5, 80)]
+led_x0, led_x1 = 6.5, 173.5                     # Lichtkammer vorne
+led_d, cob_t, cob_len, cob_z, cob_w = 5.7, 2.5, 162.5, 8.75, 5.0   # COB-Streifen WS2812B (26 LEDs) auf der Kammer-Rueckwand
+cob_x0 = (led_x0 + led_x1 - cob_len) / 2
 feet_pos = [(11, 11), (169, 11), (11, 89), (169, 89)]
 
 # ---------------- Szene leeren ----------------
@@ -87,6 +90,23 @@ def tex_mat(name, img, emis=0.0, rough=0.4, coat=0.0):
         b.inputs['Emission Strength'].default_value = emis
     return m
 
+def milky_mat(name, glow=0.0):
+    """Milchiger Diffusor (weisses PLA / natur PETG, 1 mm): diffus durchscheinend, optional leichtes Leuchten."""
+    m = bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree
+    out = nt.nodes['Material Output']; nt.nodes.remove(nt.nodes['Principled BSDF'])
+    tr = nt.nodes.new('ShaderNodeBsdfTranslucent'); tr.inputs['Color'].default_value = (0.95, 0.96, 1.0, 1)
+    df = nt.nodes.new('ShaderNodeBsdfPrincipled'); df.inputs['Base Color'].default_value = (0.92, 0.93, 0.95, 1)
+    df.inputs['Roughness'].default_value = 0.55
+    mx = nt.nodes.new('ShaderNodeMixShader'); mx.inputs['Fac'].default_value = 0.45
+    nt.links.new(df.outputs[0], mx.inputs[1]); nt.links.new(tr.outputs[0], mx.inputs[2])
+    sh = mx
+    if glow > 0:
+        em = nt.nodes.new('ShaderNodeEmission'); em.inputs['Color'].default_value = (0.25, 0.5, 1.0, 1)
+        em.inputs['Strength'].default_value = glow
+        ad = nt.nodes.new('ShaderNodeAddShader'); nt.links.new(mx.outputs[0], ad.inputs[0]); nt.links.new(em.outputs[0], ad.inputs[1]); sh = ad
+    nt.links.new(sh.outputs[0], out.inputs['Surface'])
+    return m
+
 LED_STR = {'produkt': 4.0, 'explosion': 4.0, 'innen': 4.0, 'teile': 3.0}.get(MODE, 4.0)
 M = dict(
     pla=mat('PLA grau', (0.50, 0.51, 0.52), 0.55, spec=0.4),
@@ -111,6 +131,7 @@ M = dict(
     bat=mat('Akku', (0.06, 0.065, 0.07), 0.35, coat=0.3),
     term=mat('Klemme', (0.05, 0.45, 0.25), 0.45),
     led_on=mat('LED', (0.1, 0.4, 1.0), 0.2, emis=(0.0, 0.22, 1.0), estr=LED_STR),
+    cob=mat('COB-Traeger', (0.92, 0.92, 0.9), 0.5),
     glass=mat('Glas', (0.95, 0.97, 1.0), 0.03, trans=1.0, ior=1.06),
     water=mat('Wasser', (0.55, 0.80, 1.0), 0.08, trans=1.0, ior=1.08),
     cap=mat('Deckel Flasche', (0.85, 0.87, 0.9), 0.35, metal=0.6),
@@ -338,17 +359,16 @@ def make_battery():
     g = group('bat', o); anchor('bat', 'bat', (x+w/2, y+l*0.6, z+h)); return g
 
 def make_boost():
-    x, y, z, w, l = boost; o = []
-    o.append(box('Boost PCB', x, y, z, w, l, 1.2, M['pcb_p'], 0.15))
-    o.append(box('Spule', x+14, y+4.5, z+1.2, 8, 8, 4.0, M['black'], 0.6))
-    o.append(box('MT3608', x+24, y+6, z+1.2, 3, 3, 1.0, M['black'], 0.1))
-    o.append(box('Poti', x+4, y+9.5, z+1.2, 9.5, 4.5, 4.5, M['potblue'], 0.3))
-    o.append(cyl('Poti Schraube', x+5.2, y+11.7, z+3.5, 1.8, 2.3, M['gold'], 16))
-    for i, (px, py) in enumerate([(x+1, y+1.2), (x+1, y+l-4.2), (x+w-4, y+1.2), (x+w-4, y+l-4.2)]):
-        o.append(box('Pad%d' % i, px, py, z+1.2, 3, 3, 0.15, M['gold'], 0.0))
-    o.append(box('C1', x+6, y+3, z+1.2, 3.2, 1.6, 1.4, M['tape'], 0.1))
-    o.append(box('C2', x+27, y+11, z+1.2, 3.2, 1.6, 1.4, M['tape'], 0.1))
-    g = group('boost', o); anchor('boost', 'boost', (x+18, y+8.5, z+5)); return g
+    # 5-V-Wandler Pololu S13V10F5: 12,1 x 8,9 mm, beidseitig bestueckt (4,2 mm), mit Klebeband mittig im 37x17-Fach
+    x, y, z, w, l = pol; o = []
+    o.append(box('Pololu Unterseite', x+1.5, y+1.2, z, w-3, l-2.4, 1.6, M['black'], 0.1))
+    o.append(box('Pololu PCB', x, y, z+1.6, w, l, 0.8, M['pcb_p'], 0.12))
+    o.append(box('Pololu Spule', x+4.2, y+1.6, z+2.4, 4.6, 4.6, 1.8, M['black'], 0.5))
+    o.append(box('Pololu IC', x+1.0, y+2.2, z+2.4, 2.4, 2.4, 0.8, M['black'], 0.1))
+    o.append(box('Pololu C', x+9.4, y+1.2, z+2.4, 1.6, 3.2, 1.2, M['tape'], 0.1))
+    for i in range(3):
+        o.append(cyl('Pololu Pad%d' % i, x+w-1.3, y+1.9+i*2.54, z+2.39, 1.6, 0.06, M['gold'], 16))
+    g = group('boost', o); anchor('boost', 'boost', (x+w/2, y+l/2, z+4.2)); return g
 
 def make_tc():
     x, y, z, w, l = tc; o = []
@@ -439,22 +459,19 @@ def make_loadcell():
     anchor('lc', 'lc', (pad_cx+6.35, 52, z0+9)); anchor('lc_fix', 'lc', (pad_cx, 82, z0+w)); return g
 
 def make_led():
-    o = [box('LED-Streifen', led_x0+2, 3.1, 3.7, led_x1-led_x0-4, 0.4, 10, M['white'], 0.1)]
-    for i in range(10):
-        x = led_x0 + 5.8 + i*16.67
-        o.append(box('LED%d' % i, x, 1.5, 6.2, 5, 1.6, 5, M['white'], 0.25))
-        o.append(cyl('LEDl%d' % i, x+2.5, 1.49, 8.7, 3.6, 0.05, M['led_on'], 24))
-        o[-1].rotation_euler = (0, 0, 0)
-    # Lichtpunkte nach vorne drehen: Kreis in XZ statt XY
-    for ob in o[1:]:
-        if ob.name.startswith('LEDl'):
-            me = ob.data; c = Vector((0, 0, 0))
-            for v in me.vertices: c += v.co
-            c /= len(me.vertices)
-            for v in me.vertices:
-                dx, dy = v.co.x - c.x, v.co.y - c.y; dz = v.co.z - c.z
-                v.co = Vector((c.x + dx, 1.47 - dz, c.z + dy))
-    g = group('led', o); anchor('led', 'led', (led_x0+5.8+1*16.67+2.5, 1.5, 11.2)); return g
+    # COB-Streifen WS2812B FCOB, 5 mm breit, 26 LEDs: durchgehende Lichtlinie (keine Einzelpunkte)
+    y0 = led_d - cob_t
+    o = [box('COB-Streifen', cob_x0, y0, cob_z-cob_w/2, cob_len, cob_t, cob_w, M['cob'], 0.15)]
+    o.append(box('COB-Licht', cob_x0+0.4, y0-0.06, cob_z-1.5, cob_len-0.8, 0.08, 3.0, M['led_on'], 0.0))
+    for i in range(1, 13):   # Schnittmarken alle 12,5 mm (2 LEDs)
+        o.append(box('COB-Schnitt%d' % i, cob_x0+i*12.5-0.15, y0-0.07, cob_z-cob_w/2+0.2, 0.3, 0.02, 0.6, M['gold'], 0.0))
+    # Litzen an den Loetpads am linken Ende, um das Streifenende herum ins Kabelloch (x = led_x0 + 4)
+    o += bundle('COB Kabel', [(cob_x0+1.2, y0-0.4, cob_z), (cob_x0-0.9, y0+0.6, cob_z), (8.6, led_d+0.6, 8.6), (10.5, led_d+2.2, 8.5)], 'rgk', 0.8, 0.3)
+    g = group('led', o); anchor('led', 'led', (cob_x0+26, y0-0.1, cob_z+1.5)); return g
+
+def make_diff(glow=0.0):
+    d = import_stl('Diffusor-Leiste', SRC+'diff.stl', milky_mat('Diffusor milchig', glow))
+    g = group('diff', [d]); anchor('diff', 'diff', (led_x0+40, 0.2, 17.5)); return g
 
 def m3(name, x, y, ztop, L=12, head=6.0):
     o = [cyl(name+'k', x, y, ztop-1.7, 3.0, 1.7, M['steel'], 32, d2=head),
@@ -527,6 +544,7 @@ def dashed(name, p0, p1, dash=3.0, gap=2.2, r=0.25):
 
 # ---------------- Gemeinsamer Geraeteaufbau ----------------
 SRC = HERE + 'stl/'
+DIFF_GLOW = {'produkt': 0.0}.get(MODE, 0.0)
 def build_all(cables=False):
     base = import_stl('Unterschale', SRC+'base.stl', M['pla']); group('base', [base])
     anchor('base', 'base', (178, 50, 16)); anchor('base_l', 'base', (2, 40, 14)); anchor('base_f', 'base', (60, 0.5, 18)); anchor('base_in', 'base', (100, 88, floor_t))
@@ -539,6 +557,7 @@ def build_all(cables=False):
     anchor('cap', 'cap', (14.5, 101.2, 17))
     make_mat(); make_cyd(); make_battery(); make_boost(); make_tc(); make_fet(); make_cmp()
     make_hx(); make_rs(); make_loadcell(); make_led()
+    make_diff(DIFF_GLOW)
 
 def place(gname, dz=0, dx=0, dy=0):
     GROUPS[gname].location += Vector((dx, dy, dz))
@@ -564,7 +583,8 @@ if MODE == 'explosion':
     for g in ['lc', 'hx', 'rs', 'tc', 'fet', 'cmp']: place(g, Z['B'])
     place('cap', Z['B']+CYD_DZ, 0, 30)                       # Abdeckkappe (gehoert zum CYD-USB) nach hinten herausgezogen
     place('cyd', Z['B']+CYD_DZ)
-    place('led', 0, 0, -26)
+    place('led', 0, 0, -24)                                  # COB-Streifen nach vorne gezogen
+    place('diff', -8, 0, -50)                                # Diffusor-Leiste noch weiter vorne, etwas tiefer
     place('pad', Z['pad']); place('mat', Z['mat']); place('cover', Z['cover'])
     # Schrauben / Fuesse
     sc = []
@@ -609,15 +629,15 @@ elif MODE == 'innen':
     # Kabel (Farben: rot +, schwarz -, gelb/gruen/weiss Signal)
     bundle('K_HX', [(hx[0]+1, hx[1]+12, 4.2), (133, 88, 3.2), (128, 95.5, 3.2), (100, 95.0, 3.0), (80, 70, 3.0),
                     (62, 69.2, 3.0), (54, 68, 5), (52.5, 66.5, 25), (51.6, 66.5, zc)], 'rkyw', 1.0)
-    bundle('K_CMP', [(64, 35.4, 4.0), (57, 36.2, 4.0), (54, 39, 4.0), (53.4, 47, 5), (52.5, 50.5, 26), (51.6, 50.5, zc)], 'rky', 1.0)
-    bundle('K_FET', [(60, 38, 3.9), (54, 33, 3.2), (48.6, 27.5, 4.4)], 'rk', 1.1)
-    bundle('K_PWR', [(boost[0]+2, boost[1]+8.5, 4.4), (7.5, 30, 5), (7.0, 39, 22), (7.2, 40.5, zc)], 'rk', 1.1)
-    bundle('K_LED', [(10.5, 5.5, 8.5), (10, 10, 4), (7.5, 18, 4), (7.0, 24, 22), (7.2, 25.5, zc)], 'rgk', 1.0)
+    bundle('K_CMP', [(64, 37.7, 4.0), (57, 38.4, 4.0), (54, 41, 4.0), (53.4, 47, 5), (52.5, 50.5, 26), (51.6, 50.5, zc)], 'rky', 1.0)
+    bundle('K_FET', [(60, 40, 3.9), (54, 34, 3.2), (pol[0]+pol[3]+0.5, pol[1]+4.5, 3.8)], 'rk', 1.1)
+    bundle('K_PWR', [(pol[0]+1, pol[1]+4.5, 3.8), (7.5, 30, 5), (7.0, 39, 22), (7.2, 40.5, zc)], 'rk', 1.1)
+    bundle('K_LED', [(10.5, 7.6, 8.5), (10, 11, 4), (7.5, 18, 4), (7.0, 24, 22), (7.2, 25.5, zc)], 'rgk', 1.0)
     bundle('K_BAT', [(bat[0]+bat[3]/2+3, bat[1]-4.5, 3.5), (44, 38.5, 3.0), (53, 46, 3.0), (54, 62, 3.0), (56, 69, 3.6), (59, 73, 5.4)], 'rk', 1.1)
     bundle('K_TCF', [(68, 72.5, 5.4), (68.5, 70, 4.2), (68.5, 66.8, 4.0)], 'rk', 1.1)
-    bundle('K_RS', [(95, 21, 2.9), (86, 13, 3.2), (75, 10, 4.2), (72.3, 9.9, 4.3)], 'kw', 1.0)
+    bundle('K_RS', [(95, 21, 2.9), (86, 15, 3.2), (75, 12.2, 4.2), (72.3, 12.2, 4.3)], 'kw', 1.0)
     shadow_catcher(-2.2)
-    anchor('cables', None, (80, 70, 3.2)); anchor('k_led', None, (10, 10, 4))
+    anchor('cables', None, (80, 70, 3.2)); anchor('k_led', None, (10, 11, 4))
     cam = camera((96, 52, 46), -25, 50, 1280, lens=100)
 
 elif MODE == 'produkt':
@@ -640,8 +660,7 @@ elif MODE == 'produkt':
     lathe('Wasser', [(0, 1.5), (R-2.0, 1.5), (R-1.2, 4), (R-1.2, fill), (0, fill)], M['water'], 96, pad_cx, pad_cy, zb)
     shadow_catcher(-2.2, col=(0.03, 0.034, 0.04))
     MATS['Weiss'].node_tree.nodes['Principled BSDF']  # noqa
-    strip = bpy.data.objects['LED-Streifen']; sm = mat('Streifen leuchtend', (0.6, 0.75, 1.0), 0.4, emis=(0.05, 0.3, 1.0), estr=0.9)
-    strip.data.materials.clear(); strip.data.materials.append(sm)
+    # COB-Linie leuchtet hinter dem milchigen Diffusor -> gleichmaessige blaue Lichtlinie
     # Glanz fuer LEDs ueber Compositor
     scn.use_nodes = True; nt = scn.node_tree
     rl = nt.nodes['Render Layers']; comp = nt.nodes['Composite']
@@ -675,6 +694,7 @@ elif MODE == 'teile':
     lay('rs', 238, 118); lay('lc', 300, 162, (0, 0, -90)); lay('hx', 300, 112)
     lay('tc', 398, 140); lay('fet', 432, 138); lay('cmp', 466, 138); lay('boost', 398, 100)
     lay('led', 15, 36, (-90, 0, 0))
+    lay('diff', 15, 52, (-90, 0, 0))
     lay('cap', 452, 27, (-90, 0, 0))
     # Schrauben liegend + Fuesse
     def lying(objs, x, y):
@@ -690,7 +710,7 @@ elif MODE == 'teile':
     bpy.context.view_layer.update()
     # Anker: obere linke Ecke jeder Gruppe (fuer Nummern) + Mitte
     TE = {}
-    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led', 'cap']:
+    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led', 'cap', 'diff']:
         mn, mx = gbbox(g); TE[g] = (mn, mx)
     sx_mn = Vector((sx-1, 22, 0)); sx_mx = Vector((sx+140, 40, 6)); TE['screws'] = (sx_mn, sx_mx)
     TE['feet'] = (Vector((364, 24, 0)), Vector((370+3*17+13, 42, 3)))

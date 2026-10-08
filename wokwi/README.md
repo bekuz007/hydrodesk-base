@@ -47,7 +47,7 @@ Mit dieser Simulation könnt ihr die komplette Logik von **HydroDesk Base** im B
 | Nässe-/Regensensor (LM393-Modul, Ausgang DO) | **Schiebeschalter** „NÄSSE“ (links = trocken, rechts = nass) |
 | MOSFET, der die Last (Strom) abschaltet | grüne **LED „LAST“** (leuchtet = Strom an) |
 | Akku-Spannung über Spannungsteiler | **Drehregler** (Potentiometer) „AKKU“ (ganz links = 0 %, ganz rechts = 100 %) |
-| LED-Streifen WS2812 (10 LEDs) | LED-Streifen mit 10 LEDs |
+| COB-LED-Streifen WS2812B (BTF-LIGHTING FCOB, 26 LEDs, hinter der Diffusor-Leiste) | LED-Streifen mit 26 kleinen LEDs (`wokwi-led-strip`, `pixels` 26) |
 | Heim-/Schul-WLAN + NTP | Wokwi-Gast-WLAN **„Wokwi-GUEST“** + `pool.ntp.org` |
 | Telegram-Nachricht | nur Text im Seriellen Monitor: `[TELEGRAM-STUB] würde senden: ...` |
 
@@ -184,10 +184,10 @@ Gewicht **1,5 s ruhig**, wird verglichen:
 
 ---
 
-## 5. LEDs (WS2812)
+## 5. LEDs (COB-LED-Streifen WS2812B, 26 LEDs)
 
 Im Normalbetrieb sind **alle LEDs aus**. Sie leuchten in ruhigen Farben mit mittlerer Helligkeit
-(`LED_HELLIGKEIT = 60` von 255), immer **alle 10 gleich**.
+(`LED_HELLIGKEIT = 60` von 255, **höchstens 80** – Strombudget, siehe unten), immer **alle 26 gleich**.
 **Dauerlicht, kein Blinken** – geblinkt wird **nur** in drei Fällen: Akku-Warnung (rot),
 Bluetooth sucht (weiß) und Handy verbunden (2× lila). In der **Pause** eines Blinkmusters sind die
 LEDs aus (keine Mischfarbe).
@@ -231,6 +231,34 @@ LEDs aus (keine Mischfarbe).
 - Das Weiß ist **gedimmt**: Farbwert `BT_WEISS_WERT = 90` je Kanal, zusätzlich `LED_HELLIGKEIT`.
 - Der Serielle Monitor meldet nur, **wer** die LEDs gerade steuert (z. B.
   `[LED] weiß blinken (Bluetooth sucht)`), nicht jedes einzelne An/Aus.
+
+### Echter Streifen: Bauteil, Verdrahtung, Strom
+
+**Streifen:** BTF-LIGHTING WS2812B **FCOB** (COB = LEDs dicht unter einer durchgehenden Silikonschicht),
+5 V, 160 LEDs/m, 5 mm breit, jede LED mit eigenem IC (einzeln ansteuerbar wie normale WS2812B, gleiche
+Bibliothek Adafruit NeoPixel, `NEO_GRB + NEO_KHZ800`). Teilbar alle 12,5 mm (= 2 LEDs).
+Verbaut: **13 Segmente = 162,5 mm = 26 LEDs** (`LED_ANZAHL = 26`), auf die Rückwand der Lichtkammer vorne
+im Gehäuse geklebt. Davor sitzt die gedruckte **Diffusor-Leiste** (1 mm weißes PLA) – so sieht man eine
+gleichmäßige Lichtlinie statt einzelner Punkte.
+
+**Verdrahtung (echt):**
+
+| Streifen | an | Hinweis |
+|---|---|---|
+| `5V` / `+` | 5 V vom Pololu S13V10F5 (gleiche 5 V wie das CYD) | nicht an 3,3 V |
+| `GND` / `−` | GND | gemeinsame Masse mit dem CYD |
+| `DIN` | GPIO23 | **330–470 Ω in Reihe**, direkt am Streifen-Eingang (DIN) eingelötet |
+| – | Elko 470–1000 µF zwischen 5 V und GND am Streifen | empfohlen, fängt den Einschaltstrom ab |
+
+Den **Eingang** des Streifens benutzen (Pfeil auf dem Streifen zeigt vom Eingang weg). Die Kabel gehen
+am linken Streifenende durch das kleine Loch ins Gehäuse.
+
+**Strom (Schätzung):** 26 LEDs voll weiß (255) ca. **0,49 A** – kommt im Programm nie vor.
+Mit `LED_HELLIGKEIT = 60` höchstens ca. **0,12 A**, mit 80 ca. 0,15 A. Zusammen mit dem CYD
+(ca. 0,25–0,35 A) bleibt das unter 0,5 A, der Pololu-Wandler liefert bis 1 A.
+Darum `LED_HELLIGKEIT` **nicht über 80** stellen – der Sketch bricht das Kompilieren sonst mit
+einer Meldung ab (`static_assert`).
+In Wokwi wird kein Strom simuliert, und der Streifen hängt dort an 3,3 V.
 
 ---
 
@@ -364,7 +392,7 @@ mit 0 ml) und außerhalb 22:00–07:00. Nach ≥100 ml im Fenster startet die Pa
 
 1. **https://wokwi.com/projects/new/esp32** öffnen.
 2. Tab `sketch.ino`: alles ersetzen durch unsere `sketch.ino`.
-3. Tab `diagram.json`: alles ersetzen durch unsere `diagram.json` (gleich wie Version 1).
+3. Tab `diagram.json`: alles ersetzen durch unsere `diagram.json` (LED-Streifen jetzt mit 26 Pixeln).
 4. **Library Manager** → „+“ → `Adafruit GFX Library`, `Adafruit ILI9341`, `Adafruit FT6206 Library`,
    `Adafruit BusIO`, `Adafruit NeoPixel`, `HX711` (wie `libraries.txt`). WLAN und Zeit sind im
    ESP32-Kern enthalten, dafür braucht ihr **keine** weitere Bibliothek. NimBLE-Arduino braucht
@@ -495,9 +523,9 @@ Ablauf in `loop()` (Sicherheit zuerst):
 | HX711 SCK | HX711 `SCK` | GPIO22 | **GPIO22** (CN1 / P3) | |
 | Akku-Spannung | Poti `SIG` | GPIO35 | **GPIO35** (P3) | nur Eingang, ADC1 (geht auch mit WLAN); echt über Spannungsteiler 100k/100k |
 | Nässe-Sensor DO | Schalter Mitte (`2`), rechts (`3`) an GND | GPIO19 | **GPIO19** (SD-Slot MISO) | LOW = nass; nur wenn SD-Karte nicht benutzt wird |
-| WS2812 DIN | Streifen `DIN` | GPIO23 | **GPIO23** (SD-Slot MOSI) | nur ohne SD-Karte; Streifen echt an **5 V** |
+| WS2812 DIN | Streifen `DIN` | GPIO23 | **GPIO23** (SD-Slot MOSI) | nur ohne SD-Karte; COB-Streifen (26 LEDs) echt an **5 V**, **330–470 Ω in Reihe direkt am Streifen-DIN** |
 | Last / MOSFET-Gate | LED „LAST“ (Anode) | GPIO18 | **GPIO18** (SD-Slot SCK) | HIGH = Strom an; nur ohne SD-Karte |
-| 3,3 V | HX711 VCC, Poti VCC, Streifen VDD | 3V3 | 3,3 V (CN1) | |
+| 3,3 V | HX711 VCC, Poti VCC, Streifen VDD | 3V3 | 3,3 V (CN1) | Streifen nur in Wokwi an 3,3 V, echt an 5 V |
 | 5 V | Display VCC | VIN | 5 V (P1 VIN) | |
 | GND | alle GND | GND.1 / GND.2 | GND | |
 | Serieller Monitor | – | TX0/RX0 (GPIO1/3) | GPIO1/3 (P1) | |
@@ -522,7 +550,7 @@ In Wokwi sind die Pin-Nummern **gleich** gewählt wie am CYD (außer Display-RST
 | Nässe | Schiebeschalter | LM393-Modul: DO an GPIO19, Empfindlichkeit am Poti des Moduls einstellen |
 | Last | LED | Logic-Level-N-MOSFET (z. B. AO3400 / IRLZ44N), Gate über 100 Ω, 100 kΩ nach GND |
 | Akku | Poti 0–4095 = 3,0–4,2 V (gerade Linie) | Spannungsteiler 100k/100k an GPIO35, `analogReadMilliVolts()` × 2 |
-| WS2812 | Strom wird nicht simuliert | 10 LEDs bis ca. 600 mA bei voller Helligkeit → eigenes 5-V-Netzteil/USB, 330 Ω in DIN, 470–1000 µF am Streifen |
+| LED-Streifen | `wokwi-led-strip` mit 26 Pixeln, an 3,3 V, Strom wird nicht simuliert | COB-Streifen WS2812B (26 LEDs) an 5 V vom Pololu S13V10F5: voll weiß ca. 0,49 A, mit `LED_HELLIGKEIT` 60 höchstens ca. 0,12 A (max. 80 erlaubt); 330–470 Ω in DIN, 470–1000 µF am Streifen (Abschnitt 5) |
 | Uhrzeit / Tageswechsel | WLAN „Wokwi-GUEST“ + NTP (im Browser meist nach wenigen Sekunden) | Heim-/Schul-WLAN aus `secrets.h` + NTP |
 | Einstellungen | werden in `Preferences` (NVS) gespeichert, gehen beim Neustart der Simulation verloren | bleiben nach Stromausfall erhalten |
 | Telegram | nur `[TELEGRAM-STUB]`-Text | WLAN + Bot (z. B. Bibliothek „UniversalTelegramBot“) in `telegramSenden()` |
@@ -602,7 +630,8 @@ echter Hardware getestet.
 | `AKKU_BLINK_KRITISCH_AN_MS` / `AKKU_BLINK_KRITISCH_AUS_MS` | 650 / 650 ms | Blinktakt unter 10 % (langsamer) |
 | `AKKU_WIEDERHOLUNG_MS` | 10 min | Blinkmuster wiederholen (0 = nie) |
 | `AKKU_HINWEIS_MS` | 5 s | oranger Hinweis „Akku unter 20 %“ |
-| `LED_HELLIGKEIT` / `LED_GRUEN_MS` / `LED_ROT_MS` | 60 / 10 s / 5 s | LED-Streifen |
+| `LED_ANZAHL` | 26 | LEDs im COB-Streifen (13 Segmente à 2 LEDs) |
+| `LED_HELLIGKEIT` / `LED_GRUEN_MS` / `LED_ROT_MS` | 60 (höchstens 80) / 10 s / 5 s | LED-Streifen; über 80 bricht das Kompilieren ab (Strombudget) |
 | `LANGDRUCK_MS` | 3 s | Langdruck für den Service-Modus |
 | `HYDRO_BLE` | 0 | 0 = Bluetooth simuliert (Wokwi), 1 = echtes BLE (NimBLE-Arduino) |
 | `BT_START_SUCHEN` | true | beim Einschalten gleich suchen (Demo) |
@@ -657,17 +686,17 @@ echter Hardware getestet.
   Für Wokwi (`HYDRO_BLE 0`) wird sie **nicht** gebraucht.
 - **„Sketch too big“** mit `HYDRO_BLE 1`: Partition „Huge APP“ wählen (Abschnitt 6).
 - Falls `wokwi-led-strip` fehlt: in `diagram.json` durch `wokwi-led-ring` ersetzen (`VDD`→`VCC`,
-  `VSS`→`GND`).
+  `VSS`→`GND`, `pixels` bleibt 26, `pixelSize` weglassen).
 
 ---
 
-## 16. Nachweis: Kompilieren und PC-Test (Stand 06.10.2026, Version 3)
+## 16. Nachweis: Kompilieren und PC-Test (Kompilieren: Stand 08.10.2026 mit COB-Streifen, 26 LEDs; PC-Test: 06.10.2026, Version 3)
 
 `arduino-cli 1.5.1`, Kern `esp32:esp32 3.3.12`, Board `esp32:esp32:esp32`, `--warnings all`:
 
 ```
-Sketch uses 1009343 bytes (77%) of program storage space. Maximum is 1310720 bytes.
-Global variables use 50372 bytes (15%) of dynamic memory, leaving 277308 bytes for local variables. Maximum is 327680 bytes.
+Sketch uses 1016483 bytes (77%) of program storage space. Maximum is 1310720 bytes.
+Global variables use 50460 bytes (15%) of dynamic memory, leaving 277220 bytes for local variables. Maximum is 327680 bytes.
 ```
 
 **0 Fehler, 0 Warnungen** (Wokwi-Build, `HYDRO_BLE 0`). Der Speicher ist durch WLAN/NTP größer
@@ -675,11 +704,15 @@ als in Version 1 (28 % → 77 %), das passt aber gut.
 
 | Variante | Partition | Flash | RAM (global) |
 |---|---|---|---|
-| Wokwi (Standard) | Default (1,25 MB App) | 1 009 343 B = **77 %** | 50 372 B (15 %) |
-| CYD (`HYDRO_CYD=1`) | Default | 1 017 491 B = **77 %** | 49 676 B (15 %) |
-| CYD + BLE (`HYDRO_CYD=1`, `HYDRO_BLE=1`) | Default | 1 268 223 B = **96 %** | 59 832 B (18 %) |
-| CYD + BLE | **Huge APP** (3 MB App) | 1 268 255 B = **40 %** | 59 832 B (18 %) |
-| Wokwi-Display + BLE (`HYDRO_BLE=1`) | Default | 1 260 167 B = **96 %** | 60 528 B (18 %) |
+| Wokwi (Standard) | Default (1,25 MB App) | 1 016 483 B = **77 %** | 50 460 B (15 %) |
+| CYD (`HYDRO_CYD=1`) | Default | 1 024 859 B = **78 %** | 49 748 B (15 %) |
+| CYD + BLE (`HYDRO_CYD=1`, `HYDRO_BLE=1`) | Default | 1 275 243 B = **97 %** | 59 904 B (18 %) |
+| CYD + BLE | **Huge APP** (3 MB App) | 1 275 275 B = **40 %** | 59 904 B (18 %) |
+| Wokwi-Display + BLE (`HYDRO_BLE=1`) | Default | 1 267 235 B = **96 %** | 60 600 B (18 %) |
+| Wokwi-Display + BLE | **Huge APP** | 1 267 251 B = **40 %** | 60 600 B (18 %) |
+
+Alle sechs Varianten wurden am 08.10.2026 mit `LED_ANZAHL = 26` und `LED_HELLIGKEIT = 60` (Prüfung `≤ 80`)
+neu kompiliert: 0 Fehler. Die Default-Partition wird mit BLE knapp (96–97 %) → für das echte Gerät „Huge APP“.
 
 Die BLE-Varianten nutzen NimBLE-Arduino 2.5.1. Sketch und NimBLE kompilieren ohne Warnungen. Bibliotheken: Adafruit GFX 1.12.6, Adafruit ILI9341 1.6.4, Adafruit FT6206 1.1.1,
 Adafruit BusIO 1.17.4, Adafruit NeoPixel 1.15.5, HX711 (Rob Tillaart) 0.6.5. WiFi, Preferences und
@@ -690,7 +723,7 @@ aus dem Sketch. Die einzige Meldung `TOUCH_CS pin not defined` kommt aus der unv
 `User_Setup.h` von TFT_eSPI (wir nutzen für den Touch die XPT2046-Bibliothek, nicht TFT_eSPI). Sie
 kam schon in Version 2 und verschwindet mit der CYD-`User_Setup.h` aus Abschnitt 13.
 
-**PC-Logiktest:** Der Sketch wurde zusätzlich auf dem PC mit nachgebauten Bauteilen (Stubs)
+**PC-Logiktest (Stand 06.10.2026, vor der Umstellung auf 26 LEDs; die LED-Logik setzt immer alle LEDs gleich, die Anzahl ändert daran nichts):** Der Sketch wurde zusätzlich auf dem PC mit nachgebauten Bauteilen (Stubs)
 übersetzt. Dann wurden Gewichte, Touch, Nässe, Akku, WLAN/NTP und die Uhr simuliert. Geprüft
 wurden: Zielformel (5 Beispiele + ungültige Eingabe), Leergewicht-Regeln 1–3, NTP vs. Ersatzuhr,
 Erinnerung blau, Ziel grün 10 s, Wasser bernstein + automatische Freigabe nach 5 s,
@@ -719,7 +752,7 @@ F1 → „Wokwi: Start Simulator“. Das WLAN „Wokwi-GUEST“ funktioniert auc
 | Datei | Inhalt |
 |---|---|
 | `sketch.ino` | Programm (Arduino, ESP32), Version 3, mit deutschen Kommentaren |
-| `diagram.json` | Schaltung für Wokwi (unverändert seit Version 1) |
+| `diagram.json` | Schaltung für Wokwi (seit 08.10.2026 LED-Streifen mit 26 Pixeln, sonst wie Version 1) |
 | `libraries.txt` | Bibliotheksliste für den Wokwi Library Manager |
 | `wokwi.toml` | nur für Wokwi in VS Code |
 | `verdrahtung.png` | Verdrahtungsplan als Bild |

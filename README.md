@@ -1,11 +1,11 @@
 # 💧 HydroDesk Base
 
-**Smarter Trinkmengen-Untersetzer für den Schreibtisch** – ESP32 mit Touch-Display, Wägezelle und LED-Leiste.
+**Smarter Trinkmengen-Untersetzer für den Schreibtisch** – ESP32 mit Touch-Display, Wägezelle und LED-Lichtlinie.
 Schulprojekt im Ausbildungsberuf Fachinformatiker/-in für Anwendungsentwicklung (FI-AE), 2 Auszubildende.
 
 HydroDesk Base ist ein flaches, rechteckiges Gerät (180 × 100 × 25 mm), auf das man **jede beliebige Wasserflasche** stellt.
 Eine 5-kg-Wägezelle misst das Gewicht und rechnet es in getrunkene Milliliter um.
-Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen – eine LED-Leiste an der Vorderkante erinnert ans Trinken.
+Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen – eine gleichmäßig leuchtende Lichtlinie an der Vorderkante (COB-LED-Streifen hinter einem gedruckten Diffusor) erinnert ans Trinken.
 
 ![HydroDesk Base – Produktbild](design/visualisierung/hydrodesk_produkt.png)
 
@@ -15,15 +15,15 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **Gewicht → ml**: 5-kg-Wägezelle + HX711 unter einem schwimmend gelagerten 90 × 90 mm Flaschen-Pad
 - **Flaschen-Kalibrierung per Touch-Tasten „Leer“ und „Voll“**: leere Flasche auflegen → Leer, volle Flasche → Voll; Inhalt = aktuelles Gewicht − Leergewicht
 - **Tagesziel, Fortschritt und nächste Erinnerung** immer sichtbar auf dem Display
-- **LED-Leiste (WS2812)** an der Vorderkante:
+- **LED-Lichtlinie** an der Vorderkante: COB-LED-Streifen WS2812B (26 einzeln ansteuerbare LEDs, 5 mm breit) hinter einer gedruckten Diffusor-Leiste – keine einzelnen Lichtpunkte, sondern eine durchgehende Linie:
   - 🔵 blau = trinken
   - 🟢 grün = Ziel erreicht
   - 🔴 rot = Akku niedrig / Fehler
   - 🟠 amber = Wasser erkannt
 - **Wasser-Sicherheitsabschaltung**: Regensensor + FET-Modul schalten bei Nässe den Strom ab → Sperrbildschirm **„WASSER ERKANNT · STROM AUS“**
-- **Akkubetrieb**: LiPo 2000 mAh, Laden per USB-C (TC4056), 5-V-Step-up
+- **Akkubetrieb**: LiPo 2000 mAh, Laden per USB-C (TC4056), 5-V-Wandler Pololu S13V10F5
 - **Optional: Telegram-Bot** für Erinnerungen und Status (`/status`, `/ziel`, `/hilfe`)
-- **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, vier Teile: Bodenwanne, Deckel, Pad, steckbare USB-Abdeckkappe; ohne Stützmaterial druckbar)
+- **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, fünf Teile: Bodenwanne, Deckel, Pad, steckbare USB-Abdeckkappe, Diffusor-Leiste; ohne Stützmaterial druckbar)
 - **Android-App** ([`app-android/`](app-android/)): Login (Supabase), Bluetooth-LE-Verbindung zum Gerät,
   Tagesziel aus Körperdaten, Verlauf mit Wochendiagramm, offline-fähig mit Sync, Admin-Übersicht, Demo-Modus
 
@@ -36,13 +36,13 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 |  [  2,8"    ]  |           |  [   (schwimmend auf der ]  |
 |  [  Touch   ]  |           |  [    Wägezelle)         ]  |
 +----------------------------------------------------------+
-|  WS2812-LED-Leiste entlang der Vorderkante (10 LEDs)     |
+|  Lichtlinie vorne: COB-LED-Streifen (26 LEDs) + Diffusor |
 ```
 
-- **Links:** ESP32-Touch-Display („Cheap Yellow Display“ ESP32-2432S028R) im Hochformat, darunter Akku und Step-up-Wandler
+- **Links:** ESP32-Touch-Display („Cheap Yellow Display“ ESP32-2432S028R) im Hochformat, darunter Akku und 5-V-Wandler (Pololu S13V10F5)
 - **Mitte:** TC4056-USB-C-Lader an der Rückwand, FET-Schaltmodul, Auswertemodul des Regensensors
 - **Rechts:** 90 × 90 mm Flaschen-Pad, liegt nur auf der Wägezelle (1 mm Spalt rundherum); darunter Wägezelle, HX711 und Regensensor
-- **Hinten:** USB-Öffnungen – Programmier-Öffnung des CYD mit **steckbarer Abdeckkappe**, USB-C zum Laden offen; **vorne:** LED-Rille
+- **Hinten:** USB-Öffnungen – Programmier-Öffnung des CYD mit **steckbarer Abdeckkappe**, USB-C zum Laden offen; **vorne:** Lichtkammer über fast die ganze Breite – der COB-Streifen klebt an ihrer Rückwand, davor sitzt die 1 mm dünne Diffusor-Leiste in einem Falz
 
 | Explosionsansicht | Innenansicht ohne Deckel |
 |---|---|
@@ -53,6 +53,10 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 | Abdeckkappe eingesteckt | Abdeckkappe herausgezogen |
 |---|---|
 | ![Abdeckkappe eingesteckt](gehaeuse/preview/kappe_eingesteckt.png) | ![Abdeckkappe offen](gehaeuse/preview/kappe_offen.png) |
+
+| Diffusor-Leiste herausgezogen (COB-Streifen dahinter) | Schnitt durch die Lichtkammer |
+|---|---|
+| ![Diffusor offen](gehaeuse/preview/diffusor_offen.png) | ![Schnitt Lichtkammer](gehaeuse/preview/18_led_kammer_schnitt.png) |
 
 Renderbilder: [`design/visualisierung/`](design/visualisierung/) · 3D-Modell zum Drehen (GLB/STL/3MF): [`design/3d_modell/`](design/3d_modell/) · technische OpenSCAD-Vorschauen: [`gehaeuse/preview/`](gehaeuse/preview/)
 
@@ -66,7 +70,7 @@ Zusammenfassung aus der [Vorkalkulation](doku/Vorkalkulation_HydroDesk_Base.xlsx
 |---:|---|---|---|---|---:|
 | 1 | ESP32 + Touch-Display | Fastsaw ESP32 mit 2,8" ILI9341 Touch (ESP32-2432S028R, ASIN B0G1N16Q16) | Amazon | 1 Stk. | 17,99 € |
 | 2 | Wägezelle + Verstärker | DIYmalls Wägezelle 5 kg + HX711 | Amazon | 1 Set | 8,97 € |
-| 3 | LED-Leiste | BTF-LIGHTING WS2812 ECO, 1 m, 60 LED/m, 5 V | Amazon | 1 m | 9,49 € |
+| 3 | LED-Streifen (COB) | BTF-LIGHTING WS2812B FCOB, 1 m, 160 LED/m, 5 V, 5 mm (ASIN B0H41MCVSW; 26 LEDs werden gebraucht) | Amazon | 1 m | 16,99 € |
 | 4 | Feuchtigkeitssensor | Regensensor LM393 (digital + analog) | Berrybase | 1 Set | 1,80 € |
 | 5 | Strom-Abschaltung | GERUI FET-Schaltmodul DC 5–36 V | Amazon | 8 Stk. | 6,49 € |
 | 6 | Akku | EEMB LiPo 3,7 V 2000 mAh (LP103454) | Amazon | 1 Stk. | 10,99 € |
@@ -86,16 +90,18 @@ Zusammenfassung aus der [Vorkalkulation](doku/Vorkalkulation_HydroDesk_Base.xlsx
 | 20 | microSD-Sniffer | für GPIO 18/19/23 am SD-Slot (**nur AliExpress**, ab-Preis) | AliExpress | 1 Stk. | 2,39 € |
 | 21 | Gehäuse-Material | SUNLU PLA 1,75 mm | Amazon | 1 kg | 14,99 € |
 | 22 | Abdeckkappe | gedruckt aus Pos. 21 (ca. 1 g) | – | 1 Stk. | 0,00 € |
-| | **Summe Bauteile** | | | | **114,49 €** |
+| 23 | Diffusor-Leiste | gedruckt aus weißem PLA oder naturfarbenem PETG (ca. 4 g, 1 mm, 100 % Füllung) | – | 1 Stk. | 0,00 € |
+| | **Summe Bauteile** | | | | **121,99 €** |
 | | Versand (Amazon 0,00 € ab 49 €, Berrybase 4,95 €) | | | | 4,95 € |
-| | Puffer 10 % (Verschnitt, Ersatz, unbekannter Versand) | | | | 11,45 € |
-| | **Gesamt geplant** | | | | **130,89 €** |
-| | Gesamt ohne PLA (falls die Schule druckt) | | | | 114,40 € |
+| | Puffer 10 % (Verschnitt, Ersatz, unbekannter Versand) | | | | 12,20 € |
+| | **Gesamt geplant** | | | | **139,14 €** |
+| | Gesamt ohne PLA (falls die Schule druckt) | | | | 122,65 € |
 
 **Hinweise zur Stückliste**
 
 - **Versand:** Die Versandkosten von alleschrauben.de und AliExpress werden erst im Warenkorb angezeigt und sind noch nicht eingepreist. Der Puffer deckt sie ab.
 - **AliExpress-Teile (Pos. 19/20):** Lieferzeit 1–3 Wochen. Pos. 19 entfällt, wenn beim CYD Kabel dabei sind. Pos. 20 entfällt, wenn direkt an die Lötpunkte gelötet wird.
+- **LED-Streifen (Pos. 3):** Seit 08.10.2026 ein COB-Streifen statt des WS2812-ECO-Streifens mit sichtbaren Einzelpunkten (9,49 €, jetzt in der Vorkalkulation unter „Gestrichen“). Bei Amazon die Variante „1M 160LEDs/m 5mm“ wählen. Günstigste Alternative: AliExpress ab 7,59 € (Preis der Variante nicht lesbar). In die Datenleitung gehört ein Widerstand 330–470 Ω direkt am Streifen.
 - **Widerstände (Pos. 14):** 2 × 10 kΩ statt 100 kΩ, weil 100 kΩ bei Berrybase nicht lieferbar ist. Das Teilerverhältnis ist gleich, die Firmware muss nicht angepasst werden.
 - **Optional, nicht in der Summe:**
   - Elegoo Jumperkabel-Set (6,99 €), nur für einen Testaufbau auf dem Breadboard.
@@ -119,7 +125,7 @@ hydrodesk-base/
 │   ├── ANLEITUNG.md                        # Druck- und Montageanleitung
 │   ├── QUELLEN.md                          # Quellen der Bauteil-Maße
 │   ├── render.sh                           # Erzeugt die Vorschaubilder neu
-│   ├── stl/                                # Druckfertige Teile: base, cover, pad, kappe_usb
+│   ├── stl/                                # Druckfertige Teile: base, cover, pad, kappe_usb, diffusor_led
 │   └── preview/                            # Vorschaubilder
 ├── firmware/                               # PlatformIO-Firmware (folgt)
 │   └── secrets.example.h                   # Vorlage für Zugangsdaten

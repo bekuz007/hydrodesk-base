@@ -7,7 +7,8 @@
  *  zeigt Uhrzeit, Akku, heute getrunkene Menge, Tagesziel und Flascheninhalt.
  *  Touch-Tasten „Leer“ und „Voll“ auf dem Hauptbildschirm (Flaschen-Kalibrierung);
  *  Trinken/Nachfüllen wird weiter aus dem Gewicht abgeleitet.
- *  LEDs (WS2812) leuchten nur bei Ereignissen (Dauerlicht). Blinken NUR bei:
+ *  LED-Linie (COB-Streifen WS2812B, 26 LEDs hinter einer Diffusor-Leiste)
+ *  leuchtet nur bei Ereignissen (Dauerlicht). Blinken NUR bei:
  *  Akku-Warnung (rot), Bluetooth sucht (weiß), Handy verbunden (2x lila).
  *  Oben rechts: Bluetooth-Symbol links neben dem Akku (neu in V3).
  *  Ein Nässe-Sensor schaltet bei
@@ -21,6 +22,7 @@
  *  Schiebeschalter "NÄSSE"                 | LM393-Regensensor, Ausgang DO
  *  Potentiometer "AKKU"                    | Akku über Spannungsteiler am ADC
  *  LED "LAST"                              | MOSFET, der die Last schaltet
+ *  LED-Streifen 26 Pixel                   | BTF-LIGHTING WS2812B FCOB, 26 LEDs
  *  WLAN "Wokwi-GUEST" + NTP                | Heim-/Schul-WLAN (secrets.h) + NTP
  *  Telegram: nur Serial-Ausgabe (Stub)     | Telegram-Bot über WLAN
  *  Bluetooth: per Serial-Befehl simuliert   | BLE (NimBLE), HYDRO_BLE 1
@@ -163,8 +165,17 @@ const uint32_t AKKU_HINWEIS_MS      = 5000;   // Hinweis "Akku unter 20 %" so la
 // --- LED-Streifen: leuchtet NUR bei Ereignissen, sonst Dauerlicht.
 //     Blinken gibt es NUR bei: Akku-Warnung (rot), Bluetooth sucht (weiß),
 //     Handy verbunden (2x lila). Alles andere leuchtet ruhig.
-const uint8_t  LED_ANZAHL           = 10;
-const uint8_t  LED_HELLIGKEIT       = 60;     // 0..255 (mittel)
+// --- Echte Hardware: BTF-LIGHTING WS2812B FCOB (COB-Streifen), 5 V, 160 LED/m, 5 mm breit,
+//     jede LED mit eigenem IC, teilbar alle 12,5 mm (2 LEDs). Verbaut: 13 Segmente = 162,5 mm
+//     = 26 LEDs hinter der Diffusor-Leiste vorne -> die ganze Frontlinie leuchtet gleichmäßig.
+const uint8_t  LED_ANZAHL           = 26;
+// Strombudget (5-V-Wandler Pololu S13V10F5, max. 1 A):
+//   26 LEDs voll weiß (255)           ca. 0,49 A  (ungünstigster Fall, kommt im Programm nicht vor)
+//   mit LED_HELLIGKEIT 60 (= 60/255)  höchstens ca. 0,12 A
+//   + CYD (Display + ESP32 + WLAN/BLE) ca. 0,25–0,35 A  -> zusammen unter 0,5 A, genug Reserve.
+//   LED_HELLIGKEIT darum höchstens 80 einstellen (ca. 0,15 A für die LEDs).
+const uint8_t  LED_HELLIGKEIT       = 60;     // 0..255 (mittel), höchstens 80 (Strombudget, siehe oben)
+static_assert(LED_HELLIGKEIT <= 80, "LED_HELLIGKEIT höchstens 80 (Strombudget 5-V-Wandler)");
 const uint32_t LED_GRUEN_MS         = 10000;  // "Ziel erreicht" 10 s grün
 const uint32_t LED_ROT_MS           = 5000;   // Waagen-Fehler: 5 s rot
 
@@ -202,7 +213,7 @@ const int PIN_HX711_DT  = 27;  // CYD: Stecker CN1
 const int PIN_HX711_SCK = 22;  // CYD: Stecker CN1 / P3
 const int PIN_AKKU_ADC  = 35;  // nur Eingang, ADC1 (funktioniert auch mit WLAN)
 const int PIN_NAESSE    = 19;  // LOW = nass (wie LM393-Modul DO)
-const int PIN_LED_DATA  = 23;  // WS2812 Daten
+const int PIN_LED_DATA  = 23;  // WS2812B Daten (DIN); echt: 330–470 Ω in Reihe direkt am Streifen-DIN
 const int PIN_LAST      = 18;  // HIGH = Last/Strom an (MOSFET-Gate)
 
 // ============================================================================

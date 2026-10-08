@@ -10,7 +10,7 @@
     {"type": "wokwi-led", "id": "last", "top": 110, "left": 195, "attrs": {"color": "green", "label": "LAST", "flip": "1"}},
     {"type": "wokwi-resistor", "id": "r1", "top": 200, "left": 228, "attrs": {"value": "220"}},
     {"type": "wokwi-potentiometer", "id": "akku", "top": -150, "left": -110, "attrs": {"value": "900"}},
-    {"type": "wokwi-led-strip", "id": "leds", "top": -75, "left": 210, "attrs": {"pixels": "10"}}
+    {"type": "wokwi-led-strip", "id": "leds", "top": -75, "left": 210, "attrs": {"pixels": "26", "pixelSize": "2020"}}
   ],
   "connections": [
     ["esp:TX0", "$serialMonitor:RX", "", []],

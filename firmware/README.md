@@ -7,7 +7,7 @@ Geplante Module:
 
 * Wägezelle über HX711 (Tara, Kalibrierung, Umrechnung Gewicht → ml)
 * Touch-Oberfläche (ILI9341, 320 × 240): Presets Leer / 300 / 500 / 750 / 1000 / 1500 ml / Voll, Tagesziel, Fortschritt
-* WS2812-LED-Leiste (blau = trinken, grün = Ziel, rot = Akku/Fehler, amber = Wasser)
+* COB-LED-Streifen WS2812B (26 LEDs) hinter der gedruckten Diffusor-Leiste (blau = trinken, grün = Ziel, rot = Akku/Fehler, amber = Wasser)
 * Nässe-Erkennung (Regensensor) → FET-Modul schaltet Strom ab, Sperrbildschirm „WASSER ERKANNT · STROM AUS“
 * WLAN/NTP, optional Telegram-Bot (`/status`, `/ziel`, `/hilfe`)
 * Bluetooth Low Energy (BLE): Gerät „HydroDesk“, Status-Symbol neben dem Akku, LEDs weiß blinkend

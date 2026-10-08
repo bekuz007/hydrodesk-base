@@ -1,19 +1,19 @@
 # HydroDesk Base – komplettes 3D-Modell
 
-Das ganze Gerät als 3D-Modell: Gehäuse **und** Elektronik, Schrauben, Gummifüße, LED-Leiste und Silikonmatte.
+Das ganze Gerät als 3D-Modell: Gehäuse **und** Elektronik, Schrauben, Gummifüße, COB-LED-Streifen mit Diffusor-Leiste und Silikonmatte.
 Maßstab 1:1 (180 × 100 × 25 mm, mit Gummifüßen 27,2 mm hoch, mit eingesteckter Abdeckkappe 101,2 mm tief).
 
 | Datei | Inhalt |
 |---|---|
-| `hydrodesk_komplett.glb` | Zusammengebautes Gerät mit Farben und Display-Bild. 19 einzeln benannte Teile (Abdeckkappe eingesteckt) |
+| `hydrodesk_komplett.glb` | Zusammengebautes Gerät mit Farben und Display-Bild. 20 einzeln benannte Teile (Abdeckkappe eingesteckt) |
 | `hydrodesk_komplett.stl` | Dasselbe Gerät als ein einziges Netz ohne Farben, Einheit mm. Nur zum Anschauen |
-| `hydrodesk_komplett.3mf` | Zusammengebautes Gerät, 19 Teile, Einheit mm, Farben pro Fläche |
+| `hydrodesk_komplett.3mf` | Zusammengebautes Gerät, 20 Teile, Einheit mm, Farben pro Fläche |
 | `hydrodesk_explosion.glb` | Explosionsansicht (Teile auseinandergezogen wie im Bild `design/visualisierung/hydrodesk_explosion.png`, Abdeckkappe nach hinten herausgezogen) |
 | `hydrodesk_explosion.stl` | Explosionsansicht als ein Netz, Einheit mm |
 | `vorschau_komplett.png` | Kontrollbild: die GLB-Datei neu importiert und gerendert |
 
-**Teile (Objektnamen):** Unterschale, Deckel, Abdeckkappe_USB, Flaschenplatte, Silikonmatte, Display-Board, Akku, Step-up, TC4056,
-FET-Modul, LM393, Regensensor, Waegezelle, HX711, LED-Leiste, Schrauben_M3, Schrauben_M4, Schrauben_M5, Gummifuesse.
+**Teile (Objektnamen):** Unterschale, Deckel, Abdeckkappe_USB, Flaschenplatte, Silikonmatte, Display-Board, Akku, Pololu-5V-Wandler, TC4056,
+FET-Modul, LM393, Regensensor, Waegezelle, HX711, COB-LED-Streifen, Diffusor, Schrauben_M3, Schrauben_M4, Schrauben_M5, Gummifuesse.
 
 ## Öffnen
 
@@ -27,7 +27,7 @@ FET-Modul, LM393, Regensensor, Waegezelle, HX711, LED-Leiste, Schrauben_M3, Schr
 - Die **Elektronik ist vereinfacht** nachgebaut: richtige Größe, Lage und Farbe, aber keine echten Bauteil-CAD-Daten.
   Platinenfarben sind zur Unterscheidung gewählt.
 - Diese Dateien sind **keine Druckdateien**. Zum 3D-Drucken nur `gehaeuse/stl/` verwenden
-  (`base.stl`, `cover.stl`, `pad.stl`, `kappe_usb.stl`, dort schon richtig auf dem Druckbett ausgerichtet).
+  (`base.stl`, `cover.stl`, `pad.stl`, `kappe_usb.stl`, `diffusor_led.stl`, dort schon richtig auf dem Druckbett ausgerichtet).
 
 ## Neu erzeugen
 

@@ -1,8 +1,9 @@
 // =====================================================================
 //  HydroDesk Base  -  parametrisches 3D-Druck-Gehaeuse (OpenSCAD)
-//  Teile:  part = "base" | "cover" | "pad" | "cap" | "assembly" | "exploded"
-//                 | "inside" (Boden + Bauteile, ohne Deckel/Pad) | "section"
+//  Teile:  part = "base" | "cover" | "pad" | "cap" | "diffusor" | "assembly" | "exploded"
+//                 | "inside" (Boden + Bauteile, ohne Deckel/Pad) | "section" | "led_section"
 //                 | "cap_check_cyd" / "cap_check_base" (Kollisionstests der Abdeckkappe)
+//                 | "parts_check" / "diff_check" (Kollisionstests Bauteile / Diffusor, muessen LEER sein)
 //  Koordinaten: X = Breite (links->rechts), Y = Tiefe (vorne=0 -> hinten),
 //               Z = Hoehe (Tischflaeche = 0).  Alle Masse in mm.
 //  Drucker: FDM, PLA, 0,4-mm-Duese.  Alle Teile ohne Stuetzmaterial.
@@ -81,12 +82,44 @@ cap_pull     = 0;      // nur Vorschau: Kappe um so viele mm nach hinten herausg
 cap_fw = cyd_usb_w + 2*cap_rand;    // Flansch 35 x 10,6 mm
 cap_fh = cyd_usb_h + 2*cap_rand;
 
+/* ===================== LED-Linie vorne: COB-Streifen + Diffusor ===================== */
+// BTF-LIGHTING WS2812B FCOB, 5 V, 160 LED/m, 5 mm breit, jede LED mit eigenem IC,
+// teilbar alle 12,5 mm (2 LEDs).  13 Segmente = 162,5 mm = 26 LEDs.
+// Aufbau von hinten nach vorne: Streifen auf der Kammer-Rueckwand -> Luftspalt (Licht mischt sich)
+// -> Diffusor-Leiste (1 mm, weisses PLA / natur PETG, 100 % Infill) im Falz der Frontoeffnung.
+cob_seg   = 12.5;  cob_n_seg = 13;
+cob_len   = cob_seg * cob_n_seg;          // 162,5 mm
+cob_leds  = 2 * cob_n_seg;                // 26 LEDs
+cob_w     = 5;                            // Streifenbreite
+cob_t     = 2.5;                          // Dicke inkl. Klebeband: nach Lieferung nachmessen! (typ. 1,5-2,5, hier ungünstigster Fall)
+led_mix   = 2.0;                          // Luftspalt LED-Oberflaeche -> Diffusor-Rueckseite
+diff_t    = 1.0;                          // Diffusor-Dicke
+diff_clr  = 0.15;                         // Spiel Diffusor <-> Falz je Seite (Klebepunkte / leicht einpressen)
+falz_t    = diff_t + 0.2;                 // Falztiefe 1,2: Diffusor liegt 0,2 mm hinter der Frontflaeche
+falz_rand = 1.0;                          // Falz oben/unten breiter als die Lichtoeffnung (Auflage + Klebepunkte)
+led_x0 = 6.5; led_x1 = 173.5;             // Lichtkammer 167 mm lang (Streifen 162,5 + je 2,25 mm Luft)
+led_z0 = 3.5; led_hb = 10.5;              // Kammerboden, Hoehe der Rueckwand (Streifen mittig)
+led_d  = falz_t + led_mix + cob_t;        // Kammertiefe ab Frontflaeche = 5,7 (vorher 3,5)
+led_win_top = led_z0 + led_hb + (led_d - falz_t);   // Oberkante Lichtoeffnung (45-Grad-Dach) = 18,5
+falz_z0 = led_z0 - falz_rand;             // Falz unten  = 2,5
+falz_z1 = led_win_top + falz_rand;        // Falz oben   = 19,5
+diff_l = led_x1 - led_x0 - 2*diff_clr;    // Diffusor 166,7 mm lang
+diff_h = falz_z1 - falz_z0 - 2*diff_clr;  // Diffusor 16,7 mm hoch
+cob_x0 = (led_x0 + led_x1 - cob_len)/2;   // Streifen mittig in der Kammer
+cob_z  = led_z0 + led_hb/2;               // Streifenmitte (z = 8,75)
+front_in = led_d + 1.6;                   // Innenseite der verdickten Frontwand = 7,3
+// Oberkante der Verdickung: das 45-Grad-Dach der Kammer bleibt ueberall >= 1,6 mm dick
+front_thick_top = ceil(led_z0 + led_hb + led_d - wall + 1.6*sqrt(2));   // = 20
+cov_front_y = led_d + 2.25 + screw_pilot_d()/2;   // vordere Deckel-Schraubdome: 2,25 mm Wand zur Lichtkammer
+function screw_pilot_d() = 2.5;
+
 /* ===================== Akku / Module ===================== */
 bat_w = 34.5; bat_l = 56; bat_h = 10.3;     // EEMB LP103454 2000 mAh (34,5 x 55(+1) x 10,3)
 bat_x = cyd_cx - bat_w/2;
 bat_y = D - wall - 0.6 - bat_l;             // liegt unter dem CYD, hinten
-boost_w = 37; boost_l = 17;                 // MT3608-Boost (optional), unter dem CYD vorne
+boost_w = 37; boost_l = 17;                 // Fach fuer den 5-V-Wandler (Pololu S13V10F5), unter dem CYD vorne
 boost_x = cyd_cx - boost_w/2;  boost_y = 19;
+pol_w = 12.1; pol_l = 8.9; pol_h = 4.2;     // Pololu S13V10F5 (Datenblatt) - kleiner als das Fach, mit Klebeband fixieren
 strip_x = 56;                               // Modul-Streifen rechts neben dem CYD
 tc_w = 17; tc_l = 26;                       // TC4056 USB-C Lademodul
 tc_x = strip_x; tc_y = D - wall - tc_l;
@@ -94,8 +127,8 @@ tc_pcb_z  = floor_t + 1.5;                  // PCB liegt auf 1,5 mm Leisten
 tc_usb_w  = 10;  tc_usb_h = 4.5;            // Buchsenoeffnung
 tc_usb_zc = tc_pcb_z + 1.6 + 1.63;
 tc_plug_w = 13.5; tc_plug_h = 7.5; tc_plug_d = 1.2;  // Aussenmulde fuer die Stecker-Tuelle
-mos_w = 17; mos_l = 30;  mos_x = strip_x; mos_y = 37.5;   // MOSFET-Modul
-cmp_w = 16; cmp_l = 30;  cmp_x = strip_x;       cmp_y = 5.3; // LM393-Auswertemodul des Regensensors
+cmp_w = 16; cmp_l = 30;  cmp_x = strip_x;       cmp_y = front_in + clr;            // LM393-Auswertemodul (vor der dickeren Frontwand)
+mos_w = 17; mos_l = 30;  mos_x = strip_x; mos_y = cmp_y + cmp_l + 2*clr + 1.2;   // MOSFET-Modul (Anschlag dazwischen)
 hx_w = 34; hx_l = 21;    hx_x = 136; hx_y = 60;          // HX711
 
 /* ===================== Pad / Waegezelle ===================== */
@@ -127,22 +160,30 @@ rs_w = 40; rs_l = 54;                       // FC-37 / YL-83 Platine
 rs_x = 75.5; rs_y = 20; rs_pocket = 0.8;
 slit_w = 3; slit_l = 16;                   // Schlitz im Deckel neben der Pad-Kante
 
-/* ===================== LED-Rille vorne ===================== */
-led_x0 = 6.5; led_x1 = 173.5;              // 167 mm = 10 LEDs @ 60 LED/m (16,67 mm Raster)
-led_z0 = 3.5; led_hb = 10.5; led_d = 3.5;  // Boden, Hoehe Rueckwand, Tiefe
-front_in = led_d + 1.6;                    // Innenseite Frontwand (verdickt bis z=16)
-front_thick_top = 16;
 
 /* ===================== Fuesse / Schrauben ===================== */
 foot_d = 13; foot_depth = 1.0; foot_in = 11;
-screw_pilot = 2.5;                         // M3 selbstschneidend (fuer Gewindeeinsatz: 4.0)
-cov_bosses = [[77,7],[77,93],[175.5,20],[175.5,80]];
+screw_pilot = screw_pilot_d();             // M3 selbstschneidend 2,5 (fuer Gewindeeinsatz: 4.0)
+cov_bosses = [[77,cov_front_y],[77,93],[175.5,20],[175.5,80]];   // vorne 9,2 statt 7 (tiefere Lichtkammer)
 cov_pad_h  = 2;                            // Verdickung unter dem Deckel an Schraubstellen
 assert(pad_rim_top <= H, "Pad ragt ueber das Gehaeuse - H erhoehen");
 assert(D - cap_plug_d >= D - wall, "Kappen-Stopfen ragt nach innen ueber die Wand (USB-Buchse!)");
 assert(cyd_cx + cap_fw/2 < tc_x + tc_w/2 - tc_plug_w/2 - 1, "Kappen-Flansch ueberdeckt die USB-C-Lademulde");
 assert(cyd_usb_zc + cap_fh/2 < base_h, "Kappen-Flansch ragt ueber die Wand");
 assert(lcd_top_z - cyd_front_h - cyd_pcb_t - cyd_back_h > floor_t + bat_h, "Akku stoesst an CYD");
+// --- LED-Linie / dickere Frontwand ---
+assert(led_x1 - led_x0 >= cob_len + 2, "COB-Streifen (13 Segmente) passt nicht in die Lichtkammer");
+assert(led_hb >= cob_w + 2, "Kammer-Rueckwand zu niedrig fuer den 5-mm-Streifen");
+assert(front_in + clr <= cyd_y, "Frontwand stoesst an das CYD");
+assert(front_in + clr <= boost_y - clr - 1.2, "Frontwand stoesst an das 5-V-Wandler-Fach");
+assert(front_in + clr <= bat_y, "Frontwand stoesst an den Akku");
+assert(front_in + clr <= cmp_y, "Frontwand stoesst an das LM393-Modul");
+assert(front_in + clr <= rs_y - 0.5, "Frontwand stoesst an die Regensensor-Mulde");
+assert(mos_y + mos_l + clr + 1.2 < tc_y, "MOSFET-Anschlag stoesst an den TC4056");
+assert(front_thick_top < base_h - 1.5 - 0.5, "Frontverdickung kollidiert mit dem Zentrierkragen des Deckels");
+assert(cov_front_y - screw_pilot/2 - led_d >= 2, "Deckel-Schraubloch zu nah an der Lichtkammer");
+assert(falz_z1 < base_h - 2, "Diffusor-Falz zu nah an der Oberkante");
+assert(falz_z0 > bot_chamfer + 1, "Diffusor-Falz zu nah an der Unterkante");
 
 /* ===================== Hilfsmodule ===================== */
 module rrect(w,d,r){ translate([r,r]) offset(r=r) square([w-2*r,d-2*r]); }
@@ -167,9 +208,12 @@ module outer_shell(h){
   }
 }
 module led_groove(){
+  // Lichtkammer: Rueckwand senkrecht (Streifen), Dach 45 Grad (druckbar ohne Stuetzen)
   translate([led_x0,0,0]) rotate([90,0,90]) linear_extrude(led_x1-led_x0)
-    polygon([[-1,led_z0],[led_d,led_z0],[led_d,led_z0+led_hb],[-1,led_z0+led_hb+led_d+1]]);
-  // Kabelloch vom linken Rillenende nach innen
+    polygon([[-1,led_z0],[led_d,led_z0],[led_d,led_z0+led_hb],[falz_t,led_win_top],[-1,led_win_top]]);
+  // Falz fuer die Diffusor-Leiste (oben/unten je falz_rand breiter als die Lichtoeffnung)
+  translate([led_x0, -1, falz_z0]) cube([led_x1-led_x0, falz_t+1, falz_z1-falz_z0]);
+  // Kabelloch vom linken Kammerende nach innen
   translate([led_x0+4, led_d-e, led_z0+5]) rotate([-90,0,0]) cylinder(d=5, h=front_in-led_d+1);
 }
 module base(){
@@ -179,7 +223,7 @@ module base(){
         outer_shell(base_h);
         translate([0,0,floor_t]) linear_extrude(base_h) offset(delta=-wall) rrect(W,D,R_corner);
       }
-      // verdickte Frontwand hinter der LED-Rille
+      // verdickte Frontwand hinter der Lichtkammer (COB-Streifen + Diffusor)
       intersection(){
         translate([wall-e, wall-e, floor_t-e]) cube([W-2*wall+2*e, front_in-wall+e, front_thick_top-floor_t]);
         linear_extrude(base_h) rrect(W,D,R_corner);
@@ -344,6 +388,21 @@ module cap(){
   translate([cyd_cx, D + cap_flange_t + cap_pull, cyd_usb_zc]) rotate([90,0,0]) cap_print();
 }
 
+/* ===================== DIFFUSOR-LEISTE (LED-Linie vorne) ===================== */
+// Flach drucken (1,0 mm, 100 % Infill, weisses PLA oder natur PETG), in den Falz legen,
+// mit 3-4 Klebepunkten fixieren bzw. leicht einpressen.
+diff_pull = 0;     // nur Vorschau: Diffusor um so viele mm nach vorne gezogen
+module diffusor_print(){ cube([diff_l, diff_h, diff_t]); }
+module diffusor(){
+  translate([led_x0+diff_clr, falz_t-diff_t-diff_pull, falz_z0+diff_clr]) rotate([90,0,0]) translate([0,0,-diff_t]) diffusor_print();
+}
+module cob_strip(){   // COB-Streifen auf der Kammer-Rueckwand (Platzhalter, cob_t dick)
+  color([0.95,0.95,0.9]) translate([cob_x0, led_d-cob_t, cob_z-cob_w/2]) cube([cob_len, cob_t, cob_w]);
+  color([1,0.85,0.4]) translate([cob_x0, led_d-cob_t-0.05, cob_z-1.5]) cube([cob_len, 0.05, 3]);
+}
+
+module led_slab(){ translate([100, -30, -1]) cube([1, 60, H+5]); }   // fuer part = "led_section"
+
 /* ===================== Dummy-Bauteile fuer Vorschau ===================== */
 module loadcell(){
   color("silver") difference(){
@@ -362,31 +421,34 @@ module components(){
   color("lightsteelblue") translate([bat_x,bat_y,floor_t]) cube([bat_w,bat_l,bat_h]);
   color("darkblue")  translate([tc_x,tc_y,tc_pcb_z]) cube([tc_w,tc_l,1.6]);
   color("silver")    translate([tc_x+tc_w/2-4.5, D-wall-7.3, tc_pcb_z+1.6]) cube([9,7.3,3.2]);
-  color("purple")    translate([boost_x,boost_y,floor_t+1]) cube([boost_w,boost_l,6]);
+  color("purple")    translate([boost_x+(boost_w-pol_w)/2, boost_y+(boost_l-pol_l)/2, floor_t]) cube([pol_w,pol_l,pol_h]);   // Pololu im Fach
   color("darkred")   translate([mos_x,mos_y,floor_t]) cube([mos_w,mos_l,8]);
   color("darkgreen") translate([cmp_x,cmp_y,floor_t]) cube([cmp_w,cmp_l,6]);
   color("green")     translate([hx_x,hx_y,floor_t]) cube([hx_w,hx_l,5]);
   color("teal")      translate([rs_x,rs_y,floor_t-rs_pocket]) cube([rs_w,rs_l,1.6]);
-  // LED-Streifen in der Rille
-  color("white") translate([led_x0+2, led_d-0.4, led_z0+0.2]) cube([led_x1-led_x0-4, 0.4, 10]);
-  for (i=[0:9]) color("gold") translate([led_x0+5.8+i*16.67, led_d-2, led_z0+3]) cube([5,1.6,5]);
+  // COB-LED-Streifen in der Lichtkammer
+  cob_strip();
   loadcell();
 }
 module mat(){ color([0.25,0.25,0.25]) translate([pad_x0+rim_w+0.5, pad_y0+rim_w+0.5, pad_top_z]) cube([pad_size-2*rim_w-1, pad_size-2*rim_w-1, mat_t]); }
 
 housing_col = [0.82,0.82,0.82];
 pad_col     = [0.15,0.45,0.85];
+diff_col    = [0.97,0.97,0.93];
 
 /* ===================== Auswahl ===================== */
 if (part == "base") base();
 else if (part == "cover") rotate([180,0,0]) translate([0,0,-H]) cover();   // Oberseite aufs Druckbett
 else if (part == "pad")   translate([0,0,-pad_z0]) pad();                    // Rippen aufs Druckbett
 else if (part == "cap")   cap_print();                                       // Flansch-Aussenseite aufs Druckbett
+else if (part == "diffusor") diffusor_print();                               // flach aufs Druckbett
+else if (part == "parts_check") intersection(){ base(); translate([0,-0.05,0.05]) components(); }  // muss LEER sein
+else if (part == "diff_check")  union(){ intersection(){ diffusor(); base(); } intersection(){ diffusor(); components(); } }  // muss LEER sein
 else if (part == "cap_check_cyd")  intersection(){ cap(); components(); }    // muss LEER sein
 else if (part == "cap_check_base") intersection(){ cap(); base(); }          // nur Quetschrippen (Uebermass)
 else if (part == "assembly") {
   color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap();
-  color(pad_col) pad(); mat(); components();
+  color(diff_col) diffusor(); color(pad_col) pad(); mat(); components();
 }
 else if (part == "inside") {
   color(housing_col) base(); components();
@@ -396,10 +458,17 @@ else if (part == "exploded") {
   translate([0,0,35]) { color(pad_col) pad(); translate([0,0,8]) mat(); }
   translate([0,0,85]) color(housing_col) cover();
   translate([0,30,0]) color(housing_col) cap();       // Kappe nach hinten herausgezogen
+  translate([0,-25,0]) color(diff_col) diffusor();    // Diffusor nach vorne herausgezogen
 }
 else if (part == "section") {     // Schnitt bei X = Displaymitte und X = Pad-Mitte (zur Kontrolle)
   for (cx=[cyd_cx, pad_cx]) translate([-cx, 0, cx < 100 ? 0 : 35]) intersection(){
     translate([cx, -1, -1]) cube([W, D+2, H+5]);
-    union(){ color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap(); color(pad_col) pad(); mat(); components(); }
+    union(){ color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap(); color(diff_col) diffusor(); color(pad_col) pad(); mat(); components(); }
   }
+}
+else if (part == "led_section") {   // Querschnitt durch die Lichtkammer (Scheibe bei X = 100)
+  color(housing_col) render() intersection(){ led_slab(); base(); }
+  color(housing_col) render() intersection(){ led_slab(); cover(); }
+  color([0.9,0.9,1]) render() intersection(){ led_slab(); diffusor(); }
+  color([1,0.75,0.2]) render() intersection(){ led_slab(); cob_strip(); }
 }

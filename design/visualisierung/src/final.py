@@ -23,9 +23,10 @@ def explosion():
         ('fet', 'L', 'FET-Schaltmodul', 'trennt den Strom, wenn Wasser erkannt wird'),
         ('cmp', 'L', 'LM393-Auswertung', 'wertet den Regensensor aus'),
         ('bat', 'L', 'LiPo-Akku 3,7 V / 2000 mAh', '34 × 55 × 10 mm, liegt unter dem Display'),
-        ('boost', 'L', 'Step-up-Wandler 5 V', '37 × 17 mm, neben dem Akku'),
+        ('boost', 'L', '5-V-Wandler Pololu S13V10F5', '12 × 9 mm, im Fach neben dem Akku'),
         ('base_l', 'L', 'Unterschale', '3D-Druck PLA, 180 × 100 × 23 mm'),
-        ('led', 'L', 'LED-Leiste WS2812', '10 LEDs, in die Rille vorne geklebt'),
+        ('led', 'L', 'COB-LED-Streifen WS2812B (26 LEDs)', '5 mm breit, auf die Rückwand der Lichtkammer geklebt'),
+        ('diff', 'L', 'Diffusor-Leiste', '1 mm weißes PLA im Falz vorne, macht eine gleichmäßige Lichtlinie'),
         ('feet', 'R', 'Gummifüße (4×)', 'in die Mulden unten geklebt'),
         ('m3', 'R', 'Schrauben M3 × 12 (8×)', 'halten Deckel und Display-Board'),
         ('mat', 'R', 'Silikonmatte 86 × 86 mm', 'rutschfest, auf die Platte geklebt'),
@@ -49,9 +50,9 @@ def innen():
     specs = [
         ('cyd', 'L', 'Display-Board (angehoben gezeigt)', 'sitzt auf 4 Abstandshaltern über dem Akku'),
         ('bat', 'L', 'LiPo-Akku 2000 mAh', 'unter dem Display-Board'),
-        ('boost', 'L', 'Step-up-Wandler 5 V', 'macht aus 3,7 V die 5 V fürs Board'),
+        ('boost', 'L', '5-V-Wandler Pololu S13V10F5', 'macht aus 3,7 V die 5 V fürs Board'),
         ('cmp', 'L', 'LM393-Auswertung', 'Signal „nass / trocken“ an den ESP32'),
-        ('led', 'L', 'LED-Leiste WS2812', '10 LEDs vorne, Kabel links nach innen'),
+        ('diff', 'L', 'Diffusor-Leiste + COB-LED-Streifen', '26 LEDs hinter dem Diffusor, Kabel links nach innen'),
         ('base_l', 'L', 'Unterschale (ohne Deckel)', '3D-Druck PLA'),
         ('tc', 'R', 'Lademodul TC4056', 'USB-C-Buchse hinten zum Laden'),
         ('fet', 'L', 'FET-Schaltmodul', 'Strom aus, wenn Wasser erkannt wird'),
@@ -73,7 +74,7 @@ def teile():
     W, H = img.size; d = ImageDraw.Draw(img)
     parts = [
         ('cover', 'Deckel', '180 × 100 × 5 mm', 'Öffnungen für Display und Platte'),
-        ('base', 'Unterschale', '180 × 100 × 23 mm', 'Gehäuse mit Haltern und LED-Rille'),
+        ('base', 'Unterschale', '180 × 100 × 23 mm', 'Gehäuse mit Haltern und Lichtkammer vorne'),
         ('pad', 'Flaschenplatte', '90 × 90 × 7 mm', 'hier steht die Flasche'),
         ('cyd', 'Display-Board ESP32 CYD', '50 × 86 mm, 2,8″', 'Gehirn + Touchscreen'),
         ('bat', 'LiPo-Akku', '34 × 55 × 10 mm', '3,7 V, 2000 mAh'),
@@ -84,18 +85,19 @@ def teile():
         ('tc', 'Lademodul TC4056', '26 × 17 mm', 'lädt den Akku über USB-C'),
         ('fet', 'FET-Schaltmodul', '30 × 17 mm', 'schaltet den Strom ab'),
         ('cmp', 'LM393-Auswertung', '30 × 16 mm', 'gehört zum Regensensor'),
-        ('boost', 'Step-up-Wandler', '37 × 17 mm', '3,7 V → 5 V'),
-        ('led', 'LED-Leiste WS2812', '167 × 10 mm', '10 farbige LEDs'),
+        ('boost', '5-V-Wandler Pololu S13V10F5', '12,1 × 8,9 mm', '3,7 V → 5 V'),
+        ('led', 'COB-LED-Streifen WS2812B', '162,5 × 5 mm', '26 LEDs (13 Segmente)'),
         ('screws', 'Schrauben', '8× M3×12, 2× M4×10, 2× M5×12', 'Deckel, Platte, Wägezelle'),
         ('feet', 'Gummifüße', '4×, Ø 13 mm', 'rutschfest unten'),
         ('cap', 'Abdeckkappe USB', '35 × 10,6 × 3,4 mm', 'steckbar, verdeckt den USB-Ausschnitt'),
+        ('diff', 'Diffusor-Leiste', '166,7 × 16,7 × 1 mm', 'gedruckt, verteilt das LED-Licht'),
     ]
     r = int(19*k); fB = F(int(22*k), 700)
     for i, (key, name, size, fn) in enumerate(parts):
         n = str(i+1)
         x, y = A[key+'_tl'][:2]
         cx, cy = x - int(4*k), y - int(4*k)
-        if key in ('screws', 'feet', 'led', 'cap'): cx, cy = x - int(26*k), y + int(10*k)
+        if key in ('screws', 'feet', 'led', 'cap', 'diff'): cx, cy = x - int(26*k), y + int(10*k)
         d.ellipse([cx-r, cy-r, cx+r, cy+r], fill=(250, 250, 250), outline=INK, width=max(2, int(2.5*k)))
         d.text((cx, cy+1), n, font=fB, fill=INK, anchor='mm')
     # Legende rechts
@@ -120,7 +122,7 @@ def produkt():
     d.text((X, Y), 'HydroDesk Base', font=F(int(104*k), 750), fill=(245, 247, 250))
     d.text((X+int(4*k), Y+int(140*k)), 'Der smarte Untersetzer für deinen Schreibtisch.', font=F(int(36*k), 450), fill=(190, 198, 208))
     feats = ['Misst jeden Schluck – mit jeder Flasche (Leer / Voll)', '2,8″ Touch-Display mit Tagesziel',
-             'LED-Leiste erinnert nur, wenn du hinterherhängst', 'Wasserschutz, Akku, USB-C und Bluetooth']
+             'Leuchtlinie vorne erinnert nur, wenn du hinterherhängst', 'Wasserschutz, Akku, USB-C und Bluetooth']
     for i, f in enumerate(feats):
         yy = Y + int((235 + i*58)*k)
         d.ellipse([X+int(6*k), yy-int(7*k), X+int(20*k), yy+int(7*k)], fill=(40, 140, 255))

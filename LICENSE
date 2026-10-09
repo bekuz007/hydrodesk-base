@@ -1,21 +1,99 @@
-MIT License
+HydroDesk Base – Lizenzübersicht / License overview
+====================================================
 
-Copyright (c) 2026 bekuz007
+Copyright 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base)
+Alle Rechte, die nicht ausdrücklich unten eingeräumt werden, bleiben vorbehalten.
+All rights not expressly granted below are reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Required Notice: Copyright 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base)
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+DEUTSCH
+-------
+
+Dieses Projekt steht unter zwei nicht-kommerziellen Lizenzen:
+
+1. Software / Code – PolyForm Noncommercial License 1.0.0
+   (SPDX: PolyForm-Noncommercial-1.0.0, voller Text: LICENSE-CODE.md,
+   https://polyformproject.org/licenses/noncommercial/1.0.0/)
+   Gilt für:
+   - wokwi/sketch.ino (Firmware) und firmware/ (Quelltext, Vorlagen)
+   - app-android/ (Quelltext der Android-App, Build-Skripte, supabase/schema.sql)
+   - Skripte: design/visualisierung/src/*.py, *.sh und gehaeuse/render.sh
+   - Ausnahme: der Gradle-Wrapper (gradlew, gradlew.bat, gradle/wrapper/) gehört
+     dem Gradle-Projekt und steht unter dessen eigener Lizenz (Apache 2.0).
+
+2. Hardware, Design und Dokumentation – Creative Commons
+   Namensnennung – Nicht kommerziell – Weitergabe unter gleichen Bedingungen 4.0
+   International (CC BY-NC-SA 4.0)
+   (SPDX: CC-BY-NC-SA-4.0, voller Text: LICENSE-HARDWARE-DOCS.md,
+   https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)
+   Gilt für:
+   - gehaeuse/ (OpenSCAD-Modell inkl. .scad, STL-Dateien, Vorschaubilder, Anleitung)
+   - design/ (3D-Modell, Renders, .scad-Hilfsdateien, Design-Texte)
+   - doku/, alle README-/Markdown-Texte, wokwi/diagram.json, Bilder und Grafiken
+
+Namensnennung: Bei jeder Weitergabe oder Veröffentlichung (auch veränderter Fassungen)
+muss "HydroDesk Base von bekuz007 (https://github.com/bekuz007/hydrodesk-base)"
+genannt und die jeweilige Lizenz beigelegt oder verlinkt werden.
+
+Kommerzielle Nutzung (z. B. Verkauf des Geräts, der Teile, der Druckdateien oder des
+Codes, Nutzung in einem Unternehmen mit Gewinnabsicht) ist NUR mit vorheriger
+schriftlicher Erlaubnis von bekuz007 erlaubt. Kontakt: über GitHub
+(https://github.com/bekuz007).
+
+Frühere Versionen: Alle Fassungen bis einschließlich Commit e5ad237 (09.10.2026)
+wurden unter der MIT-Lizenz veröffentlicht. Wer eine dieser früheren Fassungen bereits
+erhalten hat, darf genau diese Fassung weiter nach MIT nutzen. Für alle Änderungen und
+Fassungen ab diesem Commit gelten ausschließlich die oben genannten Lizenzen.
+
+Teile Dritter (z. B. Bibliotheken wie TFT_eSPI, HX711, Adafruit NeoPixel, NimBLE,
+Android-/Kotlin-Bibliotheken, Datenblätter und Maßzeichnungen der Hersteller) sind
+nicht Teil dieser Lizenzen und unterliegen den Lizenzen ihrer jeweiligen Urheber.
+
+Bei Abweichungen zwischen dieser Übersicht und den vollständigen Lizenztexten gelten
+die vollständigen Lizenztexte.
+
+
+ENGLISH
+-------
+
+This project is licensed under two non-commercial licenses:
+
+1. Software / code – PolyForm Noncommercial License 1.0.0
+   (SPDX: PolyForm-Noncommercial-1.0.0, full text: LICENSE-CODE.md,
+   https://polyformproject.org/licenses/noncommercial/1.0.0/)
+   Covers:
+   - wokwi/sketch.ino (firmware) and firmware/ (source, templates)
+   - app-android/ (Android app source, build scripts, supabase/schema.sql)
+   - scripts: design/visualisierung/src/*.py, *.sh and gehaeuse/render.sh
+   - Exception: the Gradle wrapper (gradlew, gradlew.bat, gradle/wrapper/) belongs
+     to the Gradle project and stays under its own license (Apache 2.0).
+
+2. Hardware, design and documentation – Creative Commons
+   Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+   (SPDX: CC-BY-NC-SA-4.0, full text: LICENSE-HARDWARE-DOCS.md,
+   https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)
+   Covers:
+   - gehaeuse/ (OpenSCAD model incl. .scad, STL files, preview images, assembly guide)
+   - design/ (3D model, renders, .scad helper files, design texts)
+   - doku/, all README/Markdown texts, wokwi/diagram.json, images and graphics
+
+Attribution: Any redistribution or publication (including modified versions) must
+credit "HydroDesk Base by bekuz007 (https://github.com/bekuz007/hydrodesk-base)"
+and include or link the applicable license.
+
+Commercial use (e.g. selling the device, its parts, the print files or the code, or
+use within a for-profit business) is ONLY allowed with prior written permission from
+bekuz007. Contact: via GitHub (https://github.com/bekuz007).
+
+Earlier versions: all versions up to and including commit e5ad237 (2026-10-09) were
+published under the MIT License. Anyone who already received one of those earlier
+versions may keep using exactly that version under MIT. All changes and versions from
+this commit onward are licensed exclusively under the licenses above.
+
+Third-party components (e.g. libraries such as TFT_eSPI, HX711, Adafruit NeoPixel,
+NimBLE, Android/Kotlin libraries, manufacturer datasheets and drawings) are not
+covered by these licenses and remain under their respective authors' licenses.
+
+If this overview and the full license texts differ, the full license texts prevail.

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # Importiert eine GLB-Datei neu und rendert eine Kontroll-Vorschau (Farben/Materialien pruefen)
 import bpy, sys, math
 from mathutils import Vector

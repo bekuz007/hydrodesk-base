@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # Rendert alle Vorschaubilder (benoetigt openscad + xvfb-run)
 cd "$(dirname "$0")"
 S=hydrodesk_base.scad; P=preview; SZ=1600,1100

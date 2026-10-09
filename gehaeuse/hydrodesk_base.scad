@@ -1,4 +1,6 @@
 // =====================================================================
+//  SPDX-License-Identifier: CC-BY-NC-SA-4.0
+//  Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 //  HydroDesk Base  -  parametrisches 3D-Druck-Gehaeuse (OpenSCAD)
 //  Teile:  part = "base" | "cover" | "pad" | "cap" | "diffusor" | "keil" | "assembly" | "exploded"
 //                 | "inside" (Boden + Bauteile, ohne Deckel/Pad) | "section" | "led_section"

@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # Rendert alle Visualisierungen (Blender 4.5 LTS, Cycles CPU) und beschriftet sie (PIL)
 cd "$(dirname "$0")"
 B=${BLENDER:-/opt/blender-dl/blender-4.5.14-linux-x64/blender}

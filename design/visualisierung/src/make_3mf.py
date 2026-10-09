@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # GLB -> 3MF: ein Objekt pro Bauteil, Einheit mm, Z oben, Farben pro Dreieck (basematerials)
 import sys, re, zipfile, collections, numpy as np, trimesh
 src, dst = sys.argv[1], sys.argv[2]

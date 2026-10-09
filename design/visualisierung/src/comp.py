@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 import sys
 from PIL import Image
 def bg(w,h,c0=(196,199,203),c1=(150,154,160)):

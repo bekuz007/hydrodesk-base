@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 import json, sys
 from PIL import Image, ImageDraw
 from annotate import compose, content_bbox, title, footer, labels, INK, SUB, LINE

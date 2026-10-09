@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # Exportiert die komplette HydroDesk Base (Gehaeuse + Elektronik) als GLB/STL.
 # Aufruf: HD_NO_RENDER=1 HD_OUT=/pfad/name blender -b -P export.py -- produkt|explosion /tmp/x.png 1 10
 import bpy, os, sys

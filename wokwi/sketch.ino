@@ -2,6 +2,9 @@
  * ============================================================================
  *  HydroDesk Base – Wokwi-Simulation (ESP32, Arduino)          Version 4
  * ============================================================================
+ *  SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ *  Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
+ * ============================================================================
  *  Schulprojekt FI-AE: Trink-Tracker für den Schreibtisch.
  *  Eine Flasche steht auf einem Pad über einer Wägezelle (HX711). Das Display
  *  zeigt Uhrzeit, Akku, heute getrunkene Menge, Tagesziel und Flascheninhalt.

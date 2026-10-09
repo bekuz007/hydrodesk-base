@@ -192,6 +192,18 @@ Gemeinsam: Planung, Integration, Tests, Bericht, Präsentation.
 
 ## 📄 Lizenz
 
-[MIT](LICENSE) © 2026 bekuz007
+[![Code: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/Code-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE-CODE.md)
+[![Hardware & Doku: CC BY-NC-SA 4.0](https://img.shields.io/badge/Hardware%20%26%20Doku-CC%20BY--NC--SA%204.0-lightgrey)](LICENSE-HARDWARE-DOCS.md)
+
+© 2026 bekuz007 – **nur für nicht-kommerzielle Nutzung**. Übersicht in [`LICENSE`](LICENSE).
+
+| Teil | Lizenz |
+|---|---|
+| Code: Firmware (`wokwi/sketch.ino`, `firmware/`), Android-App (`app-android/`), Skripte (`.py`, `.sh`) | [PolyForm Noncommercial 1.0.0](LICENSE-CODE.md) |
+| Hardware, Design und Doku: Gehäuse (`gehaeuse/`, `.scad`, STL), 3D-Modell, Renders, Texte und Bilder | [CC BY-NC-SA 4.0](LICENSE-HARDWARE-DOCS.md) |
+
+- Nachbauen, Lernen und Verändern für private Zwecke, Schule und Forschung ist erlaubt – mit Nennung „HydroDesk Base von bekuz007“ und Link auf dieses Repository.
+- **Kommerzielle Nutzung** (z. B. Verkauf von Geräten, Teilen, Druckdateien oder Code) nur mit vorheriger schriftlicher Erlaubnis – Kontakt über [GitHub](https://github.com/bekuz007).
+- Fassungen bis Commit `e5ad237` (09.10.2026) wurden unter MIT veröffentlicht; wer sie schon hat, darf genau diese Fassung weiter nach MIT nutzen.
 
 Die Maßzeichnungen und Datenblätter Dritter, die für die Konstruktion verwendet wurden, sind nicht Teil dieses Repositorys – siehe [`gehaeuse/QUELLEN.md`](gehaeuse/QUELLEN.md).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 // secrets.example.h – Vorlage für Zugangsdaten
 // Kopieren nach secrets.h und echte Werte eintragen.
 // secrets.h wird NICHT eingecheckt (siehe .gitignore).

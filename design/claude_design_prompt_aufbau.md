@@ -31,7 +31,7 @@ PARTS (show each one separately on a "Teileübersicht" board, with name, size an
 6. LiPo-Akku 3.7 V 2000 mAh (34×55×10 mm): lies UNDER the display board.
 7. 5-V-Wandler Pololu S13V10F5 (tiny board 12×9 mm): in a 37×17 mm bay next to the battery under the display.
 8. TC4056 USB-C-Lademodul (26×17 mm): middle strip, against the back wall at the USB-C opening.
-9. FET-Schaltmodul (30×17 mm): middle strip, in front of the charger – cuts the power when water is detected.
+9. FET-Platine (small self-soldered perfboard 30×24.5 mm, green, with 2 tiny MOSFETs AO3401A on purple adapter boards, a black transistor BC547B, resistors and a blue lying capacitor 470 µF): middle strip, partly under the display board – switches the LED strip's 5 V (off when dark or when water is detected) and, together with the on/off switch, the battery.
 10. Regensensor (LM393 comparator board + sensor plate 40×54 mm): sensor plate in a floor pocket under a 3 mm slit next to the pad; overflow from the pad's drip notch drips onto it.
 11. Wägezelle 5 kg (aluminium bar 80×12.7×12.7 mm, silver): centred under the pad, fixed at the BACK end to the base (2× M5 from below), the pad is screwed to the FRONT free end (2× M4) – cantilever, so it can bend.
 12. HX711 (34×21 mm, green): next to the load cell under the pad.
@@ -39,22 +39,24 @@ PARTS (show each one separately on a "Teileübersicht" board, with name, size an
 14. Gummifüße ×4, Schrauben (8× M3×12, 2× M5×12, 2× M4×10).
 15. Abdeckkappe USB (cap): small 3D-printed PLA plug-in cap, 35×10.6×3.4 mm, same colour as the housing, pressed into the wide USB opening at the back (covers the display board's programming port), pull notch at the bottom.
 16. Diffusor-Leiste: 3D-printed white PLA strip, 166.7 × 16.7 × 1 mm, sits almost flush in a rebate at the front, in front of the LED strip, and turns it into one even line of light.
+17. Ein/Aus-Schalter (tiny slide switch C&K OS102011MS2QN1, 8.6×4.3×4 mm, silver with black slider): in a pocket in the LEFT side wall near the front; only the slider (2 mm) shows through a small slot, engraved "AN" above and "AUS" below (slider up = on).
+18. Klemmkeile ×2: two tiny 3D-printed PLA wedges (7.6 × 7.4 × 1.1 mm) pushed in behind the switch to hold it.
 
 BOARDS TO CREATE:
 A) "Produkt" – hero isometric of the closed device: display on the left showing "1.250 / 2.000 ml" with a progress bar, ghost bottle on the right pad, the front light line glowing evenly blue through the milky diffuser (one smooth line, no dots).
-B) "Teileübersicht" – all 16 parts laid out flat, labeled, roughly to scale.
-C) "Explosionsansicht" – vertical exploded view in this order from bottom to top: Gummifüße, Diffusor-Leiste + COB-LED-Streifen (pulled out to the front) → Unterschale → Akku + Pololu-5-V-Wandler → Display-Board / Wägezelle + HX711 / Lademodul + FET + Regensensor → Flaschenplatte → Silikonmatte → Deckel. Dashed lines show where each part goes.
-D) "Innenansicht" – top view of the open base WITHOUT cover: where every module sits (color code: display yellow, load cell silver, HX711 green, charger blue, FET red, rain sensor teal, battery dark grey), cable paths as thin colored lines.
+B) "Teileübersicht" – all 18 parts laid out flat, labeled, roughly to scale.
+C) "Explosionsansicht" – vertical exploded view in this order from bottom to top: Gummifüße, Diffusor-Leiste + COB-LED-Streifen (pulled out to the front) → Unterschale → Akku + Pololu-5-V-Wandler → Display-Board / Wägezelle + HX711 / Lademodul + FET-Platine + Regensensor / Ein/Aus-Schalter + 2 Klemmkeile (left wall) → Flaschenplatte → Silikonmatte → Deckel. Dashed lines show where each part goes.
+D) "Innenansicht" – top view of the open base WITHOUT cover: where every module sits (color code: display yellow, load cell silver, HX711 green, charger blue, FET-Platine green with purple adapters, on/off switch silver in the left wall, rain sensor teal, battery dark grey), cable paths as thin colored lines.
 E) "Aufbau in 6 Schritten" – six numbered small isometric panels:
    1. Gummifüße unten aufkleben
    2. Wägezelle hinten mit 2× M5 an der Unterschale festschrauben, HX711 daneben
-   3. Akku, 5-V-Wandler, Lademodul, FET-Modul und Regensensor einsetzen
+   3. Akku, 5-V-Wandler, Lademodul, FET-Platine und Regensensor einsetzen, Ein/Aus-Schalter links in die Wand-Tasche schieben und mit 2 Klemmkeilen sichern
    4. Display-Board auf die Abstandshalter links legen, Kabel anstecken
    5. Flaschenplatte vorne mit 2× M4 auf die Wägezelle schrauben, Silikonmatte aufkleben, COB-LED-Streifen in die Lichtkammer kleben und Diffusor-Leiste vorne einsetzen
    6. Deckel auflegen und mit 8× M3 verschrauben (4 Schrauben halten gleichzeitig das Display-Board), Abdeckkappe hinten einstecken
 F) "Schnitt" – side cross-section through the pad showing: floor → load cell (fixed back, free front) → pad floating with 1 mm gap → silicone mat; and through the display zone: battery under the display board under the cover window.
-G) "Verkabelung" – simple block diagram: ESP32-Display-Board in the centre, connected to HX711 (→ Wägezelle), COB-LED-Streifen WS2812B (26 LEDs, 330–470 Ω in der Datenleitung), Regensensor, FET-Schaltmodul (→ Stromversorgung), Akku → TC4056 → Pololu-5-V-Wandler → Board + LED-Streifen. Use arrows and short German labels.
-H) "Bedienung" – three display screens in portrait: (1) Flaschengröße wählen: Leer / 300 / 500 / 750 / 1000 / 1500 ml / Voll; (2) Tagesfortschritt with ml and goal; (3) red warning screen "WASSER ERKANNT · STROM AUS". Plus an LED color legend: blau = trinken, grün = Ziel erreicht, rot = Akku/Fehler, amber = Wasser erkannt.
+G) "Verkabelung" – simple block diagram: ESP32-Display-Board in the centre, connected to HX711 (→ Wägezelle), COB-LED-Streifen WS2812B (26 LEDs, 330–470 Ω in der Datenleitung), Regensensor, FET-Platine (GPIO18 → BC547B → P-MOSFET Q1 → 5 V des LED-Streifens), Akku → TC4056 → P-MOSFET Q2 (Gate am Ein/Aus-Schalter) → Pololu-5-V-Wandler → Board + (über Q1) LED-Streifen. Use arrows and short German labels.
+H) "Bedienung" – three display screens in portrait: (1) Flaschengröße wählen: Leer / 300 / 500 / 750 / 1000 / 1500 ml / Voll; (2) Tagesfortschritt with ml and goal; (3) red warning screen "WASSER ERKANNT · STROM AUS". Plus an LED color legend: blau = trinken, grün = Ziel erreicht, rot = Akku/Fehler, Wasser erkannt = Streifen aus (stromlos), Warnung nur auf dem Display.
 
 SELF-CHECK before finishing: Is the body a 180×100 rectangle? Is the display on the LEFT? Is the pad on the RIGHT next to it? Is the load cell under the pad only? Are all labels German? If any answer is no, fix it.
 ```

@@ -1,9 +1,11 @@
 // =====================================================================
 //  HydroDesk Base  -  parametrisches 3D-Druck-Gehaeuse (OpenSCAD)
-//  Teile:  part = "base" | "cover" | "pad" | "cap" | "diffusor" | "assembly" | "exploded"
+//  Teile:  part = "base" | "cover" | "pad" | "cap" | "diffusor" | "keil" | "assembly" | "exploded"
 //                 | "inside" (Boden + Bauteile, ohne Deckel/Pad) | "section" | "led_section"
 //                 | "cap_check_cyd" / "cap_check_base" (Kollisionstests der Abdeckkappe)
 //                 | "parts_check" / "diff_check" (Kollisionstests Bauteile / Diffusor, muessen LEER sein)
+//                 | "keil_check" (Klemmkeile gegen Bodenwanne + Bauteile, muss LEER sein)
+//                 | "sw_section" (Schnitt durch die Schalter-Tasche) | "sw_detail" / "sw_detail_offen" (Tasche + FET-Platine)
 //  Koordinaten: X = Breite (links->rechts), Y = Tiefe (vorne=0 -> hinten),
 //               Z = Hoehe (Tischflaeche = 0).  Alle Masse in mm.
 //  Drucker: FDM, PLA, 0,4-mm-Duese.  Alle Teile ohne Stuetzmaterial.
@@ -128,7 +130,14 @@ tc_usb_w  = 10;  tc_usb_h = 4.5;            // Buchsenoeffnung
 tc_usb_zc = tc_pcb_z + 1.6 + 1.63;
 tc_plug_w = 13.5; tc_plug_h = 7.5; tc_plug_d = 1.2;  // Aussenmulde fuer die Stecker-Tuelle
 cmp_w = 16; cmp_l = 30;  cmp_x = strip_x;       cmp_y = front_in + clr;            // LM393-Auswertemodul (vor der dickeren Frontwand)
-mos_w = 17; mos_l = 30;  mos_x = strip_x; mos_y = cmp_y + cmp_l + 2*clr + 1.2;   // MOSFET-Modul (Anschlag dazwischen)
+// V4: Lochraster-Platine mit den zwei P-MOSFETs AO3401A (H1 LED-Strom, H2 Akku-Schalter) statt GERUI-Modul.
+// Zuschnitt aus Lochraster 2,54 mm (10 x 12 Loecher, auf 24,5 x 30 mm zuschneiden). Reicht unter das CYD (dort Bauteile <= 13,7 mm hoch).
+mos_w = 24.5; mos_l = 30;  mos_x = 48.6; mos_y = cmp_y + cmp_l + 2*clr + 1.2;   // Platine (Anschlag zum LM393 dazwischen)
+fb_rail = 1.5;                               // Auflageleisten unter der Platine (Loetstellen frei)
+fb_t = 1.6;                                  // Platinendicke
+fb_z = floor_t + fb_rail;                    // Platinen-Unterseite = 3,5
+elko_d = 10; elko_l = 16;                    // Elko 470 uF / 25 V (Berrybase: 10 x 16 mm), liegend
+elko_x = mos_x + mos_w - 1 - elko_d;  elko_y = mos_y + 1.5;     // rechts auf der Platine (nicht unter dem CYD)
 hx_w = 34; hx_l = 21;    hx_x = 136; hx_y = 60;          // HX711
 
 /* ===================== Pad / Waegezelle ===================== */
@@ -161,6 +170,40 @@ rs_x = 75.5; rs_y = 20; rs_pocket = 0.8;
 slit_w = 3; slit_l = 16;                   // Schlitz im Deckel neben der Pad-Kante
 
 
+/* ===================== Ein/Aus-Schalter links (H2) ===================== */
+// C&K OS102011MS2QN1 (Berrybase SIS-86434-G): Schiebeschalter SPDT ON-ON, Kontakt 0,1 A @ 12 V DC.
+// Datenblatt C&K OS-Serie: Gehaeuse 8,6 x 4,3 mm, Betaetiger 2,0 mm breit und 4,0 mm hoch, Hub 2,0 mm,
+// Pins im Raster 2,0 mm, Haltelaschen im Abstand 8,2 mm. Gehaeusehoehe: Berrybase 4 mm, Datenblatt 3,5-4,7 mm
+// je nach Bezugskante -> NACH LIEFERUNG NACHMESSEN (sw_h). Die zwei Klemmkeile gleichen 3,5-4,0 mm aus.
+// Der Schalter fuehrt NICHT den Akkustrom: er schaltet nur das Gate eines P-MOSFET AO3401A (< 0,1 mA).
+// Einbaulage: Schieberichtung senkrecht (oben = AN), Betaetiger zeigt durch die linke Wand nach aussen.
+sw_l = 8.6;  sw_w = 4.3;  sw_h = 4.0;       // Laenge (hier Z), Breite (Y), Hoehe ab Wand (X)
+sw_act = 2.0; sw_act_h = 4.0; sw_travel = 2.0;
+sw_y  = 27;                                 // Mitte in Y: linke Wand vorne, zwischen den Anschlaegen des 5-V-Wandler-Fachs (weit weg vom Pad-Wasser)
+sw_z0 = floor_t + 1.0;                      // Unterkante Schalter (liegt auf einer 1-mm-Stufe) = 3,0
+sw_zc = sw_z0 + sw_l/2;                     // Mitte = Mitte des Betaetigers = 7,3
+sw_clr = 0.3;                               // Spiel Schalter <-> Tasche je Seite
+sw_slot_w = sw_act + 2*sw_clr;              // Schlitz in der Wand: 2,6 breit (Y)
+sw_slot_l = sw_act + sw_travel + 2*sw_clr;  // 4,6 lang (Z, Schieberichtung)
+sw_cheek = 1.2;                             // Seitenwangen der Tasche
+sw_in = wall;                               // Wand-Innenseite (X)
+sw_xb = sw_in + sw_h;                       // Rueckseite Schalter (Pins) = 6,4
+// Einbau: Der Betaetiger steht 4 mm vor dem Gehaeuse. Darum wird der Schalter 4,4 mm von der Wand entfernt
+// von oben eingesetzt und dann in den Schlitz geschoben. Die Pfosten hinten stehen deshalb >= 4,4 mm hinter
+// der Schalter-Rueckseite; den Platz fuellen danach 2 Klemmkeile (links/rechts der Pins), die von oben
+// zwischen Schalter und Pfosten gesteckt werden. Dicke waechst 1 mm je 3 mm Hoehe, Pfosten mit Gegenschraege.
+sw_ins = sw_act_h + 0.4;                    // Einsetz-Abstand zur Wand = 4,4
+k_k = 1/3;  k_len = sw_l - 1.0;             // Keil-Steigung, Keil-Laenge 7,6 mm
+k_z0 = sw_z0 + 1.5;                         // Spitze bei sw_h = 4,0 auf z = 4,5 (bei 3,5 mm Schalter 1,5 mm tiefer = auf der Stufe)
+k_t0 = sw_ins + (k_z0 - sw_z0)*k_k;         // Keildicke an der Spitze = 4,9 (Pfosten an der Stufe 4,4 hinter dem Schalter)
+k_y0 = 1.25; k_y1 = sw_w/2 + sw_clr - 0.1;  // Keil liegt bei |dy| = 1,25 ... 2,35 (Mitte frei fuer Pins/Kabel)
+sw_post_y0 = 1.15;                          // Pfosten |dy| = 1,15 ... Wange
+sw_post_t = 1.2;
+sw_top = sw_z0 + sw_l + 0.2;                // Oberkante Pfosten = 11,8
+function k_t(z) = k_t0 + (z - k_z0)*k_k;    // Keildicke in Hoehe z (Nennlage)
+function sw_pf(z) = sw_xb + k_t(z);         // Vorderflaeche der Pfosten (Gegenschraege)
+sw_txt = 2.8;  sw_txt_d = 0.5;  sw_txt_gap = 0.8;              // Beschriftung AN / AUS (Schrifthoehe, Gravurtiefe)
+
 /* ===================== Fuesse / Schrauben ===================== */
 foot_d = 13; foot_depth = 1.0; foot_in = 11;
 screw_pilot = screw_pilot_d();             // M3 selbstschneidend 2,5 (fuer Gewindeeinsatz: 4.0)
@@ -179,11 +222,28 @@ assert(front_in + clr <= boost_y - clr - 1.2, "Frontwand stoesst an das 5-V-Wand
 assert(front_in + clr <= bat_y, "Frontwand stoesst an den Akku");
 assert(front_in + clr <= cmp_y, "Frontwand stoesst an das LM393-Modul");
 assert(front_in + clr <= rs_y - 0.5, "Frontwand stoesst an die Regensensor-Mulde");
-assert(mos_y + mos_l + clr + 1.2 < tc_y, "MOSFET-Anschlag stoesst an den TC4056");
+assert(mos_y + mos_l + clr <= tc_y - clr - 1.2, "FET-Platine stoesst an den vorderen TC4056-Anschlag");
+assert(mos_x - clr - 1.2 > bat_x + bat_w + clr, "FET-Platine: Anschlag ragt in den Akku");
+assert(mos_x + mos_w + clr + 1.2 < rs_x - 0.5, "FET-Platine: Anschlag ragt in die Regensensor-Mulde");
+assert(elko_x > cyd_x + cyd_w + 0.5, "Elko liegt unter dem CYD (zu hoch)");
+assert(fb_z + fb_t + elko_d < base_h - 1.5, "Elko stoesst an den Deckel");
 assert(front_thick_top < base_h - 1.5 - 0.5, "Frontverdickung kollidiert mit dem Zentrierkragen des Deckels");
 assert(cov_front_y - screw_pilot/2 - led_d >= 2, "Deckel-Schraubloch zu nah an der Lichtkammer");
 assert(falz_z1 < base_h - 2, "Diffusor-Falz zu nah an der Oberkante");
 assert(falz_z0 > bot_chamfer + 1, "Diffusor-Falz zu nah an der Unterkante");
+// --- Ein/Aus-Schalter ---
+assert(sw_y - sw_w/2 - sw_clr - sw_cheek > cyd_holes[0][1] + 3.25 + 1, "Schalter-Tasche stoesst an den CYD-Abstandshalter vorne");
+assert(sw_y + sw_w/2 + sw_clr + sw_cheek < cyd_holes[1][1] - 3.25 - 1, "Schalter-Tasche stoesst an den CYD-Abstandshalter hinten");
+assert(sw_y - sw_w/2 - sw_clr - sw_cheek > boost_y - clr - 1.2 + 4 + 0.5, "Schalter-Tasche stoesst an den vorderen Anschlag des 5-V-Fachs");
+assert(sw_y + sw_w/2 + sw_clr + sw_cheek < boost_y + boost_l + clr + 1.2 - 4 - 0.5, "Schalter-Tasche stoesst an den hinteren Anschlag des 5-V-Fachs");
+assert(sw_y + sw_w/2 + sw_clr + sw_cheek < bat_y - clr - 1.2 - 0.5, "Schalter-Tasche stoesst an den Akku-Anschlag");
+assert(sw_top + 1.0 < cyd_pcb_z - cyd_back_h, "Schalter-Tasche stoesst an die CYD-Rueckseite");
+assert(k_z0 + k_len < cyd_pcb_z - cyd_back_h, "Klemmkeil stoesst an die CYD-Rueckseite");
+assert(sw_pf(sw_z0) >= sw_xb + sw_ins - e, "Pfosten zu nah: Schalter laesst sich nicht einsetzen");
+assert(k_z0 - 1.5 >= sw_z0 - e, "Keil stoesst bei 3,5 mm Schalterhoehe auf die Stufe");
+assert(sw_slot_l < sw_l - 2 && sw_slot_w < sw_w - 1, "Schalter-Schlitz groesser als das Schaltergehaeuse");
+assert(sw_zc - sw_slot_l/2 - sw_txt_gap - sw_txt > bot_chamfer + 0.4, "Beschriftung AUS zu tief");
+assert(sw_y - 6 > R_corner && sw_y + 6 < D - R_corner, "Beschriftung liegt in der Eckrundung");
 
 /* ===================== Hilfsmodule ===================== */
 module rrect(w,d,r){ translate([r,r]) offset(r=r) square([w-2*r,d-2*r]); }
@@ -248,7 +308,11 @@ module base(){
       // Anschlaege fuer Akku, Boost, MOSFET, Komparator, HX711
       stops(bat_x, bat_y, bat_w, bat_l, 3);
       stops(boost_x, boost_y, boost_w, boost_l, 2.5);
-      stops(mos_x, mos_y, mos_w, mos_l, 3);
+      stops(mos_x, mos_y, mos_w, mos_l, fb_rail + fb_t + 1.0);
+      // Auflageleisten unter der FET-Platine (Loetstellen bleiben frei)
+      for (yy=[mos_y, mos_y+mos_l-1.5]) translate([mos_x+1, yy, floor_t-e]) cube([mos_w-2, 1.5, fb_rail+e]);
+      // Tasche fuer den Ein/Aus-Schalter an der linken Wand
+      sw_holder();
       stops(cmp_x, cmp_y, cmp_w, cmp_l, 3);
       stops(hx_x, hx_y, hx_w, hx_l, 3);
     }
@@ -269,9 +333,71 @@ module base(){
     // Bohrungen in Abstandshaltern und Domen (M3 selbstschneidend)
     for (p=cyd_holes) translate([p[0],p[1],cyd_pcb_z-10]) cylinder(d=screw_pilot, h=10+e);
     for (p=cov_bosses) translate([p[0],p[1],base_h-cov_pad_h-11]) cylinder(d=screw_pilot, h=11+e);
+    // Ein/Aus-Schalter: Schlitz fuer den Betaetiger + Gravur AN (oben) / AUS (unten)
+    translate([-1, sw_y, sw_zc]) rotate([0,90,0]) linear_extrude(sw_in+1+e)
+      offset(r=0.6) offset(delta=-0.6) square([sw_slot_l, sw_slot_w], center=true);
+    sw_label("AN",  sw_zc + sw_slot_l/2 + sw_txt_gap + sw_txt/2);
+    sw_label("AUS", sw_zc - sw_slot_l/2 - sw_txt_gap - sw_txt/2);
     // Mulde fuer Regensensor (Wasser bleibt auf dem Sensor stehen)
     translate([rs_x-0.5, rs_y-0.5, floor_t-rs_pocket]) cube([rs_w+1, rs_l+1, rs_pocket+e]);
   }
+}
+
+/* ===================== Schalter-Tasche + Klemmkeile ===================== */
+// Tasche (Teil der Bodenwanne): 2 Wangen (Y), Stufe unten, 2 Pfosten mit Gegenschraege hinten.
+// Einbau: Schalter 4,4 mm vor der Wand von oben auf die Stufe setzen, nach vorne schieben, bis der Betaetiger
+// im Schlitz steckt, dann die 2 Keile von oben zwischen Schalter-Rueckseite und Pfosten druecken
+// (Pins und Kabel liegen in der Mitte frei). Halt nach oben/unten: Stufe + Schlitz-Enden (0,3 mm Luft).
+module sw_holder(){
+  yi = sw_w/2 + sw_clr;                                   // Innenkante der Wangen (|dy|)
+  xr = sw_pf(sw_top) + sw_post_t;                         // hinterste Kante
+  for (s=[-1,1]) {
+    // Wange
+    translate([sw_in-e, s>0 ? sw_y+yi : sw_y-yi-sw_cheek, floor_t-e]) cube([xr-sw_in+e, sw_cheek, sw_top+0.5-floor_t+e]);
+    // Pfosten mit Gegenschraege (Profil in XZ, in Y extrudiert), stehen auf der Stufe
+    translate([0, s>0 ? sw_y+sw_post_y0 : sw_y-yi-e, 0]) rotate([90,0,0]) mirror([0,0,1])
+      linear_extrude(yi - sw_post_y0 + e)
+        polygon([[sw_pf(sw_z0-e), sw_z0-e], [sw_pf(sw_z0-e)+sw_post_t, sw_z0-e],
+                 [sw_pf(sw_top)+sw_post_t, sw_top], [sw_pf(sw_top), sw_top]]);
+  }
+  // Stufe unten ueber die ganze Taschentiefe: Schalter liegt beim Einsetzen und eingebaut auf z = sw_z0
+  translate([sw_in-e, sw_y-yi-e, floor_t-e]) cube([xr-sw_in+e, 2*yi+2*e, sw_z0-floor_t+e]);
+}
+module sw_label(t, zc){
+  // Gravur in der linken Aussenwand, von aussen lesbar (Blick in +X: rechts = -Y)
+  translate([-e, sw_y, zc]) rotate([90,0,-90]) translate([0,0,-sw_txt_d]) linear_extrude(sw_txt_d+e)
+    text(t, size=sw_txt, font="Liberation Sans:style=Bold", halign="center", valign="center");
+}
+// Ein Klemmkeil in Einbaulage (Nennlage fuer sw_h), s = -1 / +1 (vor / hinter den Pins)
+module keil(s, lift=0){
+  translate([0, s>0 ? sw_y+k_y0 : sw_y-k_y1, lift]) rotate([90,0,0]) mirror([0,0,1])
+    linear_extrude(k_y1-k_y0)
+      polygon([[sw_xb+0.02, k_z0], [sw_xb+k_t0-0.05, k_z0], [sw_xb+k_t(k_z0+k_len)-0.05, k_z0+k_len], [sw_xb+0.02, k_z0+k_len]]);   // 0,02 / 0,05 mm Luft nur fuer die Kollisionspruefung
+}
+// Drucklage: beide Keile flach liegend (1,1 mm hohe Platten mit dem Keilprofil), 4 mm Abstand
+module keil_print(){
+  for (i=[0,1]) translate([i*(k_t(k_z0+k_len)+4), 0, 0])
+    linear_extrude(k_y1-k_y0) polygon([[0,0],[k_t0,0],[k_t(k_z0+k_len),k_len],[0,k_len]]);
+}
+// Schalter-Dummy (Gehaeuse, Betaetiger in Stellung AN = oben, Pins/Laschen nach innen)
+module switch_dummy(){
+  color("silver") translate([sw_in+0.05, sw_y-sw_w/2, sw_z0+0.05]) cube([sw_h-0.05, sw_w, sw_l-0.1]);
+  color([0.1,0.1,0.1]) translate([sw_in-sw_act_h+0.05, sw_y-sw_act/2, sw_zc+sw_travel/2-sw_act/2]) cube([sw_act_h, sw_act, sw_act]);
+  color("gold") for (i=[-1,0,1]) translate([sw_xb, sw_y-0.25, sw_zc+i*2-0.2]) cube([2.8, 0.5, 0.4]);
+  color("silver") for (i=[-1,1]) translate([sw_xb, sw_y-0.6, sw_zc+i*4.1-0.2]) cube([2.8, 1.2, 0.4]);
+}
+// Lochraster-Platine mit AO3401A (2x auf SOT-23-Adaptern), BC547B, Widerstaenden und Elko (vereinfacht)
+module fet_board(){
+  color([0.15,0.45,0.2]) translate([mos_x, mos_y, fb_z]) cube([mos_w, mos_l, fb_t]);
+  for (i=[0,1]) {   // SOT-23-Adapter 10,2 x 12,7 auf Stiftleisten
+    ay = mos_y + 1.5 + i*14.5;
+    color([0.05,0.05,0.05]) translate([mos_x+1.2, ay+1.2, fb_z+fb_t]) cube([10.2-2.4, 12.7-2.4, 2.5]);
+    color([0.6,0.1,0.6]) translate([mos_x+1, ay, fb_z+fb_t+2.5]) cube([10.2, 12.7, 1.6]);
+    color([0.05,0.05,0.05]) translate([mos_x+4.6, ay+5.4, fb_z+fb_t+4.1]) cube([3, 1.4, 1.1]);
+  }
+  color([0.1,0.1,0.1]) translate([mos_x+14.5, mos_y+mos_l-6, fb_z+fb_t]) cube([4.6, 3.7, 4.6]);   // BC547B
+  color([0.3,0.5,0.9]) translate([elko_x, elko_y, fb_z+fb_t+elko_d/2]) rotate([-90,0,0]) cylinder(d=elko_d, h=elko_l);
+  color([0.8,0.7,0.5]) for (i=[0:3]) translate([mos_x+12.5, mos_y+19.5+i*2.54, fb_z+fb_t]) cube([6.3, 1.8, 1.8]);
 }
 
 /* ===================== DECKEL (in Einbaulage) ===================== */
@@ -422,7 +548,8 @@ module components(){
   color("darkblue")  translate([tc_x,tc_y,tc_pcb_z]) cube([tc_w,tc_l,1.6]);
   color("silver")    translate([tc_x+tc_w/2-4.5, D-wall-7.3, tc_pcb_z+1.6]) cube([9,7.3,3.2]);
   color("purple")    translate([boost_x+(boost_w-pol_w)/2, boost_y+(boost_l-pol_l)/2, floor_t]) cube([pol_w,pol_l,pol_h]);   // Pololu im Fach
-  color("darkred")   translate([mos_x,mos_y,floor_t]) cube([mos_w,mos_l,8]);
+  fet_board();                                                                // V4: FET-Platine (H1 + H2)
+  switch_dummy();                                                             // V4: Ein/Aus-Schalter links
   color("darkgreen") translate([cmp_x,cmp_y,floor_t]) cube([cmp_w,cmp_l,6]);
   color("green")     translate([hx_x,hx_y,floor_t]) cube([hx_w,hx_l,5]);
   color("teal")      translate([rs_x,rs_y,floor_t-rs_pocket]) cube([rs_w,rs_l,1.6]);
@@ -435,6 +562,7 @@ module mat(){ color([0.25,0.25,0.25]) translate([pad_x0+rim_w+0.5, pad_y0+rim_w+
 housing_col = [0.82,0.82,0.82];
 pad_col     = [0.15,0.45,0.85];
 diff_col    = [0.97,0.97,0.93];
+keil_col    = [0.95,0.60,0.20];
 
 /* ===================== Auswahl ===================== */
 if (part == "base") base();
@@ -442,6 +570,18 @@ else if (part == "cover") rotate([180,0,0]) translate([0,0,-H]) cover();   // Ob
 else if (part == "pad")   translate([0,0,-pad_z0]) pad();                    // Rippen aufs Druckbett
 else if (part == "cap")   cap_print();                                       // Flansch-Aussenseite aufs Druckbett
 else if (part == "diffusor") diffusor_print();                               // flach aufs Druckbett
+else if (part == "keil")  keil_print();                                      // 2 Klemmkeile, Schalterseite aufs Druckbett
+else if (part == "keil_check") union(){ for (s=[-1,1]) { intersection(){ keil(s); base(); } intersection(){ keil(s); components(); } } }  // muss LEER sein
+else if (part == "sw_detail") {   // Bodenwanne mit Schalter, Klemmkeilen und FET-Platine (ohne CYD/Akku)
+  color(housing_col) base(); switch_dummy(); color(keil_col) for (s=[-1,1]) keil(s); fet_board();
+}
+else if (part == "sw_detail_offen") {   // wie sw_detail, Keile 14 mm hochgezogen, Schalter noch 4,4 mm vor der Wand
+  color(housing_col) base(); translate([sw_ins,0,0]) switch_dummy(); color(keil_col) for (s=[-1,1]) keil(s, 14); fet_board();
+}
+else if (part == "sw_section") {   // Schnitt bei Y = Schaltermitte (Blick von vorne)
+  intersection(){ translate([-5, sw_y-0.01, -1]) cube([30, 30, H+5]);
+    union(){ color(housing_col) base(); color(housing_col) cover(); color([0.95,0.6,0.2]) for (s=[-1,1]) keil(s); components(); } }
+}
 else if (part == "parts_check") intersection(){ base(); translate([0,-0.05,0.05]) components(); }  // muss LEER sein
 else if (part == "diff_check")  union(){ intersection(){ diffusor(); base(); } intersection(){ diffusor(); components(); } }  // muss LEER sein
 else if (part == "cap_check_cyd")  intersection(){ cap(); components(); }    // muss LEER sein
@@ -449,9 +589,11 @@ else if (part == "cap_check_base") intersection(){ cap(); base(); }          // 
 else if (part == "assembly") {
   color(housing_col) base(); color(housing_col) cover(); color(housing_col) cap();
   color(diff_col) diffusor(); color(pad_col) pad(); mat(); components();
+  color(keil_col) for (s=[-1,1]) keil(s);
 }
 else if (part == "inside") {
   color(housing_col) base(); components();
+  color(keil_col) for (s=[-1,1]) keil(s);
 }
 else if (part == "exploded") {
   color(housing_col) base(); components();
@@ -459,6 +601,7 @@ else if (part == "exploded") {
   translate([0,0,85]) color(housing_col) cover();
   translate([0,30,0]) color(housing_col) cap();       // Kappe nach hinten herausgezogen
   translate([0,-25,0]) color(diff_col) diffusor();    // Diffusor nach vorne herausgezogen
+  color(keil_col) for (s=[-1,1]) keil(s, 22);          // Klemmkeile nach oben herausgezogen
 }
 else if (part == "section") {     // Schnitt bei X = Displaymitte und X = Pad-Mitte (zur Kontrolle)
   for (cx=[cyd_cx, pad_cx]) translate([-cx, 0, cx < 100 ? 0 : 35]) intersection(){

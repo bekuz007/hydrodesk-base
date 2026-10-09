@@ -8,7 +8,7 @@ exec(compile(open(__file__).read(), __file__, 'exec'))
 OUTB = os.environ['HD_OUT']
 NAMES = {'base': 'Unterschale', 'cover': 'Deckel', 'pad': 'Flaschenplatte', 'mat': 'Silikonmatte',
          'cyd': 'Display-Board', 'lc': 'Waegezelle', 'hx': 'HX711', 'bat': 'Akku', 'boost': 'Pololu-5V-Wandler',
-         'tc': 'TC4056', 'fet': 'FET-Modul', 'cmp': 'LM393', 'rs': 'Regensensor', 'led': 'COB-LED-Streifen', 'diff': 'Diffusor',
+         'tc': 'TC4056', 'fet': 'FET-Platine', 'sw': 'Ein-Aus-Schalter', 'keil': 'Klemmkeile', 'cmp': 'LM393', 'rs': 'Regensensor', 'led': 'COB-LED-Streifen', 'diff': 'Diffusor',
          'cap': 'Abdeckkappe_USB', 'm3': 'Schrauben_M3', 'm4': 'Schrauben_M4', 'm5': 'Schrauben_M5', 'feet': 'Gummifuesse'}
 
 def part_of(o):

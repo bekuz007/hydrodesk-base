@@ -26,3 +26,17 @@ Die verbaute 5-kg-Zelle (DIYmalls-Set) hat die gleiche Bauform – trotzdem vor 
 ## Akku EEMB LP103454 (2000 mAh)
 
 Maße laut Herstellerdatenblatt: 34,5 × 55 × 10,3 mm (mit Kabelende ca. 56 mm).
+
+## Ein/Aus-Schalter C&K OS102011MS2QN1 (Schiebeschalter, 1× Um, nicht überlappend)
+
+* **Datenblatt (C&K / Littelfuse, OS-Serie):** <https://xonstorage.z8.web.core.windows.net/pdf/ck_os102011ms2qn1_apr22_xonlink.pdf>
+
+Benutzte Werte: Gehäuse 8,6 × 4,3 mm, Schieber 2,0 mm breit / 4,0 mm hoch, Weg 2,0 mm, Pin-Raster 2,0 mm,
+0,1 A bei 12 V DC, Kontaktwiderstand ≤ 20 mΩ, 10 000 Schaltzyklen. Die Gehäusehöhe ist in der Zeichnung nicht
+eindeutig (3,5–4,7 mm, Händler: 4 mm) → im Modell 4,0 mm, **nachmessen** (ANLEITUNG.md, Abschnitt 5).
+
+## P-MOSFET AO3401A (FET-Platine, H1 + H2)
+
+* **Datenblatt (Alpha & Omega, Rev 3.1, Dez. 2023):** <https://www.aosmd.com/sites/default/files/res/datasheets/AO3401A.pdf>
+
+Benutzte Werte: U_DS −30 V, I_D −4 A, U_GS ±12 V, U_GS(th) −0,5 … −1,3 V, R_DS(on) ≤ 60 mΩ (−4,5 V) / ≤ 85 mΩ (−2,5 V).

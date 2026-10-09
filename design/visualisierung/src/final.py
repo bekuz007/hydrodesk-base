@@ -19,8 +19,10 @@ def explosion():
         ('cover', 'L', 'Deckel', '5-mm-Rahmen, Fenster für Display und Platte'),
         ('cap', 'L', 'Abdeckkappe USB', 'steckbar, verdeckt den Programmier-Anschluss'),
         ('cyd', 'L', 'Display-Board ESP32 „CYD“ 2,8″', 'Touch-Display + Prozessor, 50 × 86 mm'),
-        ('tc', 'L', 'Lademodul TC4056', 'USB-C-Buchse an der Rückwand'),
-        ('fet', 'L', 'FET-Schaltmodul', 'trennt den Strom, wenn Wasser erkannt wird'),
+        ('tc', 'R', 'Lademodul TC4056', 'USB-C-Buchse an der Rückwand'),   # rechts: Linie links haette das Display gekreuzt
+        ('fet', 'L', 'FET-Platine (2× AO3401A)', 'LED-Strom an GPIO18 und Ein/Aus des Akkus'),
+        ('sw', 'L', 'Ein/Aus-Schalter', 'links in der Wand, schaltet über den FET den Akku'),
+        ('keil', 'L', 'Klemmkeile (2×)', 'gedruckt, halten den Schalter in seiner Tasche'),
         ('cmp', 'L', 'LM393-Auswertung', 'wertet den Regensensor aus'),
         ('bat', 'L', 'LiPo-Akku 3,7 V / 2000 mAh', '34 × 55 × 10 mm, liegt unter dem Display'),
         ('boost', 'L', '5-V-Wandler Pololu S13V10F5', '12 × 9 mm, im Fach neben dem Akku'),
@@ -55,7 +57,8 @@ def innen():
         ('diff', 'L', 'Diffusor-Leiste + COB-LED-Streifen', '26 LEDs hinter dem Diffusor, Kabel links nach innen'),
         ('base_l', 'L', 'Unterschale (ohne Deckel)', '3D-Druck PLA'),
         ('tc', 'R', 'Lademodul TC4056', 'USB-C-Buchse hinten zum Laden'),
-        ('fet', 'L', 'FET-Schaltmodul', 'Strom aus, wenn Wasser erkannt wird'),
+        ('fet', 'L', 'FET-Platine', 'schaltet LED-Strom (GPIO18) und Akku (Ein/Aus)'),
+        ('sw', 'L', 'Ein/Aus-Schalter + Klemmkeile', 'links an der Wand, oben = AN'),
         ('boss', 'R', 'Schraubdom', 'hier wird der Deckel verschraubt'),
         ('hx', 'R', 'HX711 Messverstärker', 'liest die Wägezelle aus'),
         ('lc', 'R', 'Wägezelle 5 kg', 'trägt später die Flaschenplatte'),
@@ -83,7 +86,7 @@ def teile():
         ('lc', 'Wägezelle 5 kg', '80 × 12,7 × 12,7 mm', 'misst das Gewicht'),
         ('hx', 'HX711', '34 × 21 mm', 'Messverstärker für die Wägezelle'),
         ('tc', 'Lademodul TC4056', '26 × 17 mm', 'lädt den Akku über USB-C'),
-        ('fet', 'FET-Schaltmodul', '30 × 17 mm', 'schaltet den Strom ab'),
+        ('fet', 'FET-Platine', '30 × 24,5 mm', 'LED-Strom + Ein/Aus (2× AO3401A)'),
         ('cmp', 'LM393-Auswertung', '30 × 16 mm', 'gehört zum Regensensor'),
         ('boost', '5-V-Wandler Pololu S13V10F5', '12,1 × 8,9 mm', '3,7 V → 5 V'),
         ('led', 'COB-LED-Streifen WS2812B', '162,5 × 5 mm', '26 LEDs (13 Segmente)'),
@@ -91,13 +94,15 @@ def teile():
         ('feet', 'Gummifüße', '4×, Ø 13 mm', 'rutschfest unten'),
         ('cap', 'Abdeckkappe USB', '35 × 10,6 × 3,4 mm', 'steckbar, verdeckt den USB-Ausschnitt'),
         ('diff', 'Diffusor-Leiste', '166,7 × 16,7 × 1 mm', 'gedruckt, verteilt das LED-Licht'),
+        ('sw', 'Ein/Aus-Schalter', '8,6 × 4,3 × 4 mm', 'C&K OS102011MS2QN1, oben = AN'),
+        ('keil', 'Klemmkeile (2×)', '7,6 × 7,4 × 1,1 mm', 'gedruckt, halten den Schalter'),
     ]
     r = int(19*k); fB = F(int(22*k), 700)
     for i, (key, name, size, fn) in enumerate(parts):
         n = str(i+1)
         x, y = A[key+'_tl'][:2]
         cx, cy = x - int(4*k), y - int(4*k)
-        if key in ('screws', 'feet', 'led', 'cap', 'diff'): cx, cy = x - int(26*k), y + int(10*k)
+        if key in ('screws', 'feet', 'led', 'cap', 'diff', 'sw', 'keil'): cx, cy = x - int(26*k), y + int(10*k)
         d.ellipse([cx-r, cy-r, cx+r, cy+r], fill=(250, 250, 250), outline=INK, width=max(2, int(2.5*k)))
         d.text((cx, cy+1), n, font=fB, fill=INK, anchor='mm')
     # Legende rechts
@@ -122,7 +127,7 @@ def produkt():
     d.text((X, Y), 'HydroDesk Base', font=F(int(104*k), 750), fill=(245, 247, 250))
     d.text((X+int(4*k), Y+int(140*k)), 'Der smarte Untersetzer für deinen Schreibtisch.', font=F(int(36*k), 450), fill=(190, 198, 208))
     feats = ['Misst jeden Schluck – mit jeder Flasche (Leer / Voll)', '2,8″ Touch-Display mit Tagesziel',
-             'Leuchtlinie vorne erinnert nur, wenn du hinterherhängst', 'Wasserschutz, Akku, USB-C und Bluetooth']
+             'Leuchtlinie vorne erinnert nur, wenn du hinterherhängst', 'Wasserschutz, Akku mit Ein/Aus-Schalter, USB-C und Bluetooth']
     for i, f in enumerate(feats):
         yy = Y + int((235 + i*58)*k)
         d.ellipse([X+int(6*k), yy-int(7*k), X+int(20*k), yy+int(7*k)], fill=(40, 140, 255))

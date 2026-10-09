@@ -23,7 +23,8 @@ bat = (12.15, 41.0, 2.0, 34.5, 56, 10.3)
 boost = (10.9, 19.0, 3.0, 37, 17)              # Fach 37 x 17 fuer den 5-V-Wandler
 pol = (10.9 + (37-12.1)/2, 19.0 + (17-8.9)/2, 2.0, 12.1, 8.9)   # Pololu S13V10F5 (12,1 x 8,9 x 4,2 mm) mittig im Fach
 tc = (56, 71.6, 3.5, 17, 26)
-fet = (56, 39.4, 2.0, 17, 30)                   # hinter das LM393-Modul geschoben (dickere Frontwand)
+fet = (48.6, 39.4, 3.5, 24.5, 30)              # V4: Lochraster-Platine mit 2x AO3401A (LED-Strom + Ein/Aus), auf 1,5-mm-Leisten
+sw_y, sw_z0, sw_zc = 27.0, 3.0, 7.3             # V4: Ein/Aus-Schalter C&K OS102011MS2QN1 an der linken Wand (oben = AN)
 cmp_ = (56, 7.6, 2.0, 16, 30)
 hx = (136, 60, 2.0, 34, 21)
 rs = (75.5, 20, 1.2, 40, 54)
@@ -381,17 +382,54 @@ def make_tc():
         o.append(box('TCpad%d' % i, px, y+0.8, z+1.6, 2.4, 3, 0.15, M['gold'], 0.0))
     g = group('tc', o); anchor('tc', 'tc', (x+w/2, y+12, z+3)); anchor('usbc', 'tc', (x+w/2, D-2.4, z+3.2)); return g
 
+def ycyl(name, cx, y0, cz, d, L, m, n=40):
+    v = []
+    for i in range(n):
+        a = 2*math.pi*i/n; v.append((cx + d/2*math.cos(a), y0, cz + d/2*math.sin(a)))
+    for i in range(n):
+        a = 2*math.pi*i/n; v.append((cx + d/2*math.cos(a), y0+L, cz + d/2*math.sin(a)))
+    f = [tuple(range(n)), tuple(range(2*n-1, n-1, -1))] + [(i, n+i, n+(i+1) % n, (i+1) % n) for i in range(n)]
+    o = mesh_from(name, v, f, m)
+    bm_ = bmesh.new(); bm_.from_mesh(o.data); bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces); bm_.to_mesh(o.data); bm_.free()
+    for p in o.data.polygons: p.use_smooth = True
+    o.data.set_sharp_from_angle(angle=math.radians(40))
+    return o
+
 def make_fet():
+    # V4: Lochraster-Platine 24,5 x 30 mm: 2x AO3401A auf SOT-23-Adaptern, BC547B, Widerstaende, Elko 470 uF liegend
     x, y, z, w, l = fet; o = []
-    o.append(box('FET PCB', x, y, z, w, l, 1.6, M['pcb_r'], 0.15))
-    o.append(box('MOSFET', x+5, y+11, z+1.6, 7, 6.5, 2.3, M['black'], 0.2))
-    o.append(box('MOSFET Tab', x+6.5, y+17.5, z+1.6, 4, 2.5, 0.6, M['steel'], 0.1))
-    o.append(box('Klemme1', x+1.5, y+0.5, z+1.6, 14, 7.5, 6.4, M['term'], 0.4))
-    o.append(box('Klemme2', x+1.5, y+l-8, z+1.6, 14, 7.5, 6.4, M['term'], 0.4))
-    for k, yy in enumerate([y+0.5, y+l-8]):
-        for j in range(3):
-            o.append(cyl('Kschr%d%d' % (k, j), x+3.8+j*5, yy+3.75, z+7.9, 3, 0.25, M['steel'], 16))
-    g = group('fet', o); anchor('fet', 'fet', (x+w/2, y+14, z+3.9)); return g
+    zt = z + 1.6
+    o.append(box('FET Lochraster', x, y, z, w, l, 1.6, M['pcb_g'], 0.15))
+    for i in range(10):
+        for j in range(12):
+            o.append(cyl('FET Loch%d_%d' % (i, j), x+1.0+i*2.54, y+1.2+j*2.54, zt-0.01, 1.2, 0.03, M['gold'], 10))
+    for k in range(2):
+        ay = y + 1.5 + k*14.5
+        o.append(box('Adapter Leiste%d' % k, x+1.0+1.2, ay+1.2, zt, 7.8, 10.3, 2.5, M['black'], 0.2))
+        o.append(box('SOT23 Adapter%d' % k, x+1.0, ay, zt+2.5, 10.2, 12.7, 1.6, M['pcb_p'], 0.15))
+        o.append(box('AO3401A_%d' % k, x+4.6, ay+5.6, zt+4.1, 3.0, 1.4, 1.1, M['black'], 0.15))
+    ex = x + w - 1 - 10
+    o.append(ycyl('Elko 470uF', ex+5, y+1.5, zt+5, 10, 16, mat('Elko', (0.08, 0.22, 0.65), 0.35, coat=0.4)))
+    o.append(ycyl('Elko Deckel', ex+5, y+1.45, zt+5, 8.6, 0.1, M['alu']))
+    o.append(box('Elko Streifen', ex+3.6, y+1.6, zt+9.9, 2.8, 15.8, 0.15, M['white'], 0.0))
+    o.append(box('BC547B', x+14.5, y+l-6, zt, 4.6, 3.7, 4.6, M['black'], 0.9, 3))
+    for i in range(4):
+        o.append(ycyl('R%d' % i, x+15.0+i*2.54, y+19.5, zt+1.0, 1.8, 6.3, mat('Widerstand', (0.35, 0.55, 0.85), 0.4), 16))
+    g = group('fet', o); anchor('fet', 'fet', (x+6, y+8, zt+4.1)); anchor('elko', 'fet', (ex+5, y+9, zt+10)); return g
+
+def make_switch():
+    # V4: Schiebeschalter C&K OS102011MS2QN1 (8,6 x 4,3 x 4 mm, Betaetiger 2 x 2 x 4 mm, Stellung AN = oben)
+    o = []; y0 = sw_y - 2.15
+    o.append(box('Schalter Gehaeuse', 2.45, y0, sw_z0+0.05, 3.95, 4.3, 8.5, M['steel'], 0.15))
+    o.append(box('Schalter Sockel', 5.6, y0+0.2, sw_z0+0.3, 0.8, 3.9, 8.0, M['black'], 0.1))
+    o.append(box('Schalter Betaetiger', -1.55, sw_y-1.0, sw_zc, 4.0, 2.0, 2.0, M['black'], 0.2))
+    for i in range(3):
+        o.append(box('Schalter Pin%d' % i, 6.4, sw_y-0.25, sw_zc-2.2+i*2.0, 2.8, 0.5, 0.4, M['gold'], 0.0))
+    g = group('sw', o); anchor('sw', 'sw', (4.4, sw_y, sw_z0+8.6)); return g
+
+def make_keil():
+    k = import_stl('Klemmkeile', SRC+'keil.stl', M['pla'])
+    g = group('keil', [k]); anchor('keil', 'keil', (8.5, sw_y+1.8, 12.0)); return g
 
 def make_cmp():
     x, y, z, w, l = cmp_; o = []
@@ -555,7 +593,7 @@ def build_all(cables=False):
     anchor('pad', 'pad', (170, 70, 24.6)); anchor('pad_notch', 'pad', (81.5, 50, 23))
     cap = import_stl('Abdeckkappe USB', SRC+'cap.stl', M['pla']); group('cap', [cap])
     anchor('cap', 'cap', (14.5, 101.2, 17))
-    make_mat(); make_cyd(); make_battery(); make_boost(); make_tc(); make_fet(); make_cmp()
+    make_mat(); make_cyd(); make_battery(); make_boost(); make_tc(); make_fet(); make_cmp(); make_switch(); make_keil()
     make_hx(); make_rs(); make_loadcell(); make_led()
     make_diff(DIFF_GLOW)
 
@@ -578,7 +616,8 @@ if MODE == 'explosion':
     world((0.5, 0.52, 0.55), 0.55)
     sun('key', (50, 0, 35), 2.2, 8); sun('fill', (65, 0, -110), 0.7, 30); sun('rim', (60, 0, 200), 1.2, 15)
     Z = dict(feet=-32, m5=-54, base=0, A=36, B=80, pad=122, m4=138, mat=148, cover=174, m3=196)
-    for g in ['bat', 'boost']: place(g, Z['A'])
+    for g in ['bat', 'boost', 'sw']: place(g, Z['A'])
+    place('keil', Z['A'] + 18)                               # Klemmkeile ueber dem Schalter
     CYD_DZ = float(os.environ.get('HD_CYD_DZ', '28'))      # Display-Board ueber den Modulstreifen (freie Hinweislinien)
     for g in ['lc', 'hx', 'rs', 'tc', 'fet', 'cmp']: place(g, Z['B'])
     place('cap', Z['B']+CYD_DZ, 0, 30)                       # Abdeckkappe (gehoert zum CYD-USB) nach hinten herausgezogen
@@ -628,13 +667,14 @@ elif MODE == 'innen':
     zc = cyd_pcb_z - 4.0 + LIFT   # Unterkante JST am angehobenen CYD
     # Kabel (Farben: rot +, schwarz -, gelb/gruen/weiss Signal)
     bundle('K_HX', [(hx[0]+1, hx[1]+12, 4.2), (133, 88, 3.2), (128, 95.5, 3.2), (100, 95.0, 3.0), (80, 70, 3.0),
-                    (62, 69.2, 3.0), (54, 68, 5), (52.5, 66.5, 25), (51.6, 66.5, zc)], 'rkyw', 1.0)
-    bundle('K_CMP', [(64, 37.7, 4.0), (57, 38.4, 4.0), (54, 41, 4.0), (53.4, 47, 5), (52.5, 50.5, 26), (51.6, 50.5, zc)], 'rky', 1.0)
-    bundle('K_FET', [(60, 40, 3.9), (54, 34, 3.2), (pol[0]+pol[3]+0.5, pol[1]+4.5, 3.8)], 'rk', 1.1)
-    bundle('K_PWR', [(pol[0]+1, pol[1]+4.5, 3.8), (7.5, 30, 5), (7.0, 39, 22), (7.2, 40.5, zc)], 'rk', 1.1)
-    bundle('K_LED', [(10.5, 7.6, 8.5), (10, 11, 4), (7.5, 18, 4), (7.0, 24, 22), (7.2, 25.5, zc)], 'rgk', 1.0)
-    bundle('K_BAT', [(bat[0]+bat[3]/2+3, bat[1]-4.5, 3.5), (44, 38.5, 3.0), (53, 46, 3.0), (54, 62, 3.0), (56, 69, 3.6), (59, 73, 5.4)], 'rk', 1.1)
-    bundle('K_TCF', [(68, 72.5, 5.4), (68.5, 70, 4.2), (68.5, 66.8, 4.0)], 'rk', 1.1)
+                    (74.5, 70.0, 5.5), (62, 69.9, 7.0), (54, 68.6, 12), (52.5, 66.5, 25), (51.6, 66.5, zc)], 'rkyw', 1.0)
+    bundle('K_CMP', [(64, 37.7, 4.0), (60, 38.6, 8), (55, 39.6, 12.2), (52.6, 46, 12.8), (52.0, 50.5, 16), (51.6, 50.5, zc)], 'rky', 1.0)
+    bundle('K_FET', [(50.2, 41.0, 5.4), (47.5, 38.4, 6.2), (40, 34.5, 5.6), (pol[0]+pol[3]+0.5, pol[1]+4.5, 3.8)], 'rk', 1.1)   # Akku geschaltet -> Pololu VIN
+    bundle('K_PWR', [(pol[0]+1, pol[1]+4.5, 3.8), (20, 34, 5.5), (12.5, 38.6, 6.5), (7.4, 39.6, 14), (7.2, 40.5, zc)], 'rk', 1.1)
+    bundle('K_LED', [(10.5, 7.6, 8.5), (14, 10.5, 5.5), (21, 17, 7.5), (44, 30, 7.5), (50, 37.6, 6.5), (52.5, 40.4, 5.6)], 'rgk', 1.0)   # Streifen -> FET-Platine
+    bundle('K_BAT', [(bat[0]+bat[3]/2+3, bat[1]-4.5, 3.5), (44, 38.0, 4.5), (50.5, 39.0, 9), (54.5, 50, 11.8), (55, 66, 11.8), (57.5, 71, 7.5), (59, 73, 5.4)], 'rk', 1.1)
+    bundle('K_TCF', [(68, 72.5, 5.4), (68.5, 70.3, 6.6), (68.5, 68.2, 5.4)], 'rk', 1.1)   # TC4056 OUT -> FET-Platine (Ein/Aus)
+    bundle('K_SW', [(9.2, sw_y, sw_zc), (12.5, sw_y, 9.5), (19, 36.5, 8.5), (40, 38.2, 6.5), (49.6, 41.5, 5.8)], 'kyr', 0.9, 0.35)   # Schalter -> Gate FET (Ein/Aus)
     bundle('K_RS', [(95, 21, 2.9), (86, 15, 3.2), (75, 12.2, 4.2), (72.3, 12.2, 4.3)], 'kw', 1.0)
     shadow_catcher(-2.2)
     anchor('cables', None, (80, 70, 3.2)); anchor('k_led', None, (10, 11, 4))
@@ -692,7 +732,8 @@ elif MODE == 'teile':
     lay('cover', 15, 214); lay('base', 210, 214); lay('pad', 410, 219)
     lay('cyd', 15, 102); lay('bat', 82, 118); lay('mat', 135, 100)
     lay('rs', 238, 118); lay('lc', 300, 162, (0, 0, -90)); lay('hx', 300, 112)
-    lay('tc', 398, 140); lay('fet', 432, 138); lay('cmp', 466, 138); lay('boost', 398, 100)
+    lay('tc', 398, 140); lay('fet', 425, 138); lay('cmp', 462, 138); lay('boost', 398, 100)
+    lay('sw', 440, 104, (0, -90, 0)); lay('keil', 472, 104)
     lay('led', 15, 36, (-90, 0, 0))
     lay('diff', 15, 52, (-90, 0, 0))
     lay('cap', 452, 27, (-90, 0, 0))
@@ -710,7 +751,7 @@ elif MODE == 'teile':
     bpy.context.view_layer.update()
     # Anker: obere linke Ecke jeder Gruppe (fuer Nummern) + Mitte
     TE = {}
-    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led', 'cap', 'diff']:
+    for g in ['cover', 'base', 'pad', 'cyd', 'bat', 'mat', 'rs', 'lc', 'hx', 'tc', 'fet', 'cmp', 'boost', 'led', 'cap', 'diff', 'sw', 'keil']:
         mn, mx = gbbox(g); TE[g] = (mn, mx)
     sx_mn = Vector((sx-1, 22, 0)); sx_mx = Vector((sx+140, 40, 6)); TE['screws'] = (sx_mn, sx_mx)
     TE['feet'] = (Vector((364, 24, 0)), Vector((370+3*17+13, 42, 3)))

@@ -9,6 +9,8 @@
     {"type": "wokwi-slide-switch", "id": "naesse", "top": 120, "left": 290, "attrs": {"value": "", "bounce": "0"}},
     {"type": "wokwi-led", "id": "last", "top": 110, "left": 195, "attrs": {"color": "green", "label": "LAST", "flip": "1"}},
     {"type": "wokwi-resistor", "id": "r1", "top": 200, "left": 228, "attrs": {"value": "220"}},
+    {"type": "wokwi-led", "id": "licht", "top": 130, "left": 380, "attrs": {"color": "white", "label": "LICHT", "flip": "1"}},
+    {"type": "wokwi-resistor", "id": "r2", "top": 220, "left": 405, "attrs": {"value": "220"}},
     {"type": "wokwi-potentiometer", "id": "akku", "top": -150, "left": -110, "attrs": {"value": "900"}},
     {"type": "wokwi-led-strip", "id": "leds", "top": -75, "left": 210, "attrs": {"pixels": "26", "pixelSize": "2020"}}
   ],
@@ -36,6 +38,9 @@
     ["esp:D18", "last:A", "limegreen", ["h83.7", "v98.3", "h25"]],
     ["last:C", "r1:1", "black", ["v53.65"]],
     ["r1:2", "esp:GND.1", "black", ["v26.35", "h-128.8", "v-83"]],
+    ["esp:D21", "licht:A", "cyan", ["h70.7", "v37.1", "h223"]],
+    ["licht:C", "r2:1", "black", ["v53.65"]],
+    ["r2:2", "esp:GND.1", "black", ["v24.35", "h-305.8", "v-101"]],
     ["esp:D19", "naesse:2", "gold", ["h168.7", "v112.8", "h36"]],
     ["naesse:3", "esp:GND.1", "black", ["v78", "h-157.5", "v-83"]],
     ["akku:SIG", "esp:D35", "orange", ["v144.4"]],

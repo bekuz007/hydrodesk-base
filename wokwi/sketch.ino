@@ -1,6 +1,6 @@
 /*
  * ============================================================================
- *  HydroDesk Base – Wokwi-Simulation (ESP32, Arduino)          Version 3
+ *  HydroDesk Base – Wokwi-Simulation (ESP32, Arduino)          Version 4
  * ============================================================================
  *  Schulprojekt FI-AE: Trink-Tracker für den Schreibtisch.
  *  Eine Flasche steht auf einem Pad über einer Wägezelle (HX711). Das Display
@@ -11,8 +11,17 @@
  *  leuchtet nur bei Ereignissen (Dauerlicht). Blinken NUR bei:
  *  Akku-Warnung (rot), Bluetooth sucht (weiß), Handy verbunden (2x lila).
  *  Oben rechts: Bluetooth-Symbol links neben dem Akku (neu in V3).
- *  Ein Nässe-Sensor schaltet bei
- *  Wasser die Last ab.
+ *  Antippen des Symbols macht das Gerät 2 min für das Handy sichtbar (neu in V4).
+ *  Ein Nässe-Sensor schaltet bei Wasser den Strom des LED-Streifens ab.
+ *
+ *  NEU IN V4 – STROMSPAREN (README Kapitel 18):
+ *   - Display: hell -> nach 30 s gedimmt -> nach 2 min aus (RUHE), nachts nach 15 s aus
+ *   - WLAN nur zum Uhr-Abgleich (Start, alle 6 h, Befehl "sync"), danach aus
+ *   - Bluetooth nur in Fenstern (Start 2 min, Symbol antippen 2 min, 60 s nach dem Trinken)
+ *   - CPU 80 MHz, auf dem echten CYD Light-Sleep in RUHE (Wecken alle 100 ms + Touch + Nässe)
+ *   - LED-Streifen bekommt nur Strom, wenn er leuchtet (FET an GPIO18)
+ *   - Akku-Prozent per LiPo-Tabelle, Schutzabschaltung bei leerem Akku
+ *   - "stromsparen 0" = Verhalten wie Version 3 (zum Vergleichen)
  *
  *  Simulation (Wokwi)                      | Echte Hardware
  *  ----------------------------------------+---------------------------------
@@ -21,7 +30,8 @@
  *  HX711-Schieberegler (0–5 kg)            | HX711 + 5-kg-Wägezelle
  *  Schiebeschalter "NÄSSE"                 | LM393-Regensensor, Ausgang DO
  *  Potentiometer "AKKU"                    | Akku über Spannungsteiler am ADC
- *  LED "LAST"                              | MOSFET, der die Last schaltet
+ *  LED "LAST"                              | LED-Strom: P-MOSFET AO3401A (High-Side)
+ *  LED "LICHT" an GPIO21 (PWM)             | Hintergrundlicht des Displays (PWM)
  *  LED-Streifen 26 Pixel                   | BTF-LIGHTING WS2812B FCOB, 26 LEDs
  *  WLAN "Wokwi-GUEST" + NTP                | Heim-/Schul-WLAN (secrets.h) + NTP
  *  Telegram: nur Serial-Ausgabe (Stub)     | Telegram-Bot über WLAN
@@ -32,7 +42,8 @@
  *  Serieller Monitor (115200 Baud): "hilfe", "status", "reset",
  *  "gewicht 75", "groesse 180", "zeit 23:59",
  *  "kalib", "leer", "voll",
- *  "bt suchen", "bt verbunden", "bt getrennt", "bt aus"
+ *  "bt suchen", "bt verbunden", "bt getrennt", "bt aus",
+ *  "sync" (Uhr-Abgleich per WLAN), "stromsparen 0" / "stromsparen 1"
  * ============================================================================
  */
 
@@ -50,11 +61,30 @@
 //  0 = Bluetooth nur simuliert (Serial-Befehle "bt ...")  <- Standard für Wokwi
 //      (Wokwi kann kein Bluetooth simulieren)
 //  1 = echtes BLE mit der Bibliothek NimBLE-Arduino (Gerät heißt "HydroDesk")
-//      Echtes Gerät: HYDRO_CYD 1 UND HYDRO_BLE 1. Speicher: siehe README
-//      (passt in "Default 4MB", für mehr Reserve Partition "Huge APP" wählen).
+//      Echtes Gerät: HYDRO_CYD 1 UND HYDRO_BLE 1. Speicher: siehe README Kapitel 16
+//      Ab V4 Partition "Huge APP (3MB No OTA/1MB SPIFFS)" PFLICHT (Default 1,25 MB ist zu klein).
 // ----------------------------------------------------------------------------
 #ifndef HYDRO_BLE
   #define HYDRO_BLE 0
+#endif
+
+// ----------------------------------------------------------------------------
+//  STROMSPAREN (neu in V4, README Kapitel 18, Stromsparplan)
+//  1 = Energie-Automat AKTIV -> GEDIMMT -> RUHE, WLAN nur zum Uhr-Abgleich,
+//      Bluetooth nur in Fenstern, CPU 80 MHz, Sparblau, LED-Strom nur bei Bedarf  <- Standard
+//  0 = Verhalten wie Version 3 (zum Vergleichen und für die Fehlersuche).
+//      Umschalten geht auch zur Laufzeit: Serial "stromsparen 0" / "stromsparen 1".
+// ----------------------------------------------------------------------------
+#ifndef STROMSPAREN
+  #define STROMSPAREN 1
+#endif
+// Echter Light-Sleep nur auf dem echten CYD. Wokwi simuliert Light-Sleep und
+// GPIO-Wecken nicht verlässlich -> dort läuft derselbe Energie-Automat ohne Schlaf.
+#ifndef HYDRO_LIGHTSLEEP
+  #define HYDRO_LIGHTSLEEP HYDRO_CYD
+#endif
+#if HYDRO_LIGHTSLEEP && !HYDRO_CYD
+  #error "HYDRO_LIGHTSLEEP 1 geht nur zusammen mit HYDRO_CYD 1"
 #endif
 
 #include <Arduino.h>
@@ -66,6 +96,8 @@
 #include <Preferences.h>        // Einstellungen dauerhaft im Flash (NVS)
 #include <HX711.h>              // Wägezellen-Verstärker
 #include <Adafruit_NeoPixel.h>  // LED-Streifen WS2812
+#include <esp_sleep.h>          // Light-Sleep / Deep-Sleep (im ESP32-Kern enthalten)
+#include <driver/gpio.h>        // gpio_hold_en(): Pin-Pegel im Schlaf festhalten
 
 #if HYDRO_BLE
   #include <NimBLEDevice.h>        // Bibliothek "NimBLE-Arduino" (h2zero), nur für echtes BLE
@@ -148,8 +180,24 @@ const float    ANDERE_FLASCHE_G     = 250.0f; // ... (mind. so viel Unterschied)
 const uint32_t TROCKEN_FREIGABE_MS  = 5000;   // so lange trocken -> Sperre hebt sich selbst auf
 
 // --- Akku (in Wokwi: Potentiometer). Simulation: 0..4095 -> 3,0..4,2 V
-const float    AKKU_LEER_V          = 3.0f;
-const float    AKKU_VOLL_V          = 4.2f;
+const float    AKKU_LEER_V          = 3.0f;   // nur Wokwi: Poti ganz links
+const float    AKKU_VOLL_V          = 4.2f;   // nur Wokwi: Poti ganz rechts
+const float    AKKU_TEILER          = 2.0f;   // echt: Spannungsteiler 2 x 10 kΩ -> ADC sieht die halbe Akkuspannung
+// Akku-Prozent aus der Spannung (neu in V4, statt linear 3,0..4,2 V):
+// TYPISCHE Ruhespannungs-Kurve einer LiPo-Zelle (Literaturwert, Quelle: README Kapitel 18),
+// NICHT am eigenen Akku gemessen. Nach dem Entladetest (Stromsparplan, Test H5) ersetzen.
+const float    AKKU_TABELLE_V[]     = { 3.27f, 3.61f, 3.69f, 3.71f, 3.73f, 3.75f, 3.77f, 3.79f, 3.80f, 3.82f, 3.84f,
+                                        3.85f, 3.87f, 3.91f, 3.95f, 3.98f, 4.02f, 4.08f, 4.11f, 4.15f, 4.20f };
+const uint8_t  AKKU_TABELLE_P[]     = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50,
+                                        55, 60, 65, 70, 75, 80, 85, 90, 95, 100 };
+const uint8_t  AKKU_TABELLE_N       = sizeof(AKKU_TABELLE_P) / sizeof(AKKU_TABELLE_P[0]);
+static_assert(sizeof(AKKU_TABELLE_V) / sizeof(AKKU_TABELLE_V[0]) == sizeof(AKKU_TABELLE_P), "Akku-Tabelle: gleich viele Werte");
+// Schutz bei leerem Akku: so lange unter AKKU_ABSCHALT_V -> Meldung, dann Tiefschlaf mit Timer
+const float    AKKU_ABSCHALT_V      = 3.30f;  // Schätzwert, nach der Entlademessung anpassen
+const uint32_t AKKU_ABSCHALT_MS     = 60000;  // 60 s lang darunter (kurze Einbrüche zählen nicht)
+const uint32_t AKKU_LEER_MELDUNG_MS = 10000;  // "Akku leer - bitte laden" so lange zeigen
+const uint32_t AKKU_LEER_SCHLAF_MIN = 15;     // im Tiefschlaf alle 15 min prüfen, ob geladen wird
+const float    AKKU_WIEDERANLAUF_V  = 3.60f;  // erst ab dieser Spannung wieder normal starten (Erholung im Leerlauf)
 const int      AKKU_WARN_PROZENT    = 20;     // darunter: Hinweis + 2x rot blinken
 const int      AKKU_KRITISCH_PROZENT = 10;    // darunter: Balken "Bitte laden" + 4x rot blinken
 const int      AKKU_HYSTERESE_PROZENT = 2;    // erst bei Schwelle + 2 % gilt die Warnung als vorbei
@@ -178,10 +226,19 @@ const uint8_t  LED_HELLIGKEIT       = 60;     // 0..255 (mittel), höchstens 80 
 static_assert(LED_HELLIGKEIT <= 80, "LED_HELLIGKEIT höchstens 80 (Strombudget 5-V-Wandler)");
 const uint32_t LED_GRUEN_MS         = 10000;  // "Ziel erreicht" 10 s grün
 const uint32_t LED_ROT_MS           = 5000;   // Waagen-Fehler: 5 s rot
+// Erinnerung (V4): erst LED_ERINNERUNG_HELL_MS voll blau, danach ruhiges "Sparblau" (Dauerlicht)
+const uint32_t LED_ERINNERUNG_HELL_MS = 2UL * 60UL * 1000UL;
+const uint8_t  LED_HELLIGKEIT_SPAR  = 15;     // wirksame Helligkeit 0..255 für Sparblau
+static_assert(LED_HELLIGKEIT_SPAR <= LED_HELLIGKEIT, "Sparblau darf nicht heller sein als normal");
+// Blau-Wert für Sparblau: LED_HELLIGKEIT wird zusätzlich angewendet -> 255 * 15 / 60 = 64
+const uint8_t  LED_SPARBLAU_WERT    = (uint8_t)((255U * LED_HELLIGKEIT_SPAR + LED_HELLIGKEIT / 2) / LED_HELLIGKEIT);
+// LED-Strom (FET an GPIO18): nach dem Einschalten kurz warten, bevor Daten gesendet werden
+const uint32_t LED_STROM_EINSCHWING_MS = 10;
 
 // --- Bluetooth (Symbol oben rechts + LED-Status)
 const bool     BT_START_SUCHEN      = true;   // beim Einschalten gleich nach dem Handy suchen (Demo)
-const uint32_t BT_SUCH_TIMEOUT_MS   = 2UL * 60UL * 1000UL; // so lange suchen, dann "nicht verbunden" (Symbol grau, LEDs aus)
+const uint32_t BT_SUCH_TIMEOUT_MS   = 2UL * 60UL * 1000UL; // Start + Symbol antippen: so lange suchen, dann "nicht verbunden"
+const uint32_t BT_SYNC_FENSTER_MS   = 60UL * 1000UL;       // V4: nach jedem Trinken/Nachfüllen still sichtbar (ohne Blinken)
 const uint32_t BT_WEISS_AN_MS       = 500;    // Suchen: weiß blinken 500 ms an ...
 const uint32_t BT_WEISS_AUS_MS      = 500;    // ... 500 ms aus
 const uint8_t  BT_WEISS_WERT        = 90;     // gedimmtes Weiß: 0..255 je Farbkanal (zusätzlich LED_HELLIGKEIT)
@@ -193,6 +250,22 @@ const char*    BT_NAME              = "HydroDesk"; // so heißt das Gerät in de
 // Eigene 128-Bit-UUIDs (zufällig erzeugt) für den HydroDesk-Dienst
 const char*    BT_SERVICE_UUID      = "4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10";
 const char*    BT_WERTE_UUID        = "4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // lesen + notify: "1250/2750 ml"
+
+// --- Stromsparen (V4). Nur wirksam mit STROMSPAREN 1 bzw. nach "stromsparen 1"
+const uint32_t ANZEIGE_DIMMEN_NACH_MS    = 30UL * 1000UL;   // 30 s ohne Aktivität -> GEDIMMT
+const uint32_t ANZEIGE_AUS_NACH_MS       = 2UL * 60UL * 1000UL; // 2 min ohne Aktivität -> RUHE (Display aus)
+const uint32_t ANZEIGE_AUS_NACH_MS_NACHT = 15UL * 1000UL;   // in der Ruhezeit 22-7 Uhr schon nach 15 s aus
+const uint8_t  LCD_HELL             = 255;    // PWM-Wert Hintergrundlicht 0..255 (AKTIV)
+const uint8_t  LCD_GEDIMMT          = 40;     // ca. 16 % (GEDIMMT)
+const uint32_t LCD_PWM_FREQ_HZ      = 5000;   // LEDC an GPIO21
+const uint8_t  LCD_PWM_BITS         = 8;
+const uint32_t RUHE_WECKTAKT_MS     = 100;    // Light-Sleep: Wecken passend zu 10 Waagen-Messungen pro Sekunde
+const uint32_t CPU_MHZ              = 80;     // statt 240 MHz (offizielle Option "80MHz (WiFi/BT)")
+const uint32_t WLAN_ABGLEICH_ALLE_MS     = 6UL * 60UL * 60UL * 1000UL; // Uhr-Abgleich alle 6 h
+const uint32_t WLAN_ABGLEICH_OHNE_NTP_MS = 30UL * 60UL * 1000UL;       // noch nie NTP: alle 30 min versuchen
+const uint32_t WLAN_ABGLEICH_TIMEOUT_MS  = 20UL * 1000UL;  // so lange WLAN + NTP versuchen, dann aufgeben
+const bool     RUHE_PINS_HALTEN     = true;   // Light-Sleep: Pegel von GPIO18/21/22/23 festhalten (Test H8)
+const bool     TOUCH_IRQ_NUTZEN     = true;   // CYD: PENIRQ (GPIO36) als Hinweis + Weckquelle
 
 // --- Versteckter Service-Modus
 const uint32_t LANGDRUCK_MS         = 3000;   // 3 s drücken -> Kalibrierung
@@ -214,7 +287,8 @@ const int PIN_HX711_SCK = 22;  // CYD: Stecker CN1 / P3
 const int PIN_AKKU_ADC  = 35;  // nur Eingang, ADC1 (funktioniert auch mit WLAN)
 const int PIN_NAESSE    = 19;  // LOW = nass (wie LM393-Modul DO)
 const int PIN_LED_DATA  = 23;  // WS2812B Daten (DIN); echt: 330–470 Ω in Reihe direkt am Streifen-DIN
-const int PIN_LAST      = 18;  // HIGH = Last/Strom an (MOSFET-Gate)
+const int PIN_LAST      = 18;  // HIGH = Strom für den LED-Streifen an (NPN BC547B -> P-MOSFET AO3401A, High-Side)
+const int PIN_TOUCH_IRQ = 36;  // nur CYD: XPT2046 PENIRQ (LOW = berührt), nur Eingang
 
 // ============================================================================
 //  ZUSTANDSAUTOMAT
@@ -234,7 +308,8 @@ const int PIN_LAST      = 18;  // HIGH = Last/Strom an (MOSFET-Gate)
  *                 LEDs dauerhaft blau, bis wieder getrunken wird.
  *  ZIEL_ERREICHT  Tagesziel erreicht. LEDs 10 s grün, dann aus.
  *                 Keine Erinnerungen mehr, es wird weiter gezählt.
- *  NAESSE_SPERRE  Nässe-Sensor meldet Wasser: Last sofort AUS, LEDs bernstein,
+ *  NAESSE_SPERRE  Nässe-Sensor meldet Wasser: LED-Strom sofort AUS (Streifen dunkel,
+ *                 V4: kein Bernstein mehr, weil der Streifen dann keinen Strom hat),
  *                 rote Vollbild-Warnung. Hebt sich AUTOMATISCH auf, wenn der
  *                 Sensor TROCKEN_FREIGABE_MS (5 s) lang trocken ist.
  *  KALIBRIERUNG   Kalibrier-Bildschirm (3 s / Serial "kalib"); Tasten Leer/Voll
@@ -270,18 +345,33 @@ enum UhrQuelle : uint8_t { UHR_KEINE, UHR_ERSATZ, UHR_NTP };
  *  Bluetooth-Zustand (eigener kleiner Automat, unabhängig vom Haupt-Zustand):
  *    BT_AUS              Bluetooth ausgeschaltet         Symbol: nicht gezeichnet  LEDs: -
  *    BT_SUCHEN           sichtbar, wartet auf das Handy  Symbol: blinkt weiß/blau  LEDs: weiß blinken
+ *                        (V4: stilles Sync-Fenster)      Symbol: fest blau         LEDs: -
  *    BT_VERBUNDEN        Handy verbunden                 Symbol: blau + Punkte     LEDs: 2x lila, dann normal
- *    BT_NICHT_VERBUNDEN  Suche nach 2 min abgebrochen    Symbol: grau              LEDs: -
- *  Übergänge:  "bt suchen" / Start ----------> BT_SUCHEN
+ *    BT_NICHT_VERBUNDEN  Fenster vorbei                  Symbol: grau              LEDs: -
+ *  Übergänge:  "bt suchen" / Start / Symbol antippen --> BT_SUCHEN laut, 2 min
+ *              Trinken/Nachfüllen erkannt (V4) --------> BT_SUCHEN still, 60 s
  *              BT_SUCHEN --Handy verbindet---> BT_VERBUNDEN
- *              BT_SUCHEN --2 min niemand-----> BT_NICHT_VERBUNDEN
- *              BT_VERBUNDEN --Handy weg------> BT_SUCHEN (sucht wieder 2 min)
+ *              BT_SUCHEN --Zeit um-----------> BT_NICHT_VERBUNDEN (V4: BLE-Stack aus)
+ *              BT_VERBUNDEN --Handy weg------> BT_SUCHEN (gleiche Art wie vorher: laut 2 min / still 60 s)
  *              jeder Zustand --"bt aus"------> BT_AUS
  */
 enum BtZustand : uint8_t { BT_AUS, BT_SUCHEN, BT_VERBUNDEN, BT_NICHT_VERBUNDEN };
 
 // Wer bestimmt gerade die LED-Farbe? (nur für das Protokoll im Seriellen Monitor)
-enum LedQuelle : uint8_t { L_AUS, L_BERNSTEIN, L_AKKU, L_LILA, L_WEISS, L_ROT, L_BLAU, L_GRUEN };
+enum LedQuelle : uint8_t { L_AUS, L_GESPERRT, L_AKKU, L_LILA, L_WEISS, L_ROT, L_BLAU, L_SPARBLAU, L_GRUEN };
+
+/*
+ *  Energie-Zustand (V4, eigener kleiner Automat, unabhängig vom Haupt-Zustand):
+ *    E_AKTIV    Licht LCD_HELL, Display wird gezeichnet
+ *    E_GEDIMMT  Licht LCD_GEDIMMT, Display wird gezeichnet
+ *    E_RUHE     Licht 0, kein Zeichnen (CYD: Display-Schlaf + Light-Sleep, wenn erlaubt)
+ *  Übergänge:  30 s ohne Aktivität -> GEDIMMT, 2 min (nachts 15 s) -> RUHE,
+ *              jede Aktivität (Touch, Flasche, Trinken, Erinnerung, Nässe, ...) -> AKTIV
+ */
+enum Energie : uint8_t { E_AKTIV, E_GEDIMMT, E_RUHE };
+
+// WLAN (V4): aus, kurzer Uhr-Abgleich oder dauerhaft an (nur "stromsparen 0" = wie V3)
+enum WlanModus : uint8_t { WLAN_AUS, WLAN_ABGLEICH, WLAN_DAUER };
 
 // Touch-Taste (sichtbar: Leer / Voll auf Haupt- und Kalibrier-Bildschirm)
 struct Taste {
@@ -303,6 +393,15 @@ const char* zustandName(Zustand z) {
     case ZIEL_ERREICHT: return "ZIEL_ERREICHT";
     case NAESSE_SPERRE: return "NAESSE_SPERRE";
     case KALIBRIERUNG:  return "KALIBRIERUNG";
+  }
+  return "?";
+}
+
+const char* energieName(Energie e) {
+  switch (e) {
+    case E_AKTIV:   return "AKTIV";
+    case E_GEDIMMT: return "GEDIMMT";
+    case E_RUHE:    return "RUHE";
   }
   return "?";
 }
@@ -368,13 +467,26 @@ uint32_t akkuWarnMs       = 0;    // Zeitpunkt der letzten Akku-Warnung (für di
 uint32_t akkuHinweisBisMs = 0;    // bis dahin Hinweis "Akku unter 20 %" im Statusfeld
 float    akkuVolt         = 4.2f;
 int      akkuProzent      = 100;
+uint32_t akkuLeerSeitMs   = 0;    // V4: seit wann unter AKKU_ABSCHALT_V (0 = nicht)
 bool     fehlerVorher     = false;
+// Bleibt im Tiefschlaf erhalten (RTC-Speicher): "wir schlafen, weil der Akku leer war"
+RTC_DATA_ATTR bool akkuLeerSchlaf = false;
 
 // Uhr
 UhrQuelle uhrQuelle       = UHR_KEINE;
 volatile bool ntpEmpfangen = false;
 long     letzterTag       = -1;             // Jahr*1000 + Tag im Jahr
 bool     wlanVerbunden    = false;
+// WLAN-Abgleich (V4)
+WlanModus wlanModus       = WLAN_AUS;
+uint32_t wlanStartMs      = 0;              // Beginn des laufenden Abgleichs (Timeout)
+uint32_t letzterAbgleichMs = 0;             // Beginn des letzten Abgleichs (Abstand 6 h)
+bool     ntpAngefragt     = false;          // NTP in diesem Abgleich schon angefragt?
+bool     driftMessbar     = false;          // Uhr war vorher per NTP gestellt -> Abweichung sinnvoll
+int64_t  driftVorherUs    = 0;              // Systemzeit beim Anfragen ...
+uint32_t driftVorherMs    = 0;              // ... und millis() dazu
+uint32_t letzterNtpMs     = 0;              // millis() beim letzten NTP-Empfang
+long     letzteAbweichungMs = 0;            // gemessene Abweichung beim letzten Abgleich (Protokoll/Status)
 
 // LEDs
 uint32_t gruenBisMs       = 0;
@@ -383,10 +495,13 @@ uint32_t blinkStartMs     = 0;    // Akku-Blinkmuster: Start ...
 uint8_t  blinkAnzahl      = 0;    // ... und Anzahl Blitze (0 = kein Blinken)
 uint32_t blinkAnMs        = AKKU_BLINK_AN_MS;   // aktiver An-Takt (Warnung oder kritisch)
 uint32_t blinkAusMs       = AKKU_BLINK_AUS_MS;  // aktiver Aus-Takt
+bool     ledStromAn       = false;  // V4: FET an GPIO18 leitet (Streifen hat 5 V)
 
 // Bluetooth
 BtZustand btZustand       = BT_AUS;
-uint32_t btSuchStartMs    = 0;    // Beginn der Suche (für Timeout + Blinktakt)
+uint32_t btSuchStartMs    = 0;    // Beginn der Suche (für den Blinktakt)
+uint32_t btFensterEndeMs  = 0;    // V4: Ende des Sichtbarkeits-Fensters
+bool     btStill          = false; // V4: stilles Sync-Fenster (nach dem Trinken, ohne Blinken)
 bool     lilaAusstehend   = false; // 2x lila wartet, bis das Akku-Blinken fertig ist
 bool     lilaLaeuft       = false;
 uint32_t lilaStartMs      = 0;
@@ -399,6 +514,15 @@ bool     touchGehalten    = false;
 bool     langdruckErledigt = false;
 String   kalibMeldung     = "";             // deutsche Feedback-/Fehlermeldung auf dem Display
 uint32_t kalibMeldungBisMs = 0;             // Anzeige bis zu diesem millis()-Zeitpunkt
+
+// Energie (V4)
+bool     stromsparen      = STROMSPAREN;    // Hauptschalter, per Serial umschaltbar
+Energie  energie          = E_AKTIV;
+uint32_t letzteAktivitaetMs = 0;
+uint8_t  lichtWert        = 0;              // aktueller PWM-Wert des Hintergrundlichts
+bool     weckBeruehrung   = false;          // diese Berührung hat nur geweckt (zählt nicht als Taste)
+uint32_t waageLetzteMessungMs = 0;          // für den Wecktakt im Light-Sleep
+uint32_t schlafZyklen     = 0;              // Anzahl Light-Sleep-Zyklen (Status)
 
 // ============================================================================
 //  HILFSFUNKTIONEN: LOG, TELEGRAM-STUB, ZAHLEN
@@ -481,7 +605,9 @@ const int16_t HOEHE  = 320;
 #if HYDRO_CYD
   TFT_eSPI tft;
   SPIClass touchSpi(VSPI);
-  XPT2046_Touchscreen touch(33, 36);   // CYD-Touch: CS 33, IRQ 36
+  // CYD-Touch: CS 33. IRQ (GPIO36) liest der Sketch selbst (V4): kein Interrupt der Bibliothek,
+  // damit GPIO36 im Light-Sleep als Weckquelle dienen kann (Errata: LOW ist nur ein Hinweis).
+  XPT2046_Touchscreen touch(33);
   // Rohwerte -> Pixel. Am echten Gerät kalibrieren (Ecken antippen).
   const int TOUCH_X_MIN = 200, TOUCH_X_MAX = 3700;
   const int TOUCH_Y_MIN = 240, TOUCH_Y_MAX = 3800;
@@ -494,15 +620,20 @@ const int16_t HOEHE  = 320;
 
 bool touchBereit = false;
 
+// Hintergrundlicht per PWM (V4, M1). In Wokwi zeigt die Hilfs-LED "LICHT" an GPIO21 den Wert.
+void hintergrundlichtSetzen(uint8_t wert) {
+  lichtWert = wert;
+  ledcWrite(PIN_TFT_LED, wert);
+}
+
 void anzeigeInit() {
-  pinMode(PIN_TFT_LED, OUTPUT);
-  digitalWrite(PIN_TFT_LED, HIGH);   // Hintergrundbeleuchtung an
 #if HYDRO_CYD
-  tft.init();
+  tft.init();                        // (TFT_eSPI schaltet ggf. TFT_BL ein -> LEDC erst danach)
   tft.setRotation(0);                // Hochformat 240 x 320
   touchSpi.begin(25, 39, 32, 33);
   touch.begin(touchSpi);
   touch.setRotation(0);
+  pinMode(PIN_TOUCH_IRQ, INPUT);     // PENIRQ (GPIO36 hat keine internen Pull-Widerstände)
   touchBereit = true;
 #else
   tftSpi.begin(PIN_TFT_SCK, PIN_TFT_MISO, PIN_TFT_MOSI, -1);
@@ -512,6 +643,8 @@ void anzeigeInit() {
   Wire.begin(PIN_TOUCH_SDA, PIN_TOUCH_SCL);
   touchBereit = touch.begin(40);
 #endif
+  ledcAttach(PIN_TFT_LED, LCD_PWM_FREQ_HZ, LCD_PWM_BITS);   // Kern 3.x: Pin, Frequenz, Auflösung
+  hintergrundlichtSetzen(LCD_HELL);
   tft.fillScreen(0x0000);
   logZeile("SYSTEM", touchBereit ? "Display + Touch bereit" : "Display bereit, Touch NICHT gefunden");
 }
@@ -521,6 +654,9 @@ void anzeigeInit() {
 bool readTouch(int16_t& x, int16_t& y) {
   if (!touchBereit) return false;
 #if HYDRO_CYD
+  // PENIRQ HIGH = sicher nicht berührt (spart die SPI-Abfrage). LOW ist nur ein Hinweis
+  // (Errata GPIO36: kurze Störimpulse) -> erst die Druckmessung entscheidet.
+  if (TOUCH_IRQ_NUTZEN && digitalRead(PIN_TOUCH_IRQ) == HIGH) return false;
   if (!touch.touched()) return false;
   TS_Point p = touch.getPoint();
   x = constrain(map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, BREITE - 1), 0, BREITE - 1);
@@ -534,6 +670,25 @@ bool readTouch(int16_t& x, int16_t& y) {
   y = constrain(y, 0, HOEHE - 1);
 #endif
   return true;
+}
+
+// Display schlafen legen / wecken (V4, M3). Wokwi: Licht wird nicht simuliert -> schwarz zeichnen.
+void anzeigeSchlafen() {
+#if HYDRO_CYD
+  tft.writecommand(0x28);            // DISPOFF
+  tft.writecommand(0x10);            // SLPIN (ILI9341: danach 5 ms bis zum nächsten Befehl)
+  delay(5);
+#else
+  tft.fillScreen(0x0000);
+#endif
+}
+
+void anzeigeWecken() {
+#if HYDRO_CYD
+  tft.writecommand(0x11);            // SLPOUT
+  delay(120);                        // ILI9341: 120 ms warten
+  tft.writecommand(0x29);            // DISPON
+#endif
 }
 
 // ============================================================================
@@ -634,6 +789,57 @@ void tasteZeichnen(const Taste& t, uint16_t fuellung, uint16_t schrift) {
 const Taste TASTE_LEER       = { 6,   230, 110, 52, "Leer" };   // groß für Wokwi-Touch
 const Taste TASTE_VOLL       = { 124, 230, 110, 52, "Voll" };
 const Taste TASTE_KAL_FERTIG = { 6,   288, 228, 28, "Fertig" };  // nur Kalibrier-Bildschirm
+// Bluetooth-Symbol oben rechts (gezeichnet bei x 168..191 / y 2..25): Antippen = 2 min sichtbar (V4)
+const Taste FLAECHE_BT_SYMBOL = { 162, 0, 32, 30, "" };
+
+// ============================================================================
+//  ENERGIE-AUTOMAT (V4): AKTIV -> GEDIMMT -> RUHE
+// ============================================================================
+void energieSetzen(Energie neu, const String& grund) {
+  if (neu == energie) return;
+  logZeile("ENERGIE", String(energieName(energie)) + " -> " + energieName(neu) + "  (" + grund + ")");
+  Energie alt = energie;
+  energie = neu;
+  if (alt == E_RUHE) {
+    anzeigeWecken();                 // CYD: Display aus dem Schlaf holen
+    bildschirmNeu = true;            // alles neu zeichnen
+  }
+  if (neu == E_AKTIV)        hintergrundlichtSetzen(LCD_HELL);
+  else if (neu == E_GEDIMMT) hintergrundlichtSetzen(LCD_GEDIMMT);
+  else {
+    hintergrundlichtSetzen(0);
+    anzeigeSchlafen();
+  }
+}
+
+// Jede Aktivität (Touch, Flasche, Trinken, Erinnerung, Nässe, Handy, Akku-Warnung, Serial)
+void aktivitaet(const char* grund) {
+  letzteAktivitaetMs = millis();
+  if (energie != E_AKTIV) energieSetzen(E_AKTIV, grund);
+}
+
+bool inRuhezeit();   // steht weiter unten (Erinnerungs-Logik)
+
+void energieVerwalten() {
+  if (!stromsparen) return;          // wie V3: Display immer hell
+  uint32_t jetzt = millis();
+  // Display bleibt hell: Nässe (Sicherheit), Kalibrierung, Finger liegt noch auf
+  if (zustand == NAESSE_SPERRE || zustand == KALIBRIERUNG || touchGehalten) {
+    letzteAktivitaetMs = jetzt;
+    if (energie != E_AKTIV) energieSetzen(E_AKTIV, zustand == NAESSE_SPERRE ? "Nässe-Sperre" :
+                                                   (zustand == KALIBRIERUNG ? "Kalibrierung" : "Finger liegt auf"));
+    return;
+  }
+  bool nacht = inRuhezeit();
+  uint32_t ausNach  = nacht ? ANZEIGE_AUS_NACH_MS_NACHT : ANZEIGE_AUS_NACH_MS;
+  uint32_t dimmNach = min(ANZEIGE_DIMMEN_NACH_MS, ausNach);
+  uint32_t still = jetzt - letzteAktivitaetMs;
+  if (still >= ausNach) {
+    if (energie != E_RUHE) energieSetzen(E_RUHE, String(ausNach / 1000) + " s ohne Aktivität" + (nacht ? " (Nacht)" : ""));
+  } else if (still >= dimmNach && dimmNach < ausNach) {
+    if (energie == E_AKTIV) energieSetzen(E_GEDIMMT, String(dimmNach / 1000) + " s ohne Aktivität");
+  }
+}
 
 // ============================================================================
 //  UHR: WLAN + NTP, Ersatzuhr, Tageswechsel
@@ -643,12 +849,95 @@ void ntpCallback(struct timeval* tv) {
   ntpEmpfangen = true;   // wird im loop() ausgewertet (hier nur Merker setzen)
 }
 
-void uhrStarten() {
+int64_t systemzeitUs() {
+  struct timeval tv;
+  gettimeofday(&tv, nullptr);
+  return (int64_t)tv.tv_sec * 1000000LL + tv.tv_usec;
+}
+
+void wlanEinschalten() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WLAN_SSID, WLAN_PASS, WLAN_KANAL);
-  sntp_set_time_sync_notification_cb(ntpCallback);
-  configTzTime(ZEITZONE, NTP_SERVER);   // setzt Zeitzone + startet NTP im Hintergrund
+  ntpAngefragt = false;
   logZeile("UHR", String("Verbinde mit WLAN \"") + WLAN_SSID + "\" ...");
+}
+
+void wlanAusschalten(const String& grund) {
+  esp_sntp_stop();                   // NTP-Dienst anhalten (startet beim nächsten Abgleich neu)
+  WiFi.disconnect(true);             // trennen + Funk aus
+  WiFi.mode(WIFI_OFF);
+  wlanModus = WLAN_AUS;
+  logZeile("UHR", "WLAN aus (" + grund + ")");
+}
+
+// Uhr-Abgleich (V4, M2): WLAN an, NTP holen, WLAN wieder aus (Timeout 20 s)
+void wlanAbgleichStarten(const String& grund) {
+  if (wlanModus == WLAN_DAUER) {
+    Serial.println(F("WLAN ist dauerhaft an (Stromsparen aus) - NTP gleicht selbst ab."));
+    return;
+  }
+  if (wlanModus == WLAN_ABGLEICH) {
+    Serial.println(F("Abgleich läuft schon."));
+    return;
+  }
+  wlanModus = WLAN_ABGLEICH;
+  wlanStartMs = millis();
+  letzterAbgleichMs = millis();
+  logZeile("UHR", "Abgleich: WLAN an (" + grund + "), höchstens " + String(WLAN_ABGLEICH_TIMEOUT_MS / 1000) + " s");
+  wlanEinschalten();
+}
+
+void uhrStarten() {
+  setenv("TZ", ZEITZONE, 1);         // Zeitzone gleich setzen (auch für die Ersatzuhr)
+  tzset();
+  sntp_set_time_sync_notification_cb(ntpCallback);
+  if (stromsparen) {
+    wlanAbgleichStarten("Start");
+  } else {
+    wlanModus = WLAN_DAUER;          // wie V3: WLAN bleibt an
+    wlanEinschalten();
+  }
+}
+
+void wlanVerwalten() {
+  uint32_t jetzt = millis();
+  if (wlanModus == WLAN_AUS) {
+    uint32_t abstand = uhrQuelle == UHR_NTP ? WLAN_ABGLEICH_ALLE_MS : WLAN_ABGLEICH_OHNE_NTP_MS;
+    if (stromsparen && jetzt - letzterAbgleichMs >= abstand) {
+      wlanAbgleichStarten(uhrQuelle == UHR_NTP ? "planmäßig alle 6 h" : "noch keine NTP-Zeit, alle 30 min");
+    }
+    return;
+  }
+  if (!ntpAngefragt && WiFi.status() == WL_CONNECTED) {
+    ntpAngefragt = true;
+    driftMessbar = uhrQuelle == UHR_NTP;      // nur dann ist die Abweichung aussagekräftig
+    driftVorherUs = systemzeitUs();
+    driftVorherMs = jetzt;
+    ntpEmpfangen = false;
+    configTzTime(ZEITZONE, NTP_SERVER);       // Zeitzone + NTP-Anfrage (startet SNTP neu)
+    logZeile("UHR", "NTP-Anfrage an " + String(NTP_SERVER));
+  }
+  if (wlanModus == WLAN_ABGLEICH && jetzt - wlanStartMs >= WLAN_ABGLEICH_TIMEOUT_MS) {
+    wlanAusschalten(String(WLAN_ABGLEICH_TIMEOUT_MS / 1000) + " s ohne NTP-Zeit, nächster Versuch in " +
+                    (uhrQuelle == UHR_NTP ? "6 h" : "30 min"));
+  }
+}
+
+// NTP ist angekommen: Abweichung der eigenen Uhr protokollieren (M2b), dann WLAN aus
+void ntpVerarbeiten() {
+  uint32_t jetzt = millis();
+  if (driftMessbar && ntpAngefragt) {
+    // erwartete Systemzeit ohne Korrektur = Zeit beim Anfragen + seitdem vergangene millis()
+    int64_t erwartetUs = driftVorherUs + (int64_t)(jetzt - driftVorherMs) * 1000LL;
+    letzteAbweichungMs = (long)((systemzeitUs() - erwartetUs) / 1000LL);
+    float stunden = (jetzt - letzterNtpMs) / 3600000.0f;
+    logZeile("UHR", "Abgleich: Abweichung " + String(letzteAbweichungMs / 1000.0f, 1) + " s in " +
+             String(stunden, 1) + " h (" + (letzteAbweichungMs > 0 ? "Uhr ging nach" :
+                                           (letzteAbweichungMs < 0 ? "Uhr ging vor" : "genau")) + ")");
+  }
+  driftMessbar = false;
+  letzterNtpMs = jetzt;
+  if (wlanModus == WLAN_ABGLEICH) wlanAusschalten("Uhr abgeglichen");
 }
 
 bool zeitHolen(struct tm& lt) {
@@ -720,11 +1009,15 @@ void uhrVerwalten() {
     wlanVerbunden = w;
     logZeile("UHR", w ? "WLAN verbunden" : "WLAN getrennt");
   }
-  if (ntpEmpfangen && uhrQuelle != UHR_NTP) {
-    uhrQuelle = UHR_NTP;
-    tagMerken();
-    logZeile("UHR", "NTP-Zeit empfangen");
-    bildschirmNeu = true;
+  if (ntpEmpfangen) {
+    ntpEmpfangen = false;
+    if (uhrQuelle != UHR_NTP) {
+      uhrQuelle = UHR_NTP;
+      tagMerken();
+      logZeile("UHR", "NTP-Zeit empfangen");
+      bildschirmNeu = true;
+    }
+    ntpVerarbeiten();
   }
   if (uhrQuelle == UHR_KEINE && millis() >= NTP_WARTEZEIT_MS) {
     ersatzuhrSetzen(12, 0);
@@ -784,9 +1077,8 @@ void waageLesen() {
     }
     return;
   }
-  static uint32_t letzteMessung = 0;
-  if (jetzt - letzteMessung < 100) return;   // 10 Messungen pro Sekunde
-  letzteMessung = jetzt;
+  if (jetzt - waageLetzteMessungMs < RUHE_WECKTAKT_MS) return;   // 10 Messungen pro Sekunde
+  waageLetzteMessungMs = jetzt;
 
   long roh = (long)waage.read();
   if (!waageOk) logZeile("WAAGE", "HX711 liefert wieder Daten");
@@ -865,11 +1157,14 @@ int flascheninhaltMl() {
 }
 
 // Wertet das Gewicht aus: Abheben, Abstellen, Trinken, Nachfüllen, Leergewicht.
+void btSyncFenster(const String& grund);   // steht im Bluetooth-Teil
+
 void trinkenAuswerten() {
   if (flascheSteht && gewicht < FLASCHE_WEG_G) {
     flascheSteht = false;
     padLeerSeit = millis();
     logZeile("WAAGE", "Flasche abgehoben – Änderungen werden ignoriert");
+    aktivitaet("Flasche abgehoben");
     return;
   }
   if (!gewichtRuhig) return;
@@ -879,6 +1174,7 @@ void trinkenAuswerten() {
     flascheSteht = true;
     geradeAbgestellt = true;
     logZeile("WAAGE", "Flasche steht (" + String(gewicht, 0) + " g)");
+    aktivitaet("Flasche abgestellt");
   }
   if (!flascheSteht) return;
 
@@ -938,10 +1234,14 @@ void trinkenAuswerten() {
                         String(gewicht, 0) + " g), heute " + String(getrunkenHeute) + " ml");
     referenzGewicht = gewicht;
     leergewichtUntergrenze(gewicht);
+    aktivitaet("Trinken erkannt");
+    btSyncFenster("Trinken erkannt");       // V4: App kann den neuen Stand abholen
   } else if (-differenz >= MIN_NACHFUELL_G) {
     logZeile("TRINKEN", "Nachgefüllt (+" + String(-differenz, 0) + " g) – zählt nicht als Trinken");
     leergewichtKandidat(referenzGewicht);   // Regel 1
     referenzGewicht = gewicht;
+    aktivitaet("Nachfüllen erkannt");
+    btSyncFenster("Nachfüllen erkannt");
   }
 }
 
@@ -963,15 +1263,87 @@ void naesseLesen() {
   }
 }
 
+// Akkuspannung in Volt. SIMULATION: Poti 0..4095 direkt als 3,0..4,2 V.
+// ECHT (CYD): Teiler 2 x 10 kΩ an GPIO35, 8 Messungen gemittelt (ADC-Kalibrierung aus dem eFuse).
+float akkuSpannungMessen() {
+#if HYDRO_CYD
+  uint32_t summe = 0;
+  for (uint8_t i = 0; i < 8; i++) summe += analogReadMilliVolts(PIN_AKKU_ADC);
+  return summe / 8.0f / 1000.0f * AKKU_TEILER;
+#else
+  int adc = analogRead(PIN_AKKU_ADC);   // 0..4095
+  return AKKU_LEER_V + (AKKU_VOLL_V - AKKU_LEER_V) * adc / 4095.0f;
+#endif
+}
+
+// Prozent aus der LiPo-Tabelle (lineare Interpolation zwischen den Stützstellen, V4 / M9)
+int akkuProzentAusSpannung(float v) {
+  if (v <= AKKU_TABELLE_V[0]) return 0;
+  for (uint8_t i = 1; i < AKKU_TABELLE_N; i++) {
+    if (v < AKKU_TABELLE_V[i]) {
+      float anteil = (v - AKKU_TABELLE_V[i - 1]) / (AKKU_TABELLE_V[i] - AKKU_TABELLE_V[i - 1]);
+      return (int)lroundf(AKKU_TABELLE_P[i - 1] + anteil * (AKKU_TABELLE_P[i] - AKKU_TABELLE_P[i - 1]));
+    }
+  }
+  return 100;
+}
+
+void tiefschlafStarten();     // steht unten bei SETUP
+void ledStromSetzen(bool an, const String& grund);
+void wlanAusschalten(const String& grund);
+void bleStoppen();
+
+// Akku leer: Meldung, alles aus, Tiefschlaf mit Timer (V4, Stromsparplan Kap. 5.6)
+void akkuLeerAbschalten() {
+  logZeile("AKKU", "LEER: " + String(akkuVolt, 2) + " V seit " + String(AKKU_ABSCHALT_MS / 1000) +
+           " s unter " + String(AKKU_ABSCHALT_V, 2) + " V -> Meldung, dann Tiefschlaf (Prüfung alle " +
+           String(AKKU_LEER_SCHLAF_MIN) + " min)");
+  telegramSenden("HydroDesk: Akku leer – Gerät schaltet ab. Bitte laden.");
+  ledStromSetzen(false, "Akku leer");
+  if (wlanModus != WLAN_AUS) wlanAusschalten("Akku leer");
+  bleStoppen();
+  energieSetzen(E_AKTIV, "Akku leer - Meldung");
+  hintergrundlichtSetzen(LCD_HELL);
+  tft.fillScreen(0x0000);
+  textMitte(0, BREITE, 110, "Akku leer", 3, ROT, SCHWARZ);
+  textMitte(0, BREITE, 150, "bitte laden", 2, WEISS, SCHWARZ);
+  textMitte(0, BREITE, 190, "Gerät schaltet ab.", 1, GRAU, SCHWARZ);
+  delay(AKKU_LEER_MELDUNG_MS);
+  hintergrundlichtSetzen(0);
+  anzeigeSchlafen();
+  akkuLeerSchlaf = true;
+  tiefschlafStarten();
+}
+
+void akkuSchutzPruefen() {
+  if (akkuVolt >= AKKU_ABSCHALT_V) {
+    if (akkuLeerSeitMs != 0) logZeile("AKKU", "wieder über " + String(AKKU_ABSCHALT_V, 2) + " V - keine Abschaltung");
+    akkuLeerSeitMs = 0;
+    return;
+  }
+  if (akkuLeerSeitMs == 0) {
+    akkuLeerSeitMs = millis() | 1;   // 0 heißt "nicht"
+    logZeile("AKKU", "unter " + String(AKKU_ABSCHALT_V, 2) + " V (" + String(akkuVolt, 2) +
+             " V): Abschaltung in " + String(AKKU_ABSCHALT_MS / 1000) + " s, wenn es so bleibt");
+    return;
+  }
+  if (millis() - akkuLeerSeitMs >= AKKU_ABSCHALT_MS) akkuLeerAbschalten();
+}
+
 void akkuLesen() {
   static uint32_t letzte = 0;
   if (millis() - letzte < 500) return;
   letzte = millis();
-  int adc = analogRead(PIN_AKKU_ADC);   // 0..4095
-  // SIMULATION: Poti 0..4095 direkt als 3,0..4,2 V.
-  // ECHT: Spannungsteiler 100k/100k, akkuVolt = analogReadMilliVolts(PIN_AKKU_ADC) * 2 / 1000.0;
-  akkuVolt = AKKU_LEER_V + (AKKU_VOLL_V - AKKU_LEER_V) * adc / 4095.0f;
-  akkuProzent = constrain((int)lroundf((akkuVolt - AKKU_LEER_V) * 100.0f / (AKKU_VOLL_V - AKKU_LEER_V)), 0, 100);
+  float v = akkuSpannungMessen();
+#if HYDRO_CYD
+  static bool erste = true;            // echt: leicht glätten (WLAN-/LED-Lastspitzen)
+  akkuVolt = erste ? v : akkuVolt * 0.8f + v * 0.2f;
+  erste = false;
+#else
+  akkuVolt = v;                        // Wokwi: Poti-Wert direkt (Tests reagieren sofort)
+#endif
+  akkuProzent = akkuProzentAusSpannung(akkuVolt);
+  akkuSchutzPruefen();
 
   // Stufe mit Hysterese bestimmen: runter sofort, rauf erst bei Schwelle + 2 %
   uint8_t neu = akkuStufe;
@@ -984,6 +1356,7 @@ void akkuLesen() {
     // Schwelle nach unten überschritten -> EINMAL warnen
     akkuStufe = neu;
     akkuWarnen();
+    aktivitaet("Akku-Warnung");      // nur die erste Warnung weckt (Wiederholungen nur per LED)
     telegramSenden("HydroDesk: Akku unter " + String(neu == 2 ? AKKU_KRITISCH_PROZENT : AKKU_WARN_PROZENT) +
                    " % (" + String(akkuProzent) + " %)");
   } else if (neu < akkuStufe) {
@@ -1078,9 +1451,12 @@ void zustandWechseln(Zustand neu, const String& grund) {
   zustand = neu;
   bildschirmNeu = true;
 
+  if (neu == ERINNERUNG || neu == ZIEL_ERREICHT || neu == NAESSE_SPERRE || neu == KALIBRIERUNG) {
+    aktivitaet(zustandName(neu));    // V4: weckt das Display
+  }
   switch (neu) {   // beim BETRETEN
     case NAESSE_SPERRE:
-      digitalWrite(PIN_LAST, LOW);   // MOSFET aus -> Strom aus
+      ledStromSetzen(false, "WASSER ERKANNT");   // FET aus -> Streifen ohne Strom
       logZeile("LAST", "AUS (WASSER ERKANNT · STROM AUS)");
       telegramSenden("HydroDesk: WASSER ERKANNT – Strom wurde abgeschaltet!");
       break;
@@ -1105,8 +1481,9 @@ void zustandWechseln(Zustand neu, const String& grund) {
       break;
   }
   if (alt == NAESSE_SPERRE) {    // beim VERLASSEN
-    digitalWrite(PIN_LAST, HIGH);
-    logZeile("LAST", "wieder AN (5 s trocken)");
+    if (!stromsparen) ledStromSetzen(true, "5 s trocken");   // wie V3: Last sofort wieder an
+    logZeile("LAST", stromsparen ? "wieder freigegeben (5 s trocken) - Strom nur, wenn die LEDs leuchten"
+                                 : "wieder AN (5 s trocken)");
   }
   if (alt == NAESSE_SPERRE || alt == KALIBRIERUNG) {
     referenzGueltig = false;     // Gewicht kann sich verändert haben -> neu referenzieren
@@ -1223,6 +1600,8 @@ void kalibVollBestaetigen() {
 // ============================================================================
 //  TOUCH: Tasten Leer/Voll (Haupt + Kalib); optional 3 s -> Kalibrier-Bildschirm
 // ============================================================================
+void btSuchenStarten(const String& grund);   // steht im Bluetooth-Teil
+
 void touchAuswerten() {
   int16_t x = 0, y = 0;
   bool gedrueckt = readTouch(x, y);
@@ -1230,11 +1609,26 @@ void touchAuswerten() {
   if (neu) {
     touchStartMs = millis();
     langdruckErledigt = false;
-    logZeile("TOUCH", "x=" + String(x) + " y=" + String(y));
+    weckBeruehrung = stromsparen && energie != E_AKTIV;   // V4 (M8): gedimmt/aus -> nur wecken
+    logZeile("TOUCH", "x=" + String(x) + " y=" + String(y) + (weckBeruehrung ? " (nur Wecken)" : ""));
+    aktivitaet(weckBeruehrung ? "Touch weckt" : "Touch");
   }
   touchGehalten = gedrueckt;
 
+  // Weck-Berührung: zählt weder als Taste noch als Langdruck, bis der Finger wieder weg ist
+  if (weckBeruehrung) {
+    if (!gedrueckt) weckBeruehrung = false;
+    return;
+  }
+
   if (zustand == NAESSE_SPERRE) return;           // Bedienung gesperrt
+
+  // V4: Bluetooth-Symbol antippen -> 2 min sichtbar (auch ohne Laptop wieder verbinden)
+  if (neu && zustand != KALIBRIERUNG && getroffen(FLAECHE_BT_SYMBOL, x, y)) {
+    langdruckErledigt = true;
+    btSuchenStarten("Bluetooth-Symbol angetippt");
+    return;
+  }
 
   // Sichtbare Tasten Leer / Voll – auf Haupt- und Kalibrier-Bildschirm
   if (zustand == KALIBRIERUNG || zustand == IDLE || zustand == MESSEN ||
@@ -1287,6 +1681,7 @@ NimBLEServer*         bleServer   = nullptr;
 NimBLECharacteristic* bleWerte    = nullptr;
 volatile bool         bleVerbunden = false;   // von den Callbacks gesetzt
 volatile uint16_t     bleTrennGrund = 0;
+bool                  bleLaeuft    = false;   // V4: BLE-Stack eingeschaltet?
 
 class HydroServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* server, NimBLEConnInfo& info) override {
@@ -1305,7 +1700,10 @@ String bleWerteText() {
   return String(getrunkenHeute) + "/" + String(tagesziel) + " ml";
 }
 
+// BLE-Stack einschalten und Dienst anlegen. V4: bei jedem Fenster neu (nach deinit(true)).
 void bleStarten() {
+  if (bleLaeuft) return;
+  bleVerbunden = false;
   NimBLEDevice::init(BT_NAME);
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(&bleCallbacks, false);
@@ -1325,9 +1723,25 @@ void bleStarten() {
   werbung->setAdvertisementData(daten);
   werbung->setScanResponseData(antwort);
   werbung->enableScanResponse(true);
-  logZeile("BT", String("BLE bereit (NimBLE), Name \"") + BT_NAME + "\"");
+  bleLaeuft = true;
+  logZeile("BT", String("BLE-Stack an (NimBLE), Name \"") + BT_NAME + "\"");
 }
 #endif
+
+// BLE-Stack ganz aus (V4, M6): Voraussetzung für den Light-Sleep. deinit(true) löscht Server,
+// Dienst und Werbung -> bleStarten() legt beim nächsten Fenster alles neu an.
+void bleStoppen() {
+#if HYDRO_BLE
+  if (!bleLaeuft) return;
+  NimBLEDevice::stopAdvertising();
+  NimBLEDevice::deinit(true);
+  bleServer = nullptr;
+  bleWerte = nullptr;
+  bleVerbunden = false;
+  bleLaeuft = false;
+  logZeile("BT", "BLE-Stack aus (deinit)");
+#endif
+}
 
 void btSetzen(BtZustand neu, const String& grund) {
   if (neu == btZustand) return;
@@ -1337,24 +1751,54 @@ void btSetzen(BtZustand neu, const String& grund) {
   if (neu == BT_VERBUNDEN) {
     lilaAusstehend = true;          // 2x lila (startet nach einem laufenden Akku-Blinken)
     lilaLaeuft = false;
+    aktivitaet("Handy verbunden");
   } else if (alt == BT_VERBUNDEN) {
     lilaAusstehend = false;         // getrennt, bevor lila fertig war -> abbrechen
     lilaLaeuft = false;
+    aktivitaet("Handy getrennt");
   }
 }
 
-// Sichtbar werden und auf das Handy warten (Timeout BT_SUCH_TIMEOUT_MS)
-void btSuchenStarten(const String& grund) {
-  btSuchStartMs = millis();         // auch bei erneutem "bt suchen": Timeout neu starten
+// Sichtbar werden und auf das Handy warten.
+//   laut (still = false): Start, "bt suchen", Symbol antippen -> weiß blinken, BT_SUCH_TIMEOUT_MS
+//   still (V4):           nach dem Trinken -> ohne Blinken, BT_SYNC_FENSTER_MS
+void btFensterOeffnen(const String& grund, bool still, uint32_t dauerMs) {
+  uint32_t jetzt = millis();
+  bool lief = btZustand == BT_SUCHEN;
+  if (still && lief) {              // läuft schon ein Fenster: höchstens verlängern, Art bleibt
+    if ((int32_t)(jetzt + dauerMs - btFensterEndeMs) > 0) btFensterEndeMs = jetzt + dauerMs;
+    logZeile("BT", "Fenster läuft schon -> noch " + String((btFensterEndeMs - jetzt) / 1000) + " s (" + grund + ")");
+    return;
+  }
+  btFensterEndeMs = jetzt + dauerMs; // auch bei erneutem "bt suchen": Zeit neu starten
+  btSuchStartMs = jetzt;            // Blinktakt ab Beginn
+  btStill = still;
 #if HYDRO_BLE
+  bleStarten();
   if (bleServer && bleServer->getConnectedCount() > 0) {
     btSetzen(BT_VERBUNDEN, "Handy ist schon verbunden");
     return;
   }
   NimBLEDevice::startAdvertising();
 #endif
-  if (btZustand == BT_SUCHEN) logZeile("BT", "Suche neu gestartet (" + grund + ")");
-  btSetzen(BT_SUCHEN, grund + ", max. " + String(BT_SUCH_TIMEOUT_MS / 1000) + " s");
+  if (lief) logZeile("BT", "Suche neu gestartet (" + grund + ")");
+  btSetzen(BT_SUCHEN, grund + ", max. " + String(dauerMs / 1000) + " s" + (still ? ", still (ohne Blinken)" : ""));
+}
+
+void btSuchenStarten(const String& grund) {
+  btFensterOeffnen(grund, false, BT_SUCH_TIMEOUT_MS);
+}
+
+// V4 (Option A): nach jedem Trinken/Nachfüllen 60 s still sichtbar, damit die App den Stand abholt
+void btSyncFenster(const String& grund) {
+  if (!stromsparen) return;                       // wie V3: keine Fenster nach dem Trinken
+  if (btZustand == BT_AUS || btZustand == BT_VERBUNDEN) return;
+  btFensterOeffnen(grund, true, BT_SYNC_FENSTER_MS);
+}
+
+// Verbindung weg: wieder ein Fenster derselben Art (laut 2 min / still 60 s)
+void btNachTrennung(const String& grund) {
+  btFensterOeffnen(grund, btStill, btStill ? BT_SYNC_FENSTER_MS : BT_SUCH_TIMEOUT_MS);
 }
 
 void btAusschalten() {
@@ -1363,6 +1807,7 @@ void btAusschalten() {
   if (bleServer) {
     for (uint16_t h : bleServer->getPeerDevices()) bleServer->disconnect(h);
   }
+  if (stromsparen) bleStoppen();
 #endif
   btSetzen(BT_AUS, "Befehl bt aus");
 }
@@ -1373,44 +1818,68 @@ void btVerwalten() {
   if (v && btZustand != BT_VERBUNDEN && btZustand != BT_AUS) {
     btSetzen(BT_VERBUNDEN, "Handy hat sich verbunden");
   } else if (!v && btZustand == BT_VERBUNDEN) {
-    btSuchenStarten("Handy getrennt, Grund " + String(bleTrennGrund));
+    btNachTrennung("Handy getrennt, Grund " + String(bleTrennGrund));
   }
   // Werte aktuell halten (lesen) und bei Änderung an das Handy schicken (notify)
   static String letzterWert;
   static uint32_t letzteNotify = 0;
   String wert = bleWerteText();
-  if (bleWerte && wert != letzterWert && millis() - letzteNotify >= BT_NOTIFY_MS) {
+  if (bleLaeuft && bleWerte && wert != letzterWert && millis() - letzteNotify >= BT_NOTIFY_MS) {
     letzterWert = wert;
     letzteNotify = millis();
     bleWerte->setValue(wert.c_str());
     if (btZustand == BT_VERBUNDEN) bleWerte->notify();
   }
 #endif
-  if (btZustand == BT_SUCHEN && millis() - btSuchStartMs >= BT_SUCH_TIMEOUT_MS) {
+  if (btZustand == BT_SUCHEN && (int32_t)(millis() - btFensterEndeMs) >= 0) {
 #if HYDRO_BLE
     NimBLEDevice::stopAdvertising();
 #endif
-    btSetzen(BT_NICHT_VERBUNDEN, String(BT_SUCH_TIMEOUT_MS / 1000) + " s kein Handy -> Suche beendet");
+    btSetzen(BT_NICHT_VERBUNDEN, btStill ? String(BT_SYNC_FENSTER_MS / 1000) + " s Sync-Fenster vorbei"
+                                         : String(BT_SUCH_TIMEOUT_MS / 1000) + " s kein Handy -> Suche beendet");
   }
+#if HYDRO_BLE
+  // V4: ohne Fenster und ohne Verbindung den ganzen BLE-Stack ausschalten (erst dann Light-Sleep)
+  if (stromsparen && bleLaeuft && (btZustand == BT_NICHT_VERBUNDEN || btZustand == BT_AUS)) bleStoppen();
+#endif
 }
 
 // ============================================================================
 //  LED-STREIFEN: aus im Normalbetrieb, nur bei Ereignissen, Dauerlicht.
 //  Blinken NUR bei Akku-Warnung (rot), Bluetooth sucht (weiß), verbunden (2x lila).
-//  Priorität: bernstein (Wasser) > Akku rot blitzen (2x/4x) > lila 2x (Handy verbunden)
+//  Priorität: Nässe (Streifen ohne Strom, dunkel) > Akku rot blitzen (2x/4x) > lila 2x (Handy verbunden)
 //             > weiß blinken (Bluetooth sucht) > rot (Fehler 5 s)
-//             > blau (Erinnerung) > grün (Ziel erreicht, 10 s)
+//             > blau (Erinnerung, V4: nach 2 min Sparblau) > grün (Ziel erreicht, 10 s)
 //  In der Pause eines Blinkmusters sind die LEDs aus (keine Mischfarben).
+//  V4 (H1): Der Streifen bekommt nur Strom (FET an GPIO18), solange eine Quelle aktiv ist.
+//  Ausschalten: erst schwarz senden (DIN danach LOW), dann FET aus. Einschalten: FET an,
+//  LED_STROM_EINSCHWING_MS warten, Farbe neu senden.
 // ============================================================================
+// LED-Strom über den FET schalten (V4, H1)
+void ledStromSetzen(bool an, const String& grund) {
+  if (an == ledStromAn) return;
+  if (an) {
+    digitalWrite(PIN_LAST, HIGH);       // NPN leitet -> Gate des P-MOSFET auf GND -> Streifen hat 5 V
+    delay(LED_STROM_EINSCHWING_MS);     // Versorgung und LED-Chips einschwingen lassen
+  } else {
+    leds.clear();                       // erst alle LEDs schwarz ...
+    leds.show();                        // ... (danach liegt DIN auf LOW)
+    digitalWrite(PIN_LAST, LOW);        // ... dann 5 V wegschalten
+  }
+  ledStromAn = an;
+  logZeile("LAST", String("LED-Strom ") + (an ? "AN" : "AUS") + " (" + grund + ")");
+}
+
 const char* ledQuelleName(LedQuelle q) {
   switch (q) {
     case L_AUS:       return "aus";
-    case L_BERNSTEIN: return "bernstein (Wasser)";
+    case L_GESPERRT:  return "aus (Nässe: LED-Strom gesperrt)";
     case L_AKKU:      return "rot blitzen (Akku)";
     case L_LILA:      return "lila 2x blinken (Handy verbunden)";
     case L_WEISS:     return "weiß blinken (Bluetooth sucht)";
     case L_ROT:       return "rot (Fehler)";
     case L_BLAU:      return "blau (Erinnerung)";
+    case L_SPARBLAU:  return "Sparblau (Erinnerung länger als 2 min)";
     case L_GRUEN:     return "grün (Ziel erreicht)";
   }
   return "?";
@@ -1422,7 +1891,7 @@ void ledsAktualisieren() {
   uint32_t jetzt = millis();
   uint32_t farbe = 0;   // aus
   LedQuelle quelle = L_AUS;
-  // Akku-Blinkmuster: läuft im Hintergrund weiter, auch wenn bernstein Vorrang hat
+  // Akku-Blinkmuster: läuft im Hintergrund weiter, auch während der Nässe-Sperre
   bool blinkAn = false;
   if (blinkAnzahl > 0) {
     uint32_t periode = blinkAnMs + blinkAusMs;
@@ -1445,22 +1914,38 @@ void ledsAktualisieren() {
     if (t >= periode * BT_LILA_ANZAHL) lilaLaeuft = false;
     else lilaAn = (t % periode) < BT_LILA_AN_MS;
   }
-  // weiß blinken, solange Bluetooth sucht (Takt ab Suchbeginn)
-  bool weissAn = btZustand == BT_SUCHEN &&
+  // weiß blinken, solange Bluetooth laut sucht (Takt ab Suchbeginn); stilles Fenster: kein Blinken
+  bool weissAn = btZustand == BT_SUCHEN && !btStill &&
                  (jetzt - btSuchStartMs) % (BT_WEISS_AN_MS + BT_WEISS_AUS_MS) < BT_WEISS_AN_MS;
 
-  if (zustand == NAESSE_SPERRE)               { quelle = L_BERNSTEIN; farbe = leds.Color(255, 110, 0); }
+  if (zustand == NAESSE_SPERRE)               { quelle = L_GESPERRT; farbe = 0; }
   else if (blinkLaeuft)                       { quelle = L_AKKU;  farbe = blinkAn ? leds.Color(255, 0, 0) : 0; }
   else if (lilaLaeuft)                        { quelle = L_LILA;  farbe = lilaAn ? leds.Color(150, 0, 255) : 0; }
-  else if (btZustand == BT_SUCHEN)            { quelle = L_WEISS; farbe = weissAn ? leds.Color(BT_WEISS_WERT, BT_WEISS_WERT, BT_WEISS_WERT) : 0; }
+  else if (btZustand == BT_SUCHEN && !btStill) { quelle = L_WEISS; farbe = weissAn ? leds.Color(BT_WEISS_WERT, BT_WEISS_WERT, BT_WEISS_WERT) : 0; }
   else if ((int32_t)(rotBisMs - jetzt) > 0)   { quelle = L_ROT;   farbe = leds.Color(255, 0, 0); }
-  else if (zustand == ERINNERUNG)             { quelle = L_BLAU;  farbe = leds.Color(0, 0, 255); }
+  else if (zustand == ERINNERUNG) {
+    bool spar = stromsparen && jetzt - letzteErinnerungMs >= LED_ERINNERUNG_HELL_MS;
+    quelle = spar ? L_SPARBLAU : L_BLAU;
+    farbe  = leds.Color(0, 0, spar ? LED_SPARBLAU_WERT : 255);
+  }
   else if ((int32_t)(gruenBisMs - jetzt) > 0) { quelle = L_GRUEN; farbe = leds.Color(0, 255, 0); }
 
   // Protokoll nur, wenn sich die QUELLE ändert (nicht bei jedem Blinken)
   if (quelle != letzteQuelle) {
     letzteQuelle = quelle;
     logZeile("LED", ledQuelleName(quelle));
+  }
+  // V4: Strom nur, solange eine Quelle aktiv ist (auch in den Blink-Pausen, kein Flackern).
+  // Stromsparen aus = wie V3: Strom immer an, außer in der Nässe-Sperre.
+  bool stromNoetig = zustand != NAESSE_SPERRE && (!stromsparen || quelle != L_AUS);
+  if (!stromNoetig) {
+    if (ledStromAn) ledStromSetzen(false, ledQuelleName(quelle));   // sendet vorher schwarz
+    letzteFarbe = 0;
+    return;
+  }
+  if (!ledStromAn) {
+    ledStromSetzen(true, ledQuelleName(quelle));
+    letzteFarbe = 0xFFFFFFFF;           // nach dem Einschalten Farbe neu senden
   }
   if (farbe == letzteFarbe) return;   // nur senden, wenn sich etwas ändert
   letzteFarbe = farbe;
@@ -1519,7 +2004,10 @@ void hauptbildschirmZeichnen() {
   //     Prozent x 184..239 / y 26..45. Uhrzeit endet bei x 126, Datum spätestens bei x 158.
   uint16_t btFarbe = SCHWARZ;   // SCHWARZ = nicht zeichnen (aus)
   bool btPunkte = false;
-  if (btZustand == BT_SUCHEN) {
+  bool btFest = false;
+  if (btZustand == BT_SUCHEN && btStill) {
+    btFarbe = BLAU; btFest = true;                        // V4: stilles Sync-Fenster, fest blau ohne Punkte
+  } else if (btZustand == BT_SUCHEN) {
     bool hell = (millis() - btSuchStartMs) % (BT_WEISS_AN_MS + BT_WEISS_AUS_MS) < BT_WEISS_AN_MS;
     btFarbe = hell ? WEISS : BLAU;                        // pulsiert im LED-Takt
   } else if (btZustand == BT_VERBUNDEN) {
@@ -1527,7 +2015,7 @@ void hauptbildschirmZeichnen() {
   } else if (btZustand == BT_NICHT_VERBUNDEN) {
     btFarbe = GRAU;                                       // Suche abgelaufen
   }
-  if (geaendert(B_BT, String(btFarbe) + (btPunkte ? "p" : ""))) {
+  if (geaendert(B_BT, String(btFarbe) + (btPunkte ? "p" : "") + (btFest ? "s" : ""))) {
     tft.fillRect(168, 2, 24, 24, SCHWARZ);
     if (btFarbe != SCHWARZ) {
       btSymbol(179, 6, btFarbe);
@@ -1773,6 +2261,7 @@ void drawUI() {
   if (kalibMeldung.length() > 0 && (int32_t)(kalibMeldungBisMs - millis()) <= 0) {
     kalibMeldung = "";
   }
+  if (stromsparen && energie == E_RUHE) return;            // V4: Display aus -> nicht zeichnen
   if (!bildschirmNeu && millis() - letzte < 200) return;   // max. 5x pro Sekunde
   letzte = millis();
   if (bildschirmNeu) {
@@ -1791,6 +2280,7 @@ void drawUI() {
 void hilfeAusgeben() {
   Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | hilfe"));
   Serial.println(F("Flasche:  kalib | leer | voll"));
+  Serial.println(F("Energie:  stromsparen 0 | stromsparen 1 | sync (Uhr per WLAN abgleichen)"));
 #if HYDRO_BLE
   Serial.println(F("Bluetooth (echtes BLE): bt suchen | bt aus   (verbunden/getrennt meldet das Handy)"));
 #else
@@ -1801,8 +2291,8 @@ void hilfeAusgeben() {
 String btText() {
   String t = btName(btZustand);
   if (btZustand == BT_SUCHEN) {
-    uint32_t rest = (BT_SUCH_TIMEOUT_MS - min(BT_SUCH_TIMEOUT_MS, millis() - btSuchStartMs)) / 1000;
-    t += " (noch " + String(rest) + " s)";
+    int32_t rest = (int32_t)(btFensterEndeMs - millis());
+    t += " (noch " + String((long)(max(rest, (int32_t)0) / 1000)) + " s" + (btStill ? ", still" : "") + ")";
   }
   return t + (HYDRO_BLE ? " [BLE]" : " [simuliert]");
 }
@@ -1822,7 +2312,7 @@ void btBefehl(const String& wert) {
       else if (btZustand == BT_VERBUNDEN) Serial.println(F("Schon verbunden."));
       else Serial.println(F("Nicht sichtbar - erst \"bt suchen\", dann \"bt verbunden\"."));
     } else {
-      if (btZustand == BT_VERBUNDEN) btSuchenStarten("Befehl bt getrennt (simuliert)");
+      if (btZustand == BT_VERBUNDEN) btNachTrennung("Befehl bt getrennt (simuliert)");
       else Serial.println(F("Kein Handy verbunden."));
     }
 #endif
@@ -1852,9 +2342,44 @@ void statusAusgeben() {
            " | Akku=" + String(akkuVolt, 2) + " V, " + String(akkuProzent) + " %" +
            (akkuStufe == 2 ? " (unter 10 %)" : (akkuStufe == 1 ? " (unter 20 %)" : "")) +
            " | nass=" + String(nass ? "ja" : "nein") +
-           " | Last=" + String(digitalRead(PIN_LAST) ? "AN" : "AUS") +
+           " | LED-Strom=" + String(digitalRead(PIN_LAST) ? "AN" : "AUS") +
            " | Uhr=" + uhr + (uhrQuelle == UHR_NTP ? " (NTP)" : (uhrQuelle == UHR_ERSATZ ? " (Ersatz)" : "")) +
-           " | BT=" + btText());
+           " | BT=" + btText() +
+           " | Energie=" + energieName(energie) + " (Licht " + String(lichtWert) + ")" +
+           " | Stromsparen=" + String(stromsparen ? "an" : "aus") +
+           " | WLAN=" + String(wlanModus == WLAN_AUS ? "aus" : (wlanModus == WLAN_ABGLEICH ? "Abgleich" : "dauerhaft")) +
+           " | CPU=" + String(getCpuFrequencyMhz()) + " MHz" +
+           (HYDRO_LIGHTSLEEP ? " | Schlafzyklen=" + String(schlafZyklen) : String("")));
+}
+
+// "stromsparen 0" = Verhalten wie V3, "stromsparen 1" = V4 (zur Laufzeit, nicht gespeichert)
+void stromsparenSetzen(bool an) {
+  if (an == stromsparen) {
+    Serial.println(an ? F("Stromsparen ist schon an.") : F("Stromsparen ist schon aus."));
+    return;
+  }
+  stromsparen = an;
+  setCpuFrequencyMhz(an ? CPU_MHZ : 240);
+  logZeile("ENERGIE", an ? "Stromsparen AN (CPU " + String(CPU_MHZ) + " MHz)"
+                         : String("Stromsparen AUS -> Verhalten wie Version 3 (CPU 240 MHz)"));
+  letzteAktivitaetMs = millis();
+  if (!an) {
+    energieSetzen(E_AKTIV, "Stromsparen aus");
+    hintergrundlichtSetzen(LCD_HELL);
+    if (wlanModus == WLAN_AUS) wlanEinschalten();
+    wlanModus = WLAN_DAUER;
+#if HYDRO_BLE
+    bleStarten();                     // wie V3: Stack bleibt an
+#endif
+    if (zustand != NAESSE_SPERRE) ledStromSetzen(true, "Stromsparen aus");
+  } else {
+    letzterAbgleichMs = millis();
+    if (wlanModus == WLAN_DAUER) {
+      if (uhrQuelle == UHR_NTP) wlanAusschalten("Stromsparen an");
+      else { wlanModus = WLAN_ABGLEICH; wlanStartMs = millis(); }
+    }
+    // BLE-Stack und LED-Strom schalten btVerwalten() / ledsAktualisieren() selbst ab
+  }
 }
 
 void serielleBefehle() {
@@ -1865,6 +2390,7 @@ void serielleBefehle() {
     if (c != '\n') { if (zeile.length() < 40) zeile += c; continue; }
     zeile.trim();
     zeile.toLowerCase();
+    if (zeile.length() > 0) aktivitaet("Serieller Befehl");
     int leer = zeile.indexOf(' ');
     String befehl = leer < 0 ? zeile : zeile.substring(0, leer);
     String wert = leer < 0 ? String("") : zeile.substring(leer + 1);
@@ -1924,6 +2450,11 @@ void serielleBefehle() {
       kalibVollBestaetigen();
     } else if (befehl == "bt") {
       btBefehl(wert);
+    } else if (befehl == "sync") {
+      wlanAbgleichStarten("Befehl sync");
+    } else if (befehl == "stromsparen") {
+      if (wert == "0" || wert == "1") stromsparenSetzen(wert == "1");
+      else Serial.println(F("stromsparen 0 (wie V3) | stromsparen 1 (V4)"));
     } else if (zeile.length() > 0) {
       hilfeAusgeben();
     }
@@ -1932,23 +2463,110 @@ void serielleBefehle() {
 }
 
 // ============================================================================
+//  SCHLAF (V4): Light-Sleep in RUHE (nur echtes CYD), Tiefschlaf bei leerem Akku
+// ============================================================================
+// Darf das Gerät jetzt kurz schlafen? (Gründe dagegen: Stromsparplan Kap. 3.2)
+bool schlafErlaubt() {
+  if (!stromsparen || energie != E_RUHE) return false;
+  if (zustand == NAESSE_SPERRE || zustand == KALIBRIERUNG || nass) return false;
+  if (touchGehalten) return false;                                    // Finger liegt noch auf
+  if (blinkAnzahl > 0 || lilaLaeuft || lilaAusstehend) return false;  // Blinkmuster laufen in loop()
+  if (btZustand == BT_SUCHEN || btZustand == BT_VERBUNDEN) return false;  // BLE-Fenster / Verbindung
+#if HYDRO_BLE
+  if (bleLaeuft) return false;                                        // Stack noch nicht aus
+#endif
+  if (wlanModus != WLAN_AUS) return false;                            // Uhr-Abgleich läuft
+  if (Serial.available()) return false;
+  return true;
+}
+
+#if HYDRO_LIGHTSLEEP
+const gpio_num_t HALTE_PINS[] = { (gpio_num_t)PIN_LAST, (gpio_num_t)PIN_TFT_LED,
+                                  (gpio_num_t)PIN_HX711_SCK, (gpio_num_t)PIN_LED_DATA };
+
+// Bis zur nächsten Waagen-Messung schlafen (höchstens RUHE_WECKTAKT_MS). Wecken: Timer,
+// Nässe (GPIO19 LOW) und Touch (GPIO36 LOW). millis() läuft im Light-Sleep weiter.
+void leichtSchlafen() {
+  uint32_t seit = millis() - waageLetzteMessungMs;
+  if (seit >= RUHE_WECKTAKT_MS) return;           // Waage ist dran -> erst messen
+  uint32_t dauer = RUHE_WECKTAKT_MS - seit;
+  if (dauer < 5) return;                          // lohnt sich nicht
+  if (digitalRead(PIN_NAESSE) == LOW) return;     // nass -> wach bleiben (Sperre folgt)
+  bool touchWecken = TOUCH_IRQ_NUTZEN && digitalRead(PIN_TOUCH_IRQ) == HIGH;  // nur wenn gerade nicht LOW
+  Serial.flush();
+  if (RUHE_PINS_HALTEN) for (gpio_num_t p : HALTE_PINS) gpio_hold_en(p);   // Pegel festhalten (FET, Licht, HX711-SCK, DIN)
+  esp_sleep_enable_timer_wakeup((uint64_t)dauer * 1000ULL);
+  gpio_wakeup_enable((gpio_num_t)PIN_NAESSE, GPIO_INTR_LOW_LEVEL);
+  if (touchWecken) gpio_wakeup_enable((gpio_num_t)PIN_TOUCH_IRQ, GPIO_INTR_LOW_LEVEL);
+  esp_sleep_enable_gpio_wakeup();
+  esp_light_sleep_start();
+  gpio_wakeup_disable((gpio_num_t)PIN_NAESSE);
+  if (touchWecken) gpio_wakeup_disable((gpio_num_t)PIN_TOUCH_IRQ);
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+  if (RUHE_PINS_HALTEN) for (gpio_num_t p : HALTE_PINS) gpio_hold_dis(p);
+  schlafZyklen++;
+}
+#endif
+
+// Tiefschlaf mit Timer (nur Akku-Schutz). FET-Pin und Licht-Pin werden LOW gehalten.
+void tiefschlafStarten() {
+  ledcDetach(PIN_TFT_LED);
+  pinMode(PIN_TFT_LED, OUTPUT);
+  digitalWrite(PIN_TFT_LED, LOW);
+  digitalWrite(PIN_LAST, LOW);                    // Streifen ohne Strom
+  pinMode(PIN_LED_DATA, OUTPUT);
+  digitalWrite(PIN_LED_DATA, LOW);                // keine Fehlspeisung über DIN
+  gpio_hold_en((gpio_num_t)PIN_TFT_LED);
+  gpio_hold_en((gpio_num_t)PIN_LAST);
+  gpio_hold_en((gpio_num_t)PIN_LED_DATA);
+  gpio_deep_sleep_hold_en();
+  Serial.flush();
+  esp_sleep_enable_timer_wakeup((uint64_t)AKKU_LEER_SCHLAF_MIN * 60ULL * 1000000ULL);
+  esp_deep_sleep_start();                         // kommt nicht zurück (Neustart nach dem Timer)
+}
+
+// ============================================================================
 //  SETUP + LOOP
 // ============================================================================
 void setup() {
+  // Zuerst: LED-Strom AUS (FET-Pin LOW), Pin-Halten aus einem Tiefschlaf lösen
+  gpio_deep_sleep_hold_dis();
+  gpio_hold_dis((gpio_num_t)PIN_TFT_LED);
+  gpio_hold_dis((gpio_num_t)PIN_LAST);
+  gpio_hold_dis((gpio_num_t)PIN_LED_DATA);
+  pinMode(PIN_LAST, OUTPUT);
+  digitalWrite(PIN_LAST, LOW);
   Serial.begin(115200);
   delay(200);
   Serial.println();
-  Serial.println(F("=== HydroDesk Base – Wokwi-Simulation (V3) ==="));
+  Serial.println(F("=== HydroDesk Base – Wokwi-Simulation (V4) ==="));
 
   pinMode(PIN_NAESSE, INPUT_PULLUP);
-  pinMode(PIN_LAST, OUTPUT);
-  digitalWrite(PIN_LAST, HIGH);          // Last an
   pinMode(PIN_AKKU_ADC, INPUT);
 
-  leds.begin();
+  // Akku-Schutz: aus dem Tiefschlaf aufgewacht? Erst bei genug Spannung normal starten.
+  if (akkuLeerSchlaf) {
+    float v = akkuSpannungMessen();
+    if (v < AKKU_WIEDERANLAUF_V) {
+      logZeile("AKKU", "noch leer (" + String(v, 2) + " V < " + String(AKKU_WIEDERANLAUF_V, 2) +
+               " V) -> weiter schlafen");
+      tiefschlafStarten();
+      return;                              // (nur für den PC-Test; echt kommt der Tiefschlaf nicht zurück)
+    }
+    akkuLeerSchlaf = false;
+    logZeile("AKKU", "Spannung wieder " + String(v, 2) + " V -> normaler Start");
+  }
+
+  if (stromsparen) setCpuFrequencyMhz(CPU_MHZ);   // M4: 80 MHz statt 240 MHz
+
+  leds.begin();                          // DIN = Ausgang LOW
   leds.setBrightness(LED_HELLIGKEIT);
   leds.clear();
-  leds.show();                           // LEDs im Normalbetrieb AUS
+  if (!stromsparen) {                    // wie V3: Strom an, LEDs schwarz
+    ledStromSetzen(true, "Start (Stromsparen aus)");
+    leds.show();
+  }                                      // V4: Streifen bleibt ohne Strom, bis er leuchten soll
 
   speicher.begin("hydrodesk", false);
   faktor             = speicher.getFloat("faktor", WOKWI_FAKTOR);
@@ -1980,7 +2598,7 @@ void setup() {
 
   uhrStarten();
 #if HYDRO_BLE
-  bleStarten();
+  if (!stromsparen) bleStarten();        // wie V3: Stack immer an. V4: erst im Fenster
 #else
   logZeile("BT", "Bluetooth wird nur simuliert (Befehle: bt suchen | bt verbunden | bt getrennt | bt aus)");
 #endif
@@ -1994,6 +2612,11 @@ void setup() {
            String(RUHE_START_STUNDE) + ":00-" + String(RUHE_ENDE_STUNDE) + ":00" +
            (WOKWI_DEMO_ERINNERUNG ? " [WOKWI-DEMO]" : " [Gerät]"));
   logZeile("ZUSTAND", "Start in IDLE");
+  logZeile("ENERGIE", stromsparen ? "Stromsparen an: CPU " + String(getCpuFrequencyMhz()) +
+                                    " MHz, dimmen nach 30 s, Display aus nach 2 min (nachts 15 s)" +
+                                    (HYDRO_LIGHTSLEEP ? ", Light-Sleep in RUHE" : ", Wokwi: ohne echten Schlaf")
+                                  : String("Stromsparen aus (wie Version 3)"));
+  letzteAktivitaetMs = millis();
   hilfeAusgeben();
 }
 
@@ -2005,8 +2628,16 @@ void loop() {
   btVerwalten();
   touchAuswerten();       // 2. versteckte Bedienung
   zustandAktualisieren(); // 3. Zustandsautomat
+  energieVerwalten();     //    V4: Display hell / gedimmt / aus
   ledsAktualisieren();    // 4. Ausgaben
   drawUI();
   serielleBefehle();
+  wlanVerwalten();        //    V4: Uhr-Abgleich per WLAN
+#if HYDRO_LIGHTSLEEP
+  if (schlafErlaubt()) {  // V4: in RUHE bis zur nächsten Waagen-Messung schlafen
+    leichtSchlafen();
+    return;
+  }
+#endif
   delay(5);
 }

@@ -19,9 +19,11 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
   - 🔵 blau = trinken
   - 🟢 grün = Ziel erreicht
   - 🔴 rot = Akku niedrig / Fehler
-  - 🟠 amber = Wasser erkannt
+  - bei Wasser bleibt der Streifen dunkel (ab V4 ohne Strom)
 - **Wasser-Sicherheitsabschaltung**: Regensensor + FET-Modul schalten bei Nässe den Strom ab → Sperrbildschirm **„WASSER ERKANNT · STROM AUS“**
 - **Akkubetrieb**: LiPo 2000 mAh, Laden per USB-C (TC4056), 5-V-Wandler Pololu S13V10F5
+- **Stromsparmodus (Firmware V4)**: Display dimmt nach 30 s und geht nach 2 min aus (nachts nach 15 s),
+  Light-Sleep, Bluetooth nur in kurzen Fenstern, WLAN nur zum Uhr-Abgleich, Akku-Schutz bei 3,30 V
 - **Optional: Telegram-Bot** für Erinnerungen und Status (`/status`, `/ziel`, `/hilfe`)
 - **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, fünf Teile: Bodenwanne, Deckel, Pad, steckbare USB-Abdeckkappe, Diffusor-Leiste; ohne Stützmaterial druckbar)
 - **Android-App** ([`app-android/`](app-android/)): Login (Supabase), Bluetooth-LE-Verbindung zum Gerät,
@@ -144,7 +146,7 @@ hydrodesk-base/
 | Steckbrief | ✅ fertig |
 | Vorkalkulation | ✅ fertig |
 | Gehäuse-CAD (OpenSCAD, STL) | ✅ fertig |
-| Wokwi-Simulation | ✅ Version 3 fertig (kompiliert, PC-Logiktest OK, auf wokwi.com testen) – inkl. Bluetooth-Symbol und LED-Status |
+| Wokwi-Simulation | ✅ Version 4 fertig (alle Varianten kompiliert, PC-Logiktest OK, auf wokwi.com testen) – inkl. Bluetooth-Symbol, LED-Status und Stromsparmodus |
 | Android-App (Kotlin, Compose, Supabase) | ✅ Version 1.0 – baut (`assembleDebug`), Unit-Tests grün, Demo-Modus; BLE mit echtem Gerät noch zu testen – siehe [`app-android/README.md`](app-android/README.md) |
 | Firmware (PlatformIO) | ⏳ offen |
 | Bau / Integration / Tests | ⏳ offen |

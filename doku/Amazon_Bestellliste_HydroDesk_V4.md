@@ -12,10 +12,10 @@ Alle Amazon-Preise am 16.10.2026 auf amazon.de mit deutscher Lieferadresse abgel
 | 4 | LiPo EEMB LP103454 2000 mAh | 1 | https://www.amazon.de/dp/B08214DJLJ | 1 Stück | 10,99 € | 1 Stk | 34,5×56×10,3 mm (Bild: 10,6) passt ins Akkufach; PCM-Schutz (Über-/Tiefentladung, Kurzschluss); JST-PHR-02 | POLARITÄT vor dem Anstecken messen (rot=+ laut Seite, Rezensionen warnen) |
 | 5 | TC4056 USB-C Lader | 1 | https://www.amazon.de/dp/B0F67KYB4F | 10er Pack | 6,99 € | 10 Stk | 4,2 V Ladeschluss, 1 A, Schutz 2,5 V; 10 Stück = Reserve | Länge nicht angegeben: Fach 26 mm → nachmessen; ohne CC-Widerstände lädt er nur mit USB-A→C-Kabel |
 | 6 | Gummifüße Ø12 | 4 | https://www.amazon.de/dp/B09LDCTQGY | schwarz, 20 Stk | 5,45 € | 20 Stk | Ø12 mm (Mulde max. 13 mm), 3,6 mm hoch; Verkauf durch Amazon |  |
-| 7 | Silikonmatte (auf 86×86 zuschneiden) | 1 | https://www.amazon.de/dp/B0GVNMS4DZ | schwarz | 7,59 € | 1 Matte | 1,2 mm dick (Soll 1–1,5 mm) |  |
+| 7 | Silikonmatte (auf 86×86 zuschneiden) | 1 | https://www.amazon.de/dp/B0DS1VRH9Z | schwarz | 12,49 € | 1 Matte 70×50 cm | 1 mm dick, Versand Amazon, auf Lager (geprüft 16.10.26). Alternativen: B0B11N653N (LEOBRO 1,3 mm, 15,99 €), B0GVNMS4DZ (alte Wahl, 1,2 mm, 7,59 €, war am 16.10. mit DE-Lieferadresse lieferbar) |  |
 | 8 | Schrauben M3×12 (8), M4 (2), M5×12 (2) | 1 | https://www.amazon.de/dp/B09XQMQNYY | – | 26,59 € | 1120 tlg. | enthält M3×12, M4×12, M5×12 Senkkopf Innensechskant | M4×12 statt ×10: geprüft in SCAD, Spitze bleibt in der 12,7-mm-Wägezelle (ca. 7,4 mm Eingriff) → passt. Teuer: alleschrauben.de ca. 4,86 € + Versand |
 
-**Summe A: 101,56 €** (versandkostenfrei ab 49 €, wenn alles „Versand durch Amazon“)
+**Summe A: 106,46 €** (Silikonmatte ab 16.10. B0DS1VRH9Z, 12,49 €) (versandkostenfrei ab 49 €, wenn alles „Versand durch Amazon“)
 
 ## B) Amazon – nur wenn du keinen zweiten Shop willst
 
@@ -125,4 +125,4 @@ Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkau
 | Schrauben M3×12/M4/M5×12 | nur M3×16 Senkkopf (0,06 €), kein M4/M5 | – | M3×16 nicht im Modell geprüft | **alleschrauben.de** einzeln: 8× M3×12 à 0,48 €, 2× M4×10 à 0,47 €, 2× M5×12 à 0,52 € = 5,82 € + Versand (erst im Warenkorb sichtbar) |
 
 **Ergebnis:** Alles bei Berrybase geht nicht (CYD, LED, Akku, Lader, Matte, M4/M5 fehlen oder passen nicht).
-Bester Mix: Amazon ohne Schraubenset und Füße 69,52 € (versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **114,37 € + Versand alleschrauben** (statt 139,99 €; Ersparnis 25,62 € minus alleschrauben-Versand).
+Bester Mix: Amazon ohne Schraubenset und Füße 74,42 € (inkl. neuer Silikonmatte 12,49 €) (versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **119,27 € + Versand alleschrauben** (vorher 114,37 € mit alter Matte minus alleschrauben-Versand).

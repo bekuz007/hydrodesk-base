@@ -110,3 +110,19 @@ Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkau
 3. **CYD-Variante** „1“/„2“ auf der Amazon-Seite: im Bild „ESP32-2432S028R“ prüfen. Ob ein 4-pol. JST-1,25-Kabel dabei ist, ist nicht angegeben.
 4. **COB-Streifen**: nur 18 auf Lager; Variante „1M 160LEDs/m 5mm“. Nach Lieferung Lötstellen prüfen und Dicke messen (`cob_t` = 2,5 mm).
 5. Händlerversand (Pos. 9, 11) liefert später und zählt nicht zur Versandkostenfreiheit.
+
+## Vergleich: alles bei Berrybase / nur benötigte Mengen (geprüft 16.10.2026)
+
+| Teil | Berrybase heute | Preis | Passt? | Ergebnis |
+|---|---|---|---|---|
+| CYD ESP32-2432S028R | nicht im Sortiment | – | – | Amazon bleibt |
+| Wägezelle 5 kg + HX711 | https://www.berrybase.de/dehnungsmessstreifen-waegezelle-5kg + https://www.berrybase.de/hx711-24-bit-a-d-gewichtssensor | 5,40 € + 1,25 € | **Nein**: 75×12,7×12,7 mm statt 80 mm, Lochbild nicht angegeben | Amazon bleibt (8,97 €) |
+| COB-LED 5 mm adressierbar | kein COB; nur WS2812B IP65 10 mm breit (5,50 €/50 cm) oder Adafruit 1515 4 mm (26,90 €/50 cm) | – | **Nein** (2,5-mm-Schlitz/Diffusor) bzw. teurer | Amazon 1 m bleibt (Rest ist Reserve) |
+| LiPo 34,5×56×10,3 | LP-503562 (62,5×36×5 mm), 785060, 803160 (60×31,4×8) … | 5,50–9,10 € | **Nein**, alle zu lang/breit | Amazon EEMB bleibt |
+| USB-C-Lader | https://www.berrybase.de/ladeplatine-fuer-3-7v-liion-lipo-akkus-mit-ausgang-usb-type-c-buchse-loetpads-1000ma | 1,40 € | **Nein**: 29×18 mm, Fach 26×17 mm | Amazon TC4056 bleibt |
+| Gummifüße | https://www.berrybase.de/fix-fasten-selbstklebender-fuss-rund-oben-9-5mm-unten-10mm-hoehe-4-5mm-gummi-schwarz | 4 × 0,15 € | Ja: Ø10 in Ø13-Mulde (1 mm tief), 3,5 mm Bodenfreiheit | **spart 4,85 €** |
+| Silikonmatte 1–1,5 mm | nur Lötmatte (Dicke nicht passend) | – | – | Amazon bleibt |
+| Schrauben M3×12/M4/M5×12 | nur M3×16 Senkkopf (0,06 €), kein M4/M5 | – | M3×16 nicht im Modell geprüft | **alleschrauben.de** einzeln: 8× M3×12 à 0,48 €, 2× M4×10 à 0,47 €, 2× M5×12 à 0,52 € = 5,82 € + Versand (erst im Warenkorb sichtbar) |
+
+**Ergebnis:** Alles bei Berrybase geht nicht (CYD, LED, Akku, Lader, Matte, M4/M5 fehlen oder passen nicht).
+Bester Mix: Amazon ohne Schraubenset und Füße 69,52 € (versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **114,37 € + Versand alleschrauben** (statt 139,99 €; Ersparnis 25,62 € minus alleschrauben-Versand).

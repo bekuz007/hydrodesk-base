@@ -97,7 +97,7 @@ Zusammenfassung aus der [Vorkalkulation](doku/Vorkalkulation_HydroDesk_Base.xlsx
 | 17 | Klebeband | TESA doppelseitig 12 mm | Berrybase | 1 Rolle | 2,90 € |
 | 18 | Kabelbinder | 100 × 2,5 mm | Berrybase | 100 Stk. | 0,60 € |
 | 19 | JST-Kabel CYD | Micro JST 1,25 mm, 4-polig (**nur AliExpress**, ab-Preis) | AliExpress | 1 Set | 1,49 € |
-| 20 | microSD-Sniffer | für GPIO 18/19/23 am SD-Slot (**nur AliExpress**, ab-Preis) | AliExpress | 1 Stk. | 2,39 € |
+| 20 | microSD-Sniffer | **gestrichen** – passt nicht ins Gehäuse (SD-Slot→Front, 3,5 mm Luft; Sniffer ~35–40 mm). GPIO18/19/23 direkt an den SD-Slot löten | – | 0 | 0,00 € |
 | 21 | Gehäuse-Material | SUNLU PLA 1,75 mm | Amazon | 1 kg | 14,99 € |
 | 22 | Abdeckkappe | gedruckt aus Pos. 21 (ca. 1 g) | – | 1 Stk. | 0,00 € |
 | 23 | Diffusor-Leiste | gedruckt aus weißem PLA oder naturfarbenem PETG (ca. 4 g, 1 mm, 100 % Füllung) | – | 1 Stk. | 0,00 € |
@@ -112,16 +112,16 @@ Zusammenfassung aus der [Vorkalkulation](doku/Vorkalkulation_HydroDesk_Base.xlsx
 | 32 | Ein/Aus-Schalter | Schiebeschalter C&K OS102011MS2QN1 (ON-ON, Printmontage) | Berrybase | 1 Stk. | 0,70 € |
 | 33 | Klemmkeile | gedruckt aus Pos. 21 (unter 1 g) | – | 2 Stk. | 0,00 € |
 | 34 | Stiftleiste | 1 × 20-polig, RM 2,54 mm (für die SOT-23-Adapter) | Berrybase | 1 Stk. | 0,20 € |
-| | **Summe Bauteile** | | | | **119,01 €** |
+| | **Summe Bauteile** | | | | **116,62 €** |
 | | Versand (Amazon 0,00 € ab 49 €, Berrybase 4,95 €, Reichelt 5,95 €) | | | | 10,90 € |
-| | Puffer 10 % (Verschnitt, Ersatz, unbekannter Versand) | | | | 11,90 € |
-| | **Gesamt geplant** | | | | **141,81 €** |
-| | Gesamt ohne PLA (falls die Schule druckt) | | | | 125,32 € |
+| | Puffer 10 % (Verschnitt, Ersatz, unbekannter Versand) | | | | 11,66 € |
+| | **Gesamt geplant** | | | | **139,18 €** |
+| | Gesamt ohne PLA (falls die Schule druckt) | | | | 124,19 € |
 
 **Hinweise zur Stückliste**
 
 - **Versand:** Die Versandkosten von alleschrauben.de und AliExpress werden erst im Warenkorb angezeigt und sind noch nicht eingepreist. Der Puffer deckt sie ab.
-- **AliExpress-Teile (Pos. 19/20):** Lieferzeit 1–3 Wochen. Pos. 19 entfällt, wenn beim CYD Kabel dabei sind. Pos. 20 entfällt, wenn direkt an die Lötpunkte gelötet wird.
+- **AliExpress-Teile (Pos. 19/20):** Pos. 19 entfällt, wenn beim CYD Kabel dabei sind (sonst AliExpress, 1–3 Wochen). Pos. 20 (microSD-Sniffer) **nicht bestellen** – passt nicht ins Gehäuse; GPIO18/19/23 direkt an den SD-Slot löten.
 - **LED-Streifen (Pos. 3):** Seit 08.10.2026 ein COB-Streifen statt des WS2812-ECO-Streifens mit sichtbaren Einzelpunkten (9,49 €, jetzt in der Vorkalkulation unter „Gestrichen“). Bei Amazon die Variante „1M 160LEDs/m 5mm“ wählen. Günstigste Alternative: AliExpress ab 7,59 € (Preis der Variante nicht lesbar). In die Datenleitung gehört ein Widerstand 330–470 Ω direkt am Streifen.
 - **V4 (Pos. 5, 24–34):** Das GERUI-FET-Modul (Low-Side, 6,49 €) ist gestrichen. Stattdessen eine kleine FET-Platine mit 2 × AO3401A: Q1 schaltet die 5 V des LED-Streifens (über BC547B an GPIO18), Q2 ist der Akku-Schalter. Berrybase führt keinen P-MOSFET, deshalb kommt der AO3401A von Reichelt (eigener Versand 5,95 €). Schaltplan und Aufbau: [`gehaeuse/ANLEITUNG.md`](gehaeuse/ANLEITUNG.md) Kapitel 7b/7c.
 - **Einkaufskörbe** (Einkaufsliste): schnell (DE-Shops) **111,04 €** + Versand alleschrauben.de, günstig (mit AliExpress) **94,98 €** – jeweils inkl. bekanntem Versand, ohne Puffer.

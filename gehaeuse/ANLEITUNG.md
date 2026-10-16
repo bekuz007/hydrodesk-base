@@ -300,8 +300,9 @@ Gelötet auf ein Stück Lochraster (30 × 24,5 mm). Die zwei AO3401A sind sehr k
   stromlosen Streifen).
 * Warum GPIO18? Laut CYD-Schaltplan (macsbug, ESP32-2432S028) haben am SD-Slot CS (GPIO5), MOSI (GPIO23), MISO (GPIO19)
   und DAT1 je einen **10-kΩ-Pull-up** (Widerstandsnetz RN2), **CLK (GPIO18) aber nicht**. Darum hält der 47-kΩ-Widerstand
-  Basis→GND den Streifen beim Booten sicher aus. GPIO18 erreichst du über den microSD-Sniffer (Pin CLK/SCK) oder den
-  CLK-Lötpunkt am SD-Slot; keine SD-Karte einstecken.
+  Basis→GND den Streifen beim Booten sicher aus. Den microSD-Sniffer **nicht** bestellen: Er passt nicht ins
+  Gehäuse (SD-Slot zeigt zur Frontwand, nur ca. 3,5 mm Luft; Sniffer würde ca. 35–40 mm herausstehen).
+  GPIO18/19/23 direkt an die Lötpunkte am SD-Slot löten (CLK/SCK = GPIO18); keine SD-Karte einstecken.
 * Folge des Pull-ups an GPIO23 (DIN): Solange die Firmware DIN auf LOW hält, fließen ca. 0,33 mA (3,3 V / 10 kΩ) –
   im Vergleich zu den 33–66 mA Durchschnitt vernachlässigbar.
 

@@ -55,7 +55,7 @@ Preise aus der Einkaufsliste vom 09.10.2026, vor der Bestellung kurz prüfen.
 
 Dazu: **AO3401A** 3 Stück bei Reichelt (0,51 € + 5,95 € Versand), weil Berrybase ihn nicht hat. Wer keinen dritten Shop will: Amazon Pos. 9 (100 Stück, 18,99 €).
 
-**microSD-Sniffer:** auf Amazon.de kein Angebot gefunden. openelab.de 6,25 € (geprüft 16.10., Link in Abschnitt E) oder AliExpress. Ohne Sniffer an die Pads des SD-Slots löten.
+**microSD-Sniffer:** **nicht bestellen, passt nicht.** SD-Slot zeigt zur Frontwand (nur ca. 3,5 mm Luft); Sniffer würde ca. 35–40 mm herausstehen. GPIO18/19/23 direkt an den SD-Slot löten.
 
 
 ## E) Geprüfte Shop-Links für alles außer Amazon (16.10.2026)
@@ -81,17 +81,17 @@ Alle Seiten am 16.10.2026 geöffnet, Artikel und Preis kontrolliert. Nichts best
 | Berrybase | TESA doppelseitig 10 m × 12 mm | 1 | 2,90 € | 2,90 € | begrenzt lagernd | https://www.berrybase.de/tesa-doppelseitiges-klebeband-10m-x-12mm-transparent-pp-traeger-loesungsmittelfrei |
 | Berrybase | Kabelbinder 100×2,5 mm, 100 Stk | 1 | 0,60 € | 0,60 € | auf Lager | https://www.berrybase.de/kabelbinder-uv-bestaendig-nylon-100-stueck/farbe-transparent/masse-100x2-5mm |
 | Reichelt | P-MOSFET AO3401A SOT-23 (1 Ersatz) | 3 | 0,17 € | 0,51 € | auf Lager, 1–2 Werktage | https://www.reichelt.de/de/de/shop/produkt/mosfet_p-ch_-30v_-4a_0_041r_sot-23-166486 |
-| openelab.de | Micro SD Sniffer TF Adapter Board (optional) | 1 | 6,25 € | 6,25 € | verfügbar; ggf. Versand aus China 10–20 Tage | https://openelab.de/products/micro-sd-sniffe-tf-adapter |
+| openelab.de | Micro SD Sniffer TF Adapter Board | – | – | – | **nicht bestellen, passt nicht** (SD-Slot→Front, 3,5 mm Luft; Sniffer ~35–40 mm). GPIO18/19/23 direkt an SD-Slot löten | https://openelab.de/products/micro-sd-sniffe-tf-adapter |
 
 - **Berrybase: 27,02 €** + 4,95 € Versand = 31,97 €
 - **Reichelt: 0,51 €** + 5,95 € Versand = 6,46 €
-- **openelab.de: 6,25 €** + Versand laut Kasse
+- **openelab.de:** Sniffer gestrichen (passt nicht ins Gehäuse)
 
 Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkauft; Ersatz 3×7 cm doppelseitig (10 Stk), eine Platte auf 30×24,5 mm zuschneiden. Berrybase-Summe dadurch 27,02 € statt 24,82 €.
 
 ## Summen
 
-- **Empfohlen (A + Berrybase + Reichelt, inkl. Versand): 139,99 €** (ohne Sniffer)
+- **Empfohlen (Amazon Pflicht ohne Schrauben/Füße + Berrybase inkl. Füße + Reichelt + alleschrauben): 119,27 € + Versand alleschrauben** (ohne Sniffer)
 - Möglichst viel Amazon (A + B, Rest Berrybase inkl. Versand): 175,07 €
 - Optional dazu: PLA 13,99 €.
 
@@ -125,4 +125,4 @@ Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkau
 | Schrauben M3×12/M4/M5×12 | nur M3×16 Senkkopf (0,06 €), kein M4/M5 | – | M3×16 nicht im Modell geprüft | **alleschrauben.de** einzeln: 8× M3×12 à 0,48 €, 2× M4×10 à 0,47 €, 2× M5×12 à 0,52 € = 5,82 € + Versand (erst im Warenkorb sichtbar) |
 
 **Ergebnis:** Alles bei Berrybase geht nicht (CYD, LED, Akku, Lader, Matte, M4/M5 fehlen oder passen nicht).
-Bester Mix: Amazon ohne Schraubenset und Füße 74,42 € (inkl. neuer Silikonmatte 12,49 €) (versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **119,27 € + Versand alleschrauben** (vorher 114,37 € mit alter Matte minus alleschrauben-Versand).
+Bester Mix: Amazon ohne Schraubenset und Füße 74,42 € (inkl. Silikonmatte 12,49 €, versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **119,27 € + Versand alleschrauben**.

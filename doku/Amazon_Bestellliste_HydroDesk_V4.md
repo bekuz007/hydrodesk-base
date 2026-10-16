@@ -1,6 +1,6 @@
 # HydroDesk Base V4 – Amazon-Bestellliste (Stand 16.10.2026)
 
-Alle Amazon-Preise am 16.10.2026 auf amazon.de mit deutscher Lieferadresse abgelesen. Bestellt wurde nichts. Preise können sich ändern, im Warenkorb prüfen.
+Alle Amazon-Preise am 16.10.2026 auf amazon.de mit deutscher Lieferadresse abgelesen. **Tatsächliche Bestellung am 16.10.2026:** siehe Abschnitt „Tatsächliche Bestellung“ (Amazon 69,52 €, Gesamt aller Shops 122,13 €). Planungspreise darunter können abweichen.
 
 ## A) Amazon – Pflicht
 
@@ -60,7 +60,7 @@ Dazu: **AO3401A** 3 Stück bei Reichelt (0,51 € + 5,95 € Versand), weil Berr
 
 ## E) Geprüfte Shop-Links für alles außer Amazon (16.10.2026)
 
-Alle Seiten am 16.10.2026 geöffnet, Artikel und Preis kontrolliert. Nichts bestellt.
+Alle Seiten am 16.10.2026 geöffnet, Artikel und Preis kontrolliert. Danach bestellt: siehe „Tatsächliche Bestellung“.
 
 | Shop | Teil | Menge | Einzelpreis | Summe | Lager | Link |
 |---|---|---|---|---|---|---|
@@ -126,3 +126,18 @@ Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkau
 
 **Ergebnis:** Alles bei Berrybase geht nicht (CYD, LED, Akku, Lader, Matte, M4/M5 fehlen oder passen nicht).
 Bester Mix: Amazon ohne Schraubenset und Füße 74,42 € (inkl. Silikonmatte 12,49 €, versandfrei ab 49 €) + Berrybase 31,97 € + 0,60 € (Füße) + Reichelt 6,46 € + alleschrauben 5,82 € = **119,27 € + Versand alleschrauben**.
+
+## Tatsächliche Bestellung (16.10.2026)
+
+Bestellt und bezahlt (bzw. bestätigt). **Gesamt: 122,13 €** (4 Belege). microSD-Sniffer und PLA **nicht** bestellt.
+
+| Shop | Bestellnr. | Inhalt | Waren | Versand | Summe |
+|---|---|---|---|---|---|
+| Amazon | 303-9574488-4297123 | CYD Fastsaw 17,99; TC4056 10er 6,99; DIYmalls Wägezelle 5 kg+HX711 8,97; Silikonmatte FUNIANMAOYI 40×30 7,59 (1×); EEMB LP103454 10,99; BTF COB 1 m 160/m 5 mm 16,99 | 69,52 € | 0,00 € (frei) | **69,52 €** |
+| Berrybase | 1086360 | TESA 2,90; BC547B 4× 0,68; Vierlingslitze 3,50; Elko 470 µF 3× 0,30; Füße 4× 0,60; 10 kΩ 5× 0,25; 470 Ω 5× 0,25; 47 kΩ 4× 0,20; 4,7 kΩ 5× 0,30; Lochraster 3×7 10er 3,30; Stiftleiste 2× 0,40; Pololu S13V10F5 9,95; Regensensor 1,80; Schiebeschalter 2× 1,40; SOT-23-Adapter 4× 1,28; Kabelbinder 0,60; Schrumpfschlauch 2,80 | 30,51 € | 4,95 € | **35,46 €** |
+| alleschrauben.de | FASTON | DIN 7991 A2: M3×12 10× 2,50; M4×10 2× 1,12; M5×12 2× 1,24 | 4,86 € | 5,49 € | **10,35 €** |
+| Reichelt | – | AO3401A 5× 0,85 | 0,85 € | 5,95 € (DHL) | **6,80 €** |
+
+**Gesamt 122,13 €.** Details und Einzelzeilen: `Bestellung_HydroDesk_16-10-2026.xlsx` und Blatt „Tatsächliche Bestellung“ in den xlsx-Dateien.
+
+Nicht bestellt: **microSD-Sniffer** (passt nicht ins Gehäuse) · **PLA** (Schule/Betrieb).

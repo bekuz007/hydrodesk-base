@@ -47,19 +47,51 @@ Preise aus der Einkaufsliste vom 09.10.2026, vor der Bestellung kurz prüfen.
 | Elko 470 µF/25 V | 1 | 0,10 € | https://www.berrybase.de/elektrolytkondensator-470-f-25v-1050c-1-radial-tht | AZDelivery-Elko-Sortiment auf Amazon nicht verfügbar |
 | 2× SOT-23-Adapter | 2 | 0,64 € | https://www.berrybase.de/smd-breakout-adapter-fuer-sot23-ssop10-msop10-10-pin-0-50mm-0-95mm | auf Amazon.de kein Angebot gefunden |
 | Stiftleiste 1×20 RM 2,54 | 1 | 0,20 € | https://www.berrybase.de/stiftleiste-1x-20-polig-rm-2-54-gerade |  |
-| Lochrasterplatine | 1 | 1,10 € | https://www.berrybase.de/lochrasterplatine-9x15cm-mit-einseitiger-kupferauflage |  |
+| Lochrasterplatine doppelseitig 3×7 cm (10 Stk) | 1 | 3,30 € | https://www.berrybase.de/lochrasterplatine-doppelseitig-3x7cm-10-stueck | 9×15 cm ist ausverkauft (16.10.) |
 | Vierlingslitze 4×0,14 mm², 5 m | 1 | 3,50 € | https://www.berrybase.de/vierlingslitze-isoliert-4x0-14mm-5m-farbe-blau-gelb-rot-gruen |  |
 | Schrumpfschlauch, TESA-Klebeband, Kabelbinder | 1 | 6,30 € | siehe Einkaufsliste_HydroDesk_guenstig.xlsx | ersetzt Amazon Pos. 13+14 |
 
-**Summe Berrybase: 24,82 € + 4,95 € Versand**
+**Summe Berrybase: 27,02 € + 4,95 € Versand** (Stand 16.10.)
 
 Dazu: **AO3401A** 3 Stück bei Reichelt (0,51 € + 5,95 € Versand), weil Berrybase ihn nicht hat. Wer keinen dritten Shop will: Amazon Pos. 9 (100 Stück, 18,99 €).
 
-**microSD-Sniffer:** auf Amazon.de kein Angebot gefunden. AliExpress oder openelab.de (ca. 5,95 €, Seite nicht geprüft). Ohne Sniffer an die Pads des SD-Slots löten.
+**microSD-Sniffer:** auf Amazon.de kein Angebot gefunden. openelab.de 6,25 € (geprüft 16.10., Link in Abschnitt E) oder AliExpress. Ohne Sniffer an die Pads des SD-Slots löten.
+
+
+## E) Geprüfte Shop-Links für alles außer Amazon (16.10.2026)
+
+Alle Seiten am 16.10.2026 geöffnet, Artikel und Preis kontrolliert. Nichts bestellt.
+
+| Shop | Teil | Menge | Einzelpreis | Summe | Lager | Link |
+|---|---|---|---|---|---|---|
+| Berrybase | Pololu S13V10F5 5 V/1 A Step-Up/Down | 1 | 9,95 € | 9,95 € | begrenzt lagernd | https://www.berrybase.de/pololu-s13v10f5-5v-1a-step-up-step-down-converter |
+| Berrybase | Regensensor LM393 (digital+analog) | 1 | 1,80 € | 1,80 € | begrenzt lagernd | https://www.berrybase.de/regensensor-mit-digitalem-und-analogem-ausgang |
+| Berrybase | Schiebeschalter 8,6×4,3×4 mm (C&K OS102011MS2QN1-Bauform) | 1 | 0,70 € | 0,70 € | begrenzt lagernd | https://www.berrybase.de/schiebeschalter-printmontage-on-on-2-stellig-8.6x4.3x4mm-gerade |
+| Berrybase | BC547B NPN TO-92 | 1 | 0,17 € | 0,17 € | begrenzt lagernd | https://www.berrybase.de/bc547b-bipolarer-transistor-npn-45v-100ma-to-92-3-pin |
+| Berrybase | Widerstand 470 Ω 1/4 W 1 % | 1 | 0,05 € | 0,05 € | begrenzt lagernd | https://www.berrybase.de/metallschichtwiderstand-470-0-ohm-1-4w-1-0207-axial-durchsteckmontage |
+| Berrybase | Widerstand 4,7 kΩ 1/4 W 1 % | 1 | 0,06 € | 0,06 € | begrenzt lagernd | https://www.berrybase.de/metallschichtwiderstand-4-7-kohm-1-4w-1-0207-axial-durchsteckmontage |
+| Berrybase | Widerstand 47 kΩ 1/4 W 1 % (Basis-GND, Gate Q2) | 2 | 0,05 € | 0,10 € | begrenzt lagernd | https://www.berrybase.de/metallschichtwiderstand-47-0-kohm-1-4w-1-0207-axial-durchsteckmontage |
+| Berrybase | Widerstand 10 kΩ 1/4 W 1 % (2× Akku-Teiler, 1× Gate Q1) | 3 | 0,05 € | 0,15 € | begrenzt lagernd | https://www.berrybase.de/metallschichtwiderstand-10-0-kohm-1-4w-1-0207-axial-durchsteckmontage |
+| Berrybase | Elko 470 µF/25 V radial | 1 | 0,10 € | 0,10 € | begrenzt lagernd | https://www.berrybase.de/elektrolytkondensator-470-f-25v-1050c-1-radial-tht |
+| Berrybase | SMD-Adapter SOT-23 (für AO3401A) | 2 | 0,32 € | 0,64 € | begrenzt lagernd | https://www.berrybase.de/smd-breakout-adapter-fuer-sot23-ssop10-msop10-10-pin-0-50mm-0-95mm |
+| Berrybase | Stiftleiste 1×20 RM 2,54 | 1 | 0,20 € | 0,20 € | begrenzt lagernd | https://www.berrybase.de/stiftleiste-1x-20-polig-rm-2-54-gerade |
+| Berrybase | Lochrasterplatine doppelseitig 3×7 cm, 10 Stk (ERSATZ: 9×15 cm einseitig ist ausverkauft) | 1 | 3,30 € | 3,30 € | begrenzt lagernd | https://www.berrybase.de/lochrasterplatine-doppelseitig-3x7cm-10-stueck |
+| Berrybase | Vierlingslitze 4×0,14 mm², 5 m | 1 | 3,50 € | 3,50 € | begrenzt lagernd | https://www.berrybase.de/vierlingslitze-isoliert-4x0-14mm-5m-farbe-blau-gelb-rot-gruen |
+| Berrybase | Schrumpfschlauch-Set 100-tlg. schwarz | 1 | 2,80 € | 2,80 € | begrenzt lagernd | https://www.berrybase.de/schrumpfschlauch-set-100-teilig-in-sortimentsbox-schwarz |
+| Berrybase | TESA doppelseitig 10 m × 12 mm | 1 | 2,90 € | 2,90 € | begrenzt lagernd | https://www.berrybase.de/tesa-doppelseitiges-klebeband-10m-x-12mm-transparent-pp-traeger-loesungsmittelfrei |
+| Berrybase | Kabelbinder 100×2,5 mm, 100 Stk | 1 | 0,60 € | 0,60 € | auf Lager | https://www.berrybase.de/kabelbinder-uv-bestaendig-nylon-100-stueck/farbe-transparent/masse-100x2-5mm |
+| Reichelt | P-MOSFET AO3401A SOT-23 (1 Ersatz) | 3 | 0,17 € | 0,51 € | auf Lager, 1–2 Werktage | https://www.reichelt.de/de/de/shop/produkt/mosfet_p-ch_-30v_-4a_0_041r_sot-23-166486 |
+| openelab.de | Micro SD Sniffer TF Adapter Board (optional) | 1 | 6,25 € | 6,25 € | verfügbar; ggf. Versand aus China 10–20 Tage | https://openelab.de/products/micro-sd-sniffe-tf-adapter |
+
+- **Berrybase: 27,02 €** + 4,95 € Versand = 31,97 €
+- **Reichelt: 0,51 €** + 5,95 € Versand = 6,46 €
+- **openelab.de: 6,25 €** + Versand laut Kasse
+
+Hinweis: Die Lochrasterplatine 9×15 cm (alte Liste) ist bei Berrybase ausverkauft; Ersatz 3×7 cm doppelseitig (10 Stk), eine Platte auf 30×24,5 mm zuschneiden. Berrybase-Summe dadurch 27,02 € statt 24,82 €.
 
 ## Summen
 
-- **Empfohlen (A + Berrybase + Reichelt, inkl. Versand): 137,79 €**
+- **Empfohlen (A + Berrybase + Reichelt, inkl. Versand): 139,99 €** (ohne Sniffer)
 - Möglichst viel Amazon (A + B, Rest Berrybase inkl. Versand): 175,07 €
 - Optional dazu: PLA 13,99 €.
 

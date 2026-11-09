@@ -198,6 +198,7 @@ static_assert(sizeof(AKKU_TABELLE_V) / sizeof(AKKU_TABELLE_V[0]) == sizeof(AKKU_
 // Schutz bei leerem Akku: so lange unter AKKU_ABSCHALT_V -> Meldung, dann Tiefschlaf mit Timer
 const float    AKKU_ABSCHALT_V      = 3.30f;  // Schätzwert, nach der Entlademessung anpassen
 const uint32_t AKKU_ABSCHALT_MS     = 60000;  // 60 s lang darunter (kurze Einbrüche zählen nicht)
+const float    AKKU_FEHLT_V         = 2.00f;  // darunter: kein Akku angeschlossen (nur USB) -> kein Abschalten
 const uint32_t AKKU_LEER_MELDUNG_MS = 10000;  // "Akku leer - bitte laden" so lange zeigen
 const uint32_t AKKU_LEER_SCHLAF_MIN = 15;     // im Tiefschlaf alle 15 min prüfen, ob geladen wird
 const float    AKKU_WIEDERANLAUF_V  = 3.60f;  // erst ab dieser Spannung wieder normal starten (Erholung im Leerlauf)
@@ -1319,6 +1320,13 @@ void akkuLeerAbschalten() {
 }
 
 void akkuSchutzPruefen() {
+  // Kein Akku angeschlossen (nur USB, z. B. beim Testen): Messung liegt nahe 0 V -> nicht abschalten
+  if (akkuVolt < AKKU_FEHLT_V) {
+    static bool gemeldet = false;
+    if (!gemeldet) { logZeile("AKKU", "kein Akku erkannt (" + String(akkuVolt, 2) + " V) - Betrieb über USB, kein Akku-Schutz"); gemeldet = true; }
+    akkuLeerSeitMs = 0;
+    return;
+  }
   if (akkuVolt >= AKKU_ABSCHALT_V) {
     if (akkuLeerSeitMs != 0) logZeile("AKKU", "wieder über " + String(AKKU_ABSCHALT_V, 2) + " V - keine Abschaltung");
     akkuLeerSeitMs = 0;

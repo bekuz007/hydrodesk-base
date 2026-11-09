@@ -1,7 +1,10 @@
 # Firmware
 
-> **Folgt.** Die Firmware wird mit **PlatformIO** (Arduino-Framework) für das ESP32-2432S028R
-> („Cheap Yellow Display“) entwickelt.
+> **Läuft auf dem echten CYD** (seit 09.11.2026). Der Quellcode ist derselbe Sketch wie in der
+> Simulation ([`../wokwi/sketch.ino`](../wokwi/sketch.ino)); [`platformio.ini`](platformio.ini) baut ihn
+> mit `HYDRO_CYD=1` und `HYDRO_BLE=1` für das ESP32-2432S028R. In VS Code diesen Ordner öffnen und
+> mit PlatformIO hochladen. Ohne angeschlossenen Akku (Messung unter 2 V) ist der Akku-Schutz aus,
+> damit das Gerät beim Testen über USB nicht abschaltet.
 
 Geplante Module:
 

@@ -70,3 +70,10 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Annahme Adapter: AO3401A mittig auf der 0,95-mm-Seite (G/S auf Pad 2/4, D auf dem mittleren Pad gegenüber) → G/S/D an Stift 2/4/8. Vor dem Einlöten mit dem Multimeter prüfen.
 - Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.
 - `fotos/loeten/loeten_5c_fet_3d_oben.png` / `loeten_5c_fet_3d_unten.png` – 3D-Ansicht (Blender) der fertig bestückten FET-Platine nach diesem Plan, nur zum Verstehen (kein Druckteil)
+
+## 09.11.2026 – WLAN und Uhrzeit
+
+- WLAN-Zugangsdaten in der gitignorierten `secrets.h` eingetragen (nicht im Repo), Firmware hochgeladen.
+- CYD verbindet sich mit dem WLAN und holt die Uhrzeit per NTP (pool.ntp.org). Danach wird das WLAN zum Stromsparen wieder abgeschaltet.
+- Beim ersten Abgleich nach dem Start kam innerhalb von 10 s keine NTP-Antwort (Ersatzuhr gelb), mit dem Befehl `sync` klappte es sofort.
+- Wägezelle war bei diesem Test abgesteckt (Rohwert 0), Eichung folgt.

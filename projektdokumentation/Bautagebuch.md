@@ -46,3 +46,16 @@
 - Testprogramm `tests/regensensor_test` liest IO27 (INPUT_PULLUP) alle 0,5 s und gibt „trocken“ / „NASS“ aus.
 - Ergebnis: Power-LED an. Mit Wassertropfen auf der Platte geht die zweite LED am Modul an, und der ESP32 meldet „NASS“. **Test bestanden.**
 - Im fertigen Gerät kommt DO an GPIO19 (SD-Slot, muss gelötet werden).
+
+## 09.11.2026 – Lötplan
+
+Ein Bild pro Lötschritt, alle Pins und Werte aus `gehaeuse/ANLEITUNG.md` (Abschnitt 7c) und `wokwi/README.md` (Pin-Tabelle):
+
+1. `fotos/loeten/loeten_1_hx711.png` – HX711: Stiftleisten, Wägezelle (Rot E+, Schwarz E−, Weiß A−, Grün A+), CN1 (VCC 3V3, SCK IO22, DT IO27, GND)
+2. `fotos/loeten/loeten_2_sd_slot.png` – microSD-Slot: Pin 5 CLK = GPIO18 (FET), Pin 3 CMD/MOSI = GPIO23 (LED-DIN), Pin 7 DAT0/MISO = GPIO19 (Regensensor)
+3. `fotos/loeten/loeten_3_akku_lader.png` – Akku an TC4056 B+/B−, OUT+/OUT− weiter
+4. `fotos/loeten/loeten_4_stromweg.png` – TC4056 → Q2 + Ein/Aus-Schalter → Pololu S13V10F5 → CYD und FET-Platine, Akku-Teiler 2 × 10 kΩ an GPIO35
+5. `fotos/loeten/loeten_5_fet_platine.png` – FET-Platine H1: Q1 AO3401A, BC547B, 10 kΩ, 4,7 kΩ, 47 kΩ, Elko 470 µF/25 V
+6. `fotos/loeten/loeten_6_led_regensensor.png` – LED-Streifen (470 Ω in DIN) und Regensensor (DO an GPIO19)
+
+Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen, wo der Regensensor seine 3,3 V abgreift und wie die Bauteile auf dem Lochraster liegen.

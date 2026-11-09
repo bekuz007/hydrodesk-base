@@ -473,7 +473,7 @@ module pad(){
     // M4-Senkschrauben von oben in das freie Ende der Waegezelle
     // runde Loecher, um pad_hole_dy in Y verschoben (siehe Kommentar bei pad_hole_dy)
     for (yy=[lc_y0+lc_hole_end+pad_hole_dy, lc_y0+lc_hole_end+lc_hole_pitch+pad_hole_dy]) {
-      translate([pad_cx,yy,pad_z0-1]) cylinder(d=4.5, h=10);
+      translate([pad_cx,yy,pad_z0-1]) cylinder(d=4.8, h=10);   // 4,8 statt 4,5: Spiel fuer Drucktoleranz (09.11.2026)
       translate([pad_cx,yy,pad_top_z-4.3]) cylinder(r1=0, r2=4.3, h=4.3+e);
     }
   }

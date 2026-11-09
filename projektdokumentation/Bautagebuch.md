@@ -85,3 +85,4 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Korrektur: Ein erster Versuch mit Langlöchern zur Seite (X, Commit a8420ac) war falsch und ist zurückgenommen.
 - Änderung im Modell (`gehaeuse/hydrodesk_base.scad`, Parameter `pad_hole_dy = -3`): Die zwei runden M4-Senklöcher im Pad sind 3 mm zur vorderen Pad-Kante gerückt, von 10 und 25 mm auf 7 und 22 mm Abstand (Lochmitte zur Kante). Der Senkkopf-Rand liegt jetzt 2,7 mm von der Außenkante entfernt, der Tropfrand bleibt ganz.
 - Neu gedruckt werden muss **nur** `gehaeuse/stl/pad.stl`. Boden und Deckel bleiben unverändert. Vorschaubilder 13/14 sind neu gerendert.
+- Nachtrag: Die Pad-Löcher sind von Ø 4,5 auf Ø 4,8 mm vergrößert, weil gedruckte Löcher oft etwas enger werden. Die Senkung für den Schraubenkopf bleibt gleich.

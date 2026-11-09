@@ -40,6 +40,7 @@
 - Nächster Schritt: Stiftleiste anlöten (Lötkolben besorgen), danach Waage testen und kalibrieren (`kalib`).
 - Vorbereitet: WLAN-Zugangsdaten werden aus `secrets.h` gelesen (Vorlage `wokwi/secrets.example.h`, Datei ist in `.gitignore`). Ohne `secrets.h` bleibt „Wokwi-GUEST“ für die Simulation.
 - **2026-11-09:** HX711 nach dem Löten erkannt (Rohwert 68194), reagiert auf Druck. Gramm-Anzeige noch falsch (Wokwi-Faktor). Kalibrierung mit neuen Serial-Befehlen `tara` / `eichen <gramm>` folgt.
+- **2026-11-09:** Display ging aus, weil GPIO35 (Akku-ADC) offen floatete und die Firmware Unterspannung sah. Fix: `AKKU_ANGESCHLOSSEN=false` (Schutz/Warnungen aus, Anzeige „USB (kein Akku)“); unter 2,8 V gilt weiter „Messung offen“.
 
 ## 09.11.2026 – Schritt 3: Regensensor (LM393) testen
 

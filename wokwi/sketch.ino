@@ -191,6 +191,8 @@ const float    ANDERE_FLASCHE_G     = 250.0f; // ... (mind. so viel Unterschied)
 const uint32_t TROCKEN_FREIGABE_MS  = 5000;   // so lange trocken -> Sperre hebt sich selbst auf
 
 // --- Akku (in Wokwi: Potentiometer). Simulation: 0..4095 -> 3,0..4,2 V
+// Auf true setzen, sobald Akku + Spannungsteiler an GPIO35 gelötet sind.
+const bool     AKKU_ANGESCHLOSSEN   = false;
 const float    AKKU_LEER_V          = 3.0f;   // nur Wokwi: Poti ganz links
 const float    AKKU_VOLL_V          = 4.2f;   // nur Wokwi: Poti ganz rechts
 const float    AKKU_TEILER          = 2.0f;   // echt: Spannungsteiler 2 x 10 kΩ -> ADC sieht die halbe Akkuspannung
@@ -206,7 +208,7 @@ static_assert(sizeof(AKKU_TABELLE_V) / sizeof(AKKU_TABELLE_V[0]) == sizeof(AKKU_
 // Schutz bei leerem Akku: so lange unter AKKU_ABSCHALT_V -> Meldung, dann Tiefschlaf mit Timer
 const float    AKKU_ABSCHALT_V      = 3.30f;  // Schätzwert, nach der Entlademessung anpassen
 const uint32_t AKKU_ABSCHALT_MS     = 60000;  // 60 s lang darunter (kurze Einbrüche zählen nicht)
-const float    AKKU_FEHLT_V         = 2.00f;  // darunter: kein Akku angeschlossen (nur USB) -> kein Abschalten
+const float    AKKU_FEHLT_V         = 2.80f;  // darunter: kein Akku / Messung offen (Float an GPIO35) -> kein Abschalten
 const uint32_t AKKU_LEER_MELDUNG_MS = 10000;  // "Akku leer - bitte laden" so lange zeigen
 const uint32_t AKKU_LEER_SCHLAF_MIN = 15;     // im Tiefschlaf alle 15 min prüfen, ob geladen wird
 const float    AKKU_WIEDERANLAUF_V  = 3.60f;  // erst ab dieser Spannung wieder normal starten (Erholung im Leerlauf)
@@ -1328,10 +1330,18 @@ void akkuLeerAbschalten() {
 }
 
 void akkuSchutzPruefen() {
-  // Kein Akku angeschlossen (nur USB, z. B. beim Testen): Messung liegt nahe 0 V -> nicht abschalten
+  if (!AKKU_ANGESCHLOSSEN) {
+    akkuLeerSeitMs = 0;
+    return;
+  }
+  // Unter 2,8 V: kein Akku / Messung offen (z. B. Float an GPIO35) -> nicht abschalten
   if (akkuVolt < AKKU_FEHLT_V) {
     static bool gemeldet = false;
-    if (!gemeldet) { logZeile("AKKU", "kein Akku erkannt (" + String(akkuVolt, 2) + " V) - Betrieb über USB, kein Akku-Schutz"); gemeldet = true; }
+    if (!gemeldet) {
+      logZeile("AKKU", "kein Akku / Messung offen (" + String(akkuVolt, 2) +
+               " V < " + String(AKKU_FEHLT_V, 2) + " V) - Betrieb über USB, kein Akku-Schutz");
+      gemeldet = true;
+    }
     akkuLeerSeitMs = 0;
     return;
   }
@@ -1353,6 +1363,20 @@ void akkuLesen() {
   static uint32_t letzte = 0;
   if (millis() - letzte < 500) return;
   letzte = millis();
+
+  if (!AKKU_ANGESCHLOSSEN) {
+    static bool gemeldet = false;
+    if (!gemeldet) {
+      logZeile("AKKU", "USB (kein Akku) – Schutz und Warnungen aus (AKKU_ANGESCHLOSSEN=false)");
+      gemeldet = true;
+    }
+    akkuVolt = 0;
+    akkuProzent = 0;
+    akkuStufe = 0;
+    akkuLeerSeitMs = 0;
+    return;
+  }
+
   float v = akkuSpannungMessen();
 #if HYDRO_CYD
   static bool erste = true;            // echt: leicht glätten (WLAN-/LED-Lastspitzen)
@@ -1361,6 +1385,13 @@ void akkuLesen() {
 #else
   akkuVolt = v;                        // Wokwi: Poti-Wert direkt (Tests reagieren sofort)
 #endif
+  // Offene Messung / kein Akku: keine Prozent-Warnungen (LED/Telegram)
+  if (v < AKKU_FEHLT_V || akkuVolt < AKKU_FEHLT_V) {
+    akkuProzent = 0;
+    akkuStufe = 0;
+    akkuSchutzPruefen();
+    return;
+  }
   akkuProzent = akkuProzentAusSpannung(akkuVolt);
   akkuSchutzPruefen();
 
@@ -2045,16 +2076,21 @@ void hauptbildschirmZeichnen() {
     }
   }
 
-  if (geaendert(B_AKKU, String(akkuProzent) + "/" + String(akkuStufe))) {
-    // grün = ok, orange = unter 20 %, rot = unter 10 %
-    uint16_t f = akkuStufe == 2 ? ROT : (akkuStufe == 1 ? ORANGE : GRUEN);
+  if (geaendert(B_AKKU, AKKU_ANGESCHLOSSEN ? String(akkuProzent) + "/" + String(akkuStufe) : String("usb"))) {
     tft.fillRect(194, 0, 46, 26, SCHWARZ);
     tft.fillRect(184, 26, 56, 20, SCHWARZ);
-    tft.drawRect(196, 8, 32, 15, WEISS);
-    tft.fillRect(228, 12, 3, 7, WEISS);
-    tft.fillRect(198, 10, 28 * akkuProzent / 100, 11, f);
-    String p = String(akkuProzent) + "%";
-    text(234 - textBreite(p, 2), 28, p, 2, akkuStufe > 0 ? f : WEISS, SCHWARZ);
+    if (!AKKU_ANGESCHLOSSEN) {
+      text(196, 10, "USB", 2, GRAU, SCHWARZ);
+      text(188, 28, "kein Akku", 1, GRAU, SCHWARZ);
+    } else {
+      // grün = ok, orange = unter 20 %, rot = unter 10 %
+      uint16_t f = akkuStufe == 2 ? ROT : (akkuStufe == 1 ? ORANGE : GRUEN);
+      tft.drawRect(196, 8, 32, 15, WEISS);
+      tft.fillRect(228, 12, 3, 7, WEISS);
+      tft.fillRect(198, 10, 28 * akkuProzent / 100, 11, f);
+      String p = String(akkuProzent) + "%";
+      text(234 - textBreite(p, 2), 28, p, 2, akkuStufe > 0 ? f : WEISS, SCHWARZ);
+    }
   }
 
   // --- Mitte: heute getrunken (größtes Element)
@@ -2360,8 +2396,10 @@ void statusAusgeben() {
            ", voll=" + String(vollgewicht, 0) + " g" +
            ", Kapazität=" + String(flaschenKapazitaetMl) + " ml" +
            (kapazitaetKalibriert ? " (kalibriert)" : "") +
-           " | Akku=" + String(akkuVolt, 2) + " V, " + String(akkuProzent) + " %" +
-           (akkuStufe == 2 ? " (unter 10 %)" : (akkuStufe == 1 ? " (unter 20 %)" : "")) +
+           " | Akku=" + (AKKU_ANGESCHLOSSEN
+             ? String(akkuVolt, 2) + " V, " + String(akkuProzent) + " %" +
+               (akkuStufe == 2 ? " (unter 10 %)" : (akkuStufe == 1 ? " (unter 20 %)" : ""))
+             : String("USB (kein Akku)")) +
            " | nass=" + String(nass ? "ja" : "nein") +
            " | LED-Strom=" + String(digitalRead(PIN_LAST) ? "AN" : "AUS") +
            " | Uhr=" + uhr + (uhrQuelle == UHR_NTP ? " (NTP)" : (uhrQuelle == UHR_ERSATZ ? " (Ersatz)" : "")) +
@@ -2589,15 +2627,24 @@ void setup() {
 
   // Akku-Schutz: aus dem Tiefschlaf aufgewacht? Erst bei genug Spannung normal starten.
   if (akkuLeerSchlaf) {
-    float v = akkuSpannungMessen();
-    if (v < AKKU_WIEDERANLAUF_V) {
-      logZeile("AKKU", "noch leer (" + String(v, 2) + " V < " + String(AKKU_WIEDERANLAUF_V, 2) +
-               " V) -> weiter schlafen");
-      tiefschlafStarten();
-      return;                              // (nur für den PC-Test; echt kommt der Tiefschlaf nicht zurück)
+    if (!AKKU_ANGESCHLOSSEN) {
+      akkuLeerSchlaf = false;
+      logZeile("AKKU", "USB (kein Akku) – Tiefschlaf-Flag gelöscht");
+    } else {
+      float v = akkuSpannungMessen();
+      if (v < AKKU_FEHLT_V) {
+        akkuLeerSchlaf = false;
+        logZeile("AKKU", "kein Akku / Messung offen (" + String(v, 2) + " V) – Tiefschlaf-Flag gelöscht");
+      } else if (v < AKKU_WIEDERANLAUF_V) {
+        logZeile("AKKU", "noch leer (" + String(v, 2) + " V < " + String(AKKU_WIEDERANLAUF_V, 2) +
+                 " V) -> weiter schlafen");
+        tiefschlafStarten();
+        return;                              // (nur für den PC-Test; echt kommt der Tiefschlaf nicht zurück)
+      } else {
+        akkuLeerSchlaf = false;
+        logZeile("AKKU", "Spannung wieder " + String(v, 2) + " V -> normaler Start");
+      }
     }
-    akkuLeerSchlaf = false;
-    logZeile("AKKU", "Spannung wieder " + String(v, 2) + " V -> normaler Start");
   }
 
   if (stromsparen) setCpuFrequencyMhz(CPU_MHZ);   // M4: 80 MHz statt 240 MHz

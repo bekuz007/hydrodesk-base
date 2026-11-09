@@ -161,12 +161,11 @@ notch_w = 8;                               // Ablaufkerbe im Rand (links, Richtu
 rib_t = 1.6;                               // (nicht mehr benutzt)
 chan_w = 15;                               // Breite Freikanal ueber der Zelle (Zelle 12,7)
 pad_sock_y1 = lc_y0 + lc_hole_end + lc_hole_pitch + 4.5;  // Ende Auflage-Sockel (34.5)
-// Korrektur nach Probemontage am echten Geraet (09.11.2026): Mit dem Pad mittig in der Deckel-Oeffnung
-// lagen die M4-Gewinde der Waegezelle ca. 3 mm neben den Pad-Loechern (Richtung -X = CYD/Regensensor-Seite);
-// das Pad lag dadurch links auf dem Deckelrand auf. Darum sind die Pad-Loecher (inkl. Senkung) Langloecher
-// von X = pad_cx + pad_hole_dx - pad_hole_slot bis X = pad_cx (122,5 ... 126): neue Lage passt, alte bleibt nutzbar.
-pad_hole_dx   = -3.0;                      // gemessener Versatz der Zellen-Gewinde gegenueber pad_cx
-pad_hole_slot = 0.5;                       // zusaetzliche Langloch-Laenge ueber pad_hole_dx hinaus (+-1 mm Unsicherheit)
+// Korrektur nach Probemontage am echten Geraet (09.11.2026): Die M4-Gewinde der echten Waegezelle lagen
+// ca. 3 mm naeher an der vorderen Pad-Kante (Y = pad_y0) als die Pad-Loecher (Versatz LAENGS der Zelle, in Y;
+// ein erster Versuch mit Langloch in X war falsch). Darum Pad-Loecher von Y = 15/30 auf 12/27 verschoben
+// (7 und 22 mm von der vorderen Pad-Kante statt 10 und 25), runde Loecher wie vorher.
+pad_hole_dy   = -3.0;                      // Verschiebung der Pad-Loecher in Y (Richtung vordere Pad-Kante)
 pad_plate_z = pad_z0 + pad_under;          // 19.9
 pad_top_z   = pad_plate_z + pad_t;         // 22.3
 pad_rim_top = pad_top_z + rim_h;           // 24.6
@@ -472,10 +471,10 @@ module pad(){
     // Freikanal ueber dem Biegebalken: Pad beruehrt die Zelle NUR am vorderen Ende (Sockel, Y < pad_sock_y1)
     translate([pad_cx-chan_w/2, pad_sock_y1, pad_z0-1]) cube([chan_w, pad_y0+pad_size-pad_sock_y1+1, pad_under+1]);
     // M4-Senkschrauben von oben in das freie Ende der Waegezelle
-    // Langloecher in X (siehe pad_hole_dx): Huelle aus Loch/Senkung bei pad_cx und bei pad_cx+pad_hole_dx-pad_hole_slot
-    for (yy=[lc_y0+lc_hole_end, lc_y0+lc_hole_end+lc_hole_pitch]) {
-      hull() for (xx=[pad_cx, pad_cx+pad_hole_dx-pad_hole_slot]) translate([xx,yy,pad_z0-1]) cylinder(d=4.5, h=10);
-      hull() for (xx=[pad_cx, pad_cx+pad_hole_dx-pad_hole_slot]) translate([xx,yy,pad_top_z-4.3]) cylinder(r1=0, r2=4.3, h=4.3+e);
+    // runde Loecher, um pad_hole_dy in Y verschoben (siehe Kommentar bei pad_hole_dy)
+    for (yy=[lc_y0+lc_hole_end+pad_hole_dy, lc_y0+lc_hole_end+lc_hole_pitch+pad_hole_dy]) {
+      translate([pad_cx,yy,pad_z0-1]) cylinder(d=4.5, h=10);
+      translate([pad_cx,yy,pad_top_z-4.3]) cylinder(r1=0, r2=4.3, h=4.3+e);
     }
   }
 }

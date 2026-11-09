@@ -69,3 +69,4 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Die 3 × 7-cm-Platine hat 10 Spalten (01–10) × 24 Reihen (A–X). Benutzt werden Reihe B–J (10 × 9 Löcher); durch Lochreihe A und K schneiden ergibt ca. 30 × 24,5 mm wie im Gehäuse (`mos_w`/`mos_l`). Der Kommentar „10 x 12 Loecher“ im .scad passt nicht zu diesem Raster (auf 30 mm liegen nur 10 Löcher).
 - Annahme Adapter: AO3401A mittig auf der 0,95-mm-Seite (G/S auf Pad 2/4, D auf dem mittleren Pad gegenüber) → G/S/D an Stift 2/4/8. Vor dem Einlöten mit dem Multimeter prüfen.
 - Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.
+- `fotos/loeten/loeten_5c_fet_3d_oben.png` / `loeten_5c_fet_3d_unten.png` – 3D-Ansicht (Blender) der fertig bestückten FET-Platine nach diesem Plan, nur zum Verstehen (kein Druckteil)

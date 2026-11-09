@@ -80,7 +80,7 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 
 ## 09.11.2026 – Probemontage Gehäuse: Pad-Löcher versetzt
 
-- Problem beim Zusammenbau: Wägezelle von unten mit M5 im Boden festgeschraubt, Pad von oben mit M4 angeschraubt, Deckel drauf. Die Pad-Löcher passten nur, wenn man das Pad zur Seite schiebt. Dann lag das Pad auf der Display-Seite auf dem Deckelrand auf, auf der anderen Seite war ein breiter Spalt (HX711 sichtbar). So misst die Waage falsch.
+- Problem beim Zusammenbau: Wägezelle von unten mit M5 im Boden festgeschraubt, Pad von oben mit M4 angeschraubt, Deckel drauf. Die Pad-Löcher passten nur, wenn man das Pad verschiebt. Dann lag das Pad auf einer Seite auf dem Deckelrand auf, auf der anderen Seite war ein breiter Spalt (HX711 sichtbar). So misst die Waage falsch.
 - Gemessen (im Slicer, von der vorderen Pad-Kante bis zum Loch): Die Pad-Löcher sitzen ca. 3 mm zu weit von der vorderen Kante weg. Der Versatz geht **längs der Wägezelle** (Y), nicht zur Seite.
 - Korrektur: Ein erster Versuch mit Langlöchern zur Seite (X, Commit a8420ac) war falsch und ist zurückgenommen.
 - Änderung im Modell (`gehaeuse/hydrodesk_base.scad`, Parameter `pad_hole_dy = -3`): Die zwei runden M4-Senklöcher im Pad sind 3 mm zur vorderen Pad-Kante gerückt, von 10 und 25 mm auf 7 und 22 mm Abstand (Lochmitte zur Kante). Der Senkkopf-Rand liegt jetzt 2,7 mm von der Außenkante entfernt, der Tropfrand bleibt ganz.

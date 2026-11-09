@@ -209,6 +209,10 @@ Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anl�
 13. **Pad** von oben in die Öffnung legen. Die zwei Senklöcher müssen vorne über den M4-Löchern der Wägezelle liegen.
     Mit 2× M4 × 10 Senkkopf festschrauben. Prüfen: Das Pad darf **nirgends** den Deckel berühren
     (rundherum ca. 1 mm Spalt) – sonst misst die Waage falsch.
+    Die Senklöcher im Pad sind **Langlöcher** (3,5 mm lang, Richtung Kerbe/Display): Pad erst mittig in die Öffnung
+    schieben, dann die Schrauben anziehen. Hintergrund: Bei der Probemontage am 09.11.2026 saßen die M4-Gewinde
+    der echten Wägezelle ca. 3 mm weiter zur Display-Seite als im Modell, das Pad lag dort auf dem Deckelrand auf.
+    Ab dieser Fassung (`pad_hole_dx` / `pad_hole_slot` im .scad) passt beides.
 14. **Silikonmatte** auf 86 × 86 mm zuschneiden und innen in das Pad kleben (deckt die Schraubenköpfe ab).
 15. **Abdeckkappe** hinten in die breite USB-Öffnung drücken, bis der Flansch an der Wand anliegt
     (die Kerbe im Flansch zeigt nach **unten**).

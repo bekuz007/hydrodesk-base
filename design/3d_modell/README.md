@@ -37,3 +37,13 @@ HD_NO_RENDER=1 HD_OUT=../../3d_modell/hydrodesk_komplett  blender -b -P export.p
 HD_NO_RENDER=1 HD_OUT=../../3d_modell/hydrodesk_explosion blender -b -P export.py -- explosion /tmp/x.png 1 10
 python3 make_3mf.py ../../3d_modell/hydrodesk_komplett.glb ../../3d_modell/hydrodesk_komplett.3mf
 ```
+
+## Blender-Dateien (.blend)
+
+| Datei | Inhalt |
+|---|---|
+| `hydrodesk_komplett.blend` | Ganzes Gerät zusammengebaut (aus `hydrodesk_komplett.glb`, Einheit Meter) |
+| `hydrodesk_explosion.blend` | Explosionsansicht aller Teile (aus `hydrodesk_explosion.glb`, Einheit Meter) |
+| `fet_platine.blend` | FET-Platine auf dem Lochraster, wie im Bestückungsplan `loeten_5b` (Einheit Millimeter, mit Kamera und Licht) |
+
+Öffnen mit Blender 4.x (Datei → Öffnen). Die Dateien sind nur zum Anschauen gedacht, nicht zum Drucken.

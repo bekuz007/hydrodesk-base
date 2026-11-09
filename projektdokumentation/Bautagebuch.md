@@ -39,6 +39,7 @@
 - Danach meldet die Firmware weiterhin „HX711 antwortet nicht“. Ursache: keine Stiftleiste angelötet, die Kabel stecken lose in den Löchern → kein sicherer Kontakt.
 - Nächster Schritt: Stiftleiste anlöten (Lötkolben besorgen), danach Waage testen und kalibrieren (`kalib`).
 - Vorbereitet: WLAN-Zugangsdaten werden aus `secrets.h` gelesen (Vorlage `wokwi/secrets.example.h`, Datei ist in `.gitignore`). Ohne `secrets.h` bleibt „Wokwi-GUEST“ für die Simulation.
+- **2026-11-09:** HX711 nach dem Löten erkannt (Rohwert 68194), reagiert auf Druck. Gramm-Anzeige noch falsch (Wokwi-Faktor). Kalibrierung mit neuen Serial-Befehlen `tara` / `eichen <gramm>` folgt.
 
 ## 09.11.2026 – Schritt 3: Regensensor (LM393) testen
 

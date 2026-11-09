@@ -44,6 +44,7 @@
  *  Optional: 3 s Langdruck oder Serial „kalib“ öffnet den Kalibrier-Bildschirm.
  *  Serieller Monitor (115200 Baud): "hilfe", "status", "reset",
  *  "gewicht 75", "groesse 180", "zeit 23:59",
+ *  "tara", "eichen 500" (bekanntes Gewicht in g auf die Waage),
  *  "kalib", "leer", "voll",
  *  "bt suchen", "bt verbunden", "bt getrennt", "bt aus",
  *  "sync" (Uhr-Abgleich per WLAN), "stromsparen 0" / "stromsparen 1"
@@ -1097,7 +1098,7 @@ void waageLesen() {
   letzteWaageMs = jetzt;
 
   rohMittel = rohMittel * 0.75f + roh * 0.25f;                       // glätten
-  if (fabsf(roh - rohMittel) > 100.0f * faktor) rohMittel = roh;     // große Sprünge sofort
+  if (fabsf(roh - rohMittel) > 100.0f * fabsf(faktor)) rohMittel = roh; // große Sprünge sofort
   gewicht = (rohMittel - tara) / faktor;
 
   if (fabsf(gewicht - ruheStartGewicht) > STABIL_TOLERANZ_G) {
@@ -2296,7 +2297,7 @@ void drawUI() {
 //  SERIELLE BEFEHLE
 // ============================================================================
 void hilfeAusgeben() {
-  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | hilfe"));
+  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | tara | eichen <g> | hilfe"));
   Serial.println(F("Flasche:  kalib | leer | voll"));
   Serial.println(F("Energie:  stromsparen 0 | stromsparen 1 | sync (Uhr per WLAN abgleichen)"));
 #if HYDRO_BLE
@@ -2351,6 +2352,8 @@ void statusAusgeben() {
            (erinnerungPauseAktiv() ? " Pause" : "") +
            " | Profil=" + String(profilKg, 1) + " kg/" + String(profilCm) + " cm" +
            " | Gewicht=" + String((int)lroundf(gewicht)) + " g" + (gewichtRuhig ? " (ruhig)" : " (unruhig)") +
+           " | Roh=" + String(rohMittel, 0) +
+           " | Faktor=" + String(faktor, 4) +
            " | Flasche=" + String(flascheninhaltMl()) + " ml" +
            ", leer=" + String(leergewicht, 0) + " g" +
            (flascheKalibriert ? " (kalibriert)" : (leergewichtGelernt ? " (gelernt)" : " (Schätzwert)")) +
@@ -2450,6 +2453,27 @@ void serielleBefehle() {
         logZeile("UHR", "Uhr von Hand gestellt (NTP kann sie später wieder korrigieren)");
       } else {
         Serial.println(F("Format: zeit HH:MM, z. B. \"zeit 23:59\""));
+      }
+    } else if (befehl == "tara") {
+      taraSetzen();
+    } else if (befehl == "eichen") {
+      float gramm = wert.toFloat();
+      if (wert.length() == 0 || gramm <= 0.0f) {
+        Serial.println(F("Format: eichen <gramm>, z. B. \"eichen 500\" (bekanntes Gewicht auflegen)"));
+      } else {
+        float delta = rohMittel - tara;
+        float neu = delta / gramm;
+        if (fabsf(neu) < 0.01f) {
+          Serial.println(F("Faktor zu klein (|faktor| < 0.01). Gewicht prüfen, Tara erneut setzen."));
+        } else {
+          faktor = neu;
+          speicher.putFloat("faktor", faktor);
+          gewicht = (rohMittel - tara) / faktor;
+          logZeile("WAAGE", "Geeicht: Faktor=" + String(faktor, 4) +
+                   " (Roh=" + String(rohMittel, 0) + ", Tara=" + String(tara, 0) +
+                   ", Ref=" + String(gramm, 0) + " g) → " +
+                   String((int)lroundf(gewicht)) + " g");
+        }
       }
     } else if (befehl == "kalib" || befehl == "kalibrierung") {
       if (zustand == NAESSE_SPERRE) {

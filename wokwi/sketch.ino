@@ -155,9 +155,16 @@ const int      RUHE_ENDE_STUNDE           = 7;       // ... bis 07:00 (keine Eri
 // secrets.h auslagern (die nicht ins Git kommt), z. B.
 //   #define WLAN_SSID_GEHEIM "MeinWLAN"
 //   #define WLAN_PASS_GEHEIM "geheim"
+#if __has_include("secrets.h")
+#include "secrets.h"                            // echtes Gerät: eigenes WLAN (nicht im Git)
+const char*    WLAN_SSID            = WLAN_SSID_GEHEIM;
+const char*    WLAN_PASS            = WLAN_PASS_GEHEIM;
+const int      WLAN_KANAL           = 0;        // 0 = Kanal automatisch suchen
+#else
 const char*    WLAN_SSID            = "Wokwi-GUEST";
 const char*    WLAN_PASS            = "";
 const int      WLAN_KANAL           = 6;
+#endif
 const char*    ZEITZONE             = "CET-1CEST,M3.5.0,M10.5.0/3"; // Deutschland inkl. Sommerzeit
 const char*    NTP_SERVER           = "pool.ntp.org";
 const uint32_t NTP_WARTEZEIT_MS     = 10000;  // danach Ersatzuhr ab 12:00

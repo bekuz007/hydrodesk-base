@@ -32,3 +32,10 @@
 3. Ohne Akku misst der Akku-Eingang ca. 0,5–0,6 V. Die Firmware hat das als „Akku leer“ gewertet und wollte nach 60 s abschalten → neu: unter 2,0 V gilt „kein Akku angeschlossen“, dann kein Akku-Schutz (`AKKU_FEHLT_V`).
 
 **Ergebnis (serieller Monitor):** Display und Touch bereit, Bluetooth „HydroDesk“ sucht, Zustand IDLE, nach 70 s keine Abschaltung. Erwartet und noch offen: „HX711 antwortet nicht“ (Waage noch nicht angeschlossen), kein WLAN (noch keine Zugangsdaten), LED-Streifen bleibt dunkel (die Firmware nutzt GPIO23, der Streifen hängt zum Testen noch an IO27).
+
+## 09.11.2026 – Schritt 2: Waage (HX711) anschließen
+
+- HX711 lag quer auf dem Steckbrett: Alle Pins einer Leiste steckten in derselben Reihe → Kurzschluss VCC–GND, CYD ging aus. Lösung: HX711 um 90° gedreht, jeder Pin in eigener Reihe.
+- Danach meldet die Firmware weiterhin „HX711 antwortet nicht“. Ursache: keine Stiftleiste angelötet, die Kabel stecken lose in den Löchern → kein sicherer Kontakt.
+- Nächster Schritt: Stiftleiste anlöten (Lötkolben besorgen), danach Waage testen und kalibrieren (`kalib`).
+- Vorbereitet: WLAN-Zugangsdaten werden aus `secrets.h` gelesen (Vorlage `wokwi/secrets.example.h`, Datei ist in `.gitignore`). Ohne `secrets.h` bleibt „Wokwi-GUEST“ für die Simulation.

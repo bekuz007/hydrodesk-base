@@ -10,7 +10,7 @@ from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
 
 argv = sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else ['check', '/tmp/x.png']
-MODE = argv[0]; OUT = argv[1]; SAMPLES = int(argv[2]) if len(argv) > 2 else 128
+MODE = argv[0]; OUT = argv[1]; SAMPLES = int(argv[2]) if len(argv) > 2 and argv[2].isdigit() else 128
 PCT = int(argv[3]) if len(argv) > 3 else 100
 HERE = os.path.dirname(os.path.abspath(__file__)) + '/'
 sys.path.insert(0, HERE)
@@ -847,16 +847,16 @@ def define_wires():
     # ---- Schalter (Pins oben/Mitte/unten = AN/Mitte/AUS, Annahme) ----
     def sw_start(key):
         z = A[key].z
-        return [(V(6.9, 27.0, z), 'sw'), V(11.5, 27.0, z), V(14.4, 27.0 + 0.25*(z-7.1), z)]
+        return [(V(6.9, 27.0, z), 'sw'), V(11.5, 27.0, z), V(15.4, 27.0 + 0.25*(z-7.1), z)]
     e = A['fet9']
     wire('Schalter AN -> FET Pad 9 (GND)', 'b', RV, sw_start('sw_an') + [V(17.6, 32.0, 8.6), V(20.5, 36.0, 7.6), V(26.0, 37.0, 7.2), V(40.0, 37.4, 7.2),
-         V(46.0, 37.9, 7.4), V(52.0, 38.8, 7.6), V(66.8, 38.8, 7.6), V(68.47, 40.6, 7.6), (up(e, 2.0), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
+         V(46.0, 37.9, 8.0), V(52.0, 38.8, 8.6), V(66.8, 38.8, 8.6), V(68.47, 40.6, 8.4), (up(e, 2.0), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
     e = A['fet7']
-    wire('Schalter Mitte -> FET Pad 7 (Gate Q2)', 'g', RV, sw_start('sw_mid') + [V(16.2, 31.0, 7.1), V(16.8, 38.0, 9.2), V(17.4, 41.4, 12.9), V(19.4, 44.2, 14.5),
-         V(46.0, 57.2, 14.8), V(52.0, 56.6, 14.8), V(56.6, 55.67, 11.6), V(59.4, 55.67, 10.4), (up(e, 2.4), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
+    wire('Schalter Mitte -> FET Pad 7 (Gate Q2)', 'g', RV, sw_start('sw_mid') + [V(16.2, 31.0, 7.1), V(16.8, 38.0, 9.2), V(17.4, 41.4, 12.9), V(19.4, 44.2, 14.8), V(30.0, 47.2, 15.3),
+         V(41.0, 48.8, 15.3), V(46.0, 52.2, 15.3), V(52.0, 56.4, 15.0), V(56.6, 55.67, 11.6), V(59.4, 55.67, 10.4), (up(e, 2.4), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
     e = A['fet8']
-    wire('Schalter AUS -> FET Pad 8 (Source Q2)', 'y', RV, sw_start('sw_aus') + [V(15.3, 31.0, 5.4), V(15.6, 38.0, 8.6), V(16.2, 41.4, 12.8), V(18.0, 45.4, 14.5),
-         V(45.6, 59.0, 14.8), V(56.0, 64.4, 14.8), V(59.0, 65.6, 12.2), V(60.6, 65.83, 10.4), (up(e, 2.4), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
+    wire('Schalter AUS -> FET Pad 8 (Source Q2)', 'y', RV, sw_start('sw_aus') + [V(16.0, 31.0, 5.6), V(16.0, 38.0, 8.6), V(16.6, 41.4, 12.8), V(18.0, 45.6, 14.8), V(30.0, 49.0, 15.3),
+         V(41.0, 50.5, 15.3), V(45.6, 59.0, 15.3), V(56.0, 64.4, 15.0), V(59.0, 65.6, 12.2), V(60.6, 65.83, 10.4), (up(e, 2.4), None), (up(e, 0.25), 'fet')], a='shrink', shrink=[(0.0, 4.6)])
     # ---- Pololu (Loecher hinten: VIN x 26,86 / GND 29,40 / VOUT 31,94) ----
     vo, gn, vi = A['pol_vout'], A['pol_gnd'], A['pol_vin']
     S3, S1 = A['S3'], A['S1']
@@ -869,10 +869,10 @@ def define_wires():
          V(40.0, 35.8, 9.6), V(45.2, 36.8, 11.4), V(47.0, 40.0, 12.8), V(47.4, 44.4, 14.6), V(48.6, 47.4, 15.2), V(56.0, 49.0, 15.2), V(62.2, 50.4, 14.8), (up(e, 2.6), None), (up(e, 0.25), 'fet')])
     e = A['fet2']
     wire('Pololu GND -> FET Pad 2 (GND)', 'b', RV, [(up(gn, 0.25), 'pol'), up(gn, 1.2), V(gn.x+0.6, 34.2, 5.8), V(33.6, 34.5, 5.9),
-         V(40.0, 34.8, 9.4), V(45.8, 36.0, 12.0), V(48.0, 40.4, 13.8), V(48.2, 44.6, 15.4), V(50.4, 47.4, 15.9), V(60.0, 47.0, 15.9), V(69.0, 46.2, 15.6), (up(e, 2.6), None), (up(e, 0.25), 'fet')])
+         V(40.0, 34.8, 9.4), V(45.8, 36.0, 12.0), V(48.0, 40.4, 13.8), V(48.2, 44.6, 15.4), V(50.4, 47.4, 15.9), V(60.0, 47.0, 15.9), V(70.6, 46.3, 15.8), V(71.01, 45.7, 12.5), (up(e, 2.6), None), (up(e, 0.25), 'fet')])
     e = A['fet10']
     wire('FET Pad 10 (Drain Q2) -> Pololu VIN', 'r', RV, [(up(vi, 0.25), 'pol'), up(vi, 0.9), V(vi.x+0.4, 34.6, 5.0), V(28.0, 35.4, 4.8),
-         V(36.0, 35.6, 4.6), V(44.0, 35.8, 5.0), V(46.4, 37.0, 5.4), V(46.8, 39.0, 6.2), V(47.0, 41.0, 8.8), V(47.6, 43.6, 11.6), V(49.6, 47.6, 12.2),
+         V(36.0, 35.6, 4.6), V(44.0, 35.8, 5.0), V(46.2, 37.0, 5.6), V(46.4, 39.0, 7.2), V(46.9, 41.0, 9.2), V(47.6, 43.6, 11.6), V(49.6, 47.6, 12.2),
          V(54.0, 51.4, 12.2), V(59.4, 53.13, 11.4), (up(e, 2.4), None), (up(e, 0.25), 'fet')])
     # ---- Akku-Teiler 2 x 10 kOhm im Schrumpfschlauch (x 51,3; y 22,5-33,5), Mitte -> IO35 (P3) ----
     wire('Teiler oben -> Pololu VIN', 'r', RV, [(up(vi, 0.25), 'pol'), up(vi, 1.6), V(vi.x-0.2, 34.2, 4.4), V(28.0, 34.3, 4.2), V(36.0, 34.3, 4.2),
@@ -888,14 +888,14 @@ def define_wires():
     # ---- CN1 -> HX711 (VCC/SCK/DT/GND) mit Abzweig 3,3 V / GND zum LM393 ----
     cn = A['cn1']   # GND, IO22(SCK), IO27(DT), 3V3(VCC)
     hxk = {0: 'hx_gnd', 1: 'hx_sck', 2: 'hx_dt', 3: 'hx_vcc'}
-    xlane = {0: 133.0, 1: 133.95, 2: 134.9, 3: 135.85}; zlane = {0: 6.4, 1: 6.4, 2: 7.6, 3: 6.4}
+    xlane = {0: 134.4, 1: 135.3, 2: 136.2, 3: 137.1}; zlane = {0: 7.4, 1: 7.4, 2: 8.6, 3: 7.4}
     colc = {0: 'k', 1: 'b', 2: 'y', 3: 'r'}
     for i in range(4):
-        e = A[hxk[i]]; xl = xlane[i]; zl = zlane[i]; yi = cn[i].y; xx = 75.7 + (3-i)*0.95; yb = 94.0 + i*0.92
+        e = A[hxk[i]]; xl = xlane[i]; zl = zlane[i]; yi = cn[i].y; xx = 75.7 + (3-i)*0.95; yb = 94.0 + i*0.92; xt = 85.0 + (3-i)*0.92
         pts = [(cn[i], 'cyd'), V(66.0, yi, 16.5), V(72.0, yi+0.4, 15.6), V(xx, 46.0+i*0.3, 10.0), V(xx, 50.0, 5.0), V(xx, 54.0, 3.8),
-               V(xx, 62.0, 3.8), V(xx, 70.0, 3.8), V(xx, 78.0, 3.8), V(xx, 84.0, 3.8), V(xx+1.2, 87.0+i*0.5, 3.8), V(xx+4.0, yb, 3.5)]
-        pts += [V(x_, yb, 3.4) for x_ in (90.0, 98.0, 106.0, 114.0, 122.0, 128.0)]
-        pts += [V(xl-1.6, yb, 3.6), V(xl, yb-1.6, 4.4), V(xl, 88.0, 5.4), V(xl, 82.0, zl), V(xl, e.y+1.4, zl), V(xl+1.2, e.y, zl),
+               V(xx, 62.0, 3.8), V(xx, 70.0, 3.8), V(xx, 78.0, 3.8), V(xx, 84.0, 3.8), V(xx+1.0, 86.0+i*0.92, 3.8), V(82.0, 86.0+i*0.92, 3.7), V(xt-1.2, 86.0+i*0.92, 3.6), V(xt, 87.2+i*0.92, 3.6), V(xt, yb-1.2, 3.5), V(xt+1.2, yb, 3.5)]
+        pts += [V(x_, yb, 3.4) for x_ in (93.0, 98.0, 106.0, 114.0, 122.0, 128.0)]
+        pts += [V(xl-1.6, yb, 3.6), V(xl, yb-1.6, 5.0), V(xl, 88.0, 7.0), V(xl, 82.0, zl), V(xl, e.y+1.4, zl), V(xl+1.2, e.y, zl),
                 V(e.x-1.4, e.y, zl-0.6), (up(e, 1.8), None), (up(e, 0.25), 'hx')]
         nm = {0: 'GND', 1: 'IO22 -> SCK', 2: 'IO27 -> DT', 3: '3V3 -> VCC'}[i]
         sh = [(V(61.0, yi, 16.5), 2.2)] if i in (0, 3) else []
@@ -917,31 +917,32 @@ def define_wires():
          V(46.0, 19.3, 5.0), V(52.0, 19.3, 5.2), V(55.0, 19.3, 6.6), V(59.0, 19.3, 6.6), V(63.6, 17.0, 6.4), V(e.x, 13.0, 5.6),
          (up(e, 1.6), None), (up(e, 0.25), 'cmp')], a='under')
     # ---- COB-Streifen: weiss GND -> Pad 4, rot 5 V -> Pad 3 (Drain Q1), gruen DIN -> 470 Ohm -> SD-Kontakt 3 (GPIO23) ----
+    ST = {'cob_gnd': [V(11.0, 7.9, 10.0), V(13.0, 8.4, 8.0)], 'cob_5v': [V(11.2, 8.3, 7.0), V(12.4, 9.5, 5.6)], 'cob_din': [V(11.2, 8.6, 8.6), V(12.6, 10.4, 7.0)]}
     def cob_start(key):
         s = A[key]
-        return [(s, 'led'), V(s.x-1.4, 4.75, s.z), V(9.75, 5.2, s.z), V(9.65, 6.5, s.z), V(9.9, 7.6, s.z)]
+        return [(s, 'led'), V(s.x-1.4, 4.75, s.z), V(9.75, 5.2, s.z), V(9.65, 6.5, s.z), V(9.9, 7.6, s.z)] + ST[key]
     e = A['fet4']
-    wire('COB weiss (GND) -> FET Pad 4 (GND)', 'w', 0.5, cob_start('cob_gnd') + [V(12.0, 8.4, 7.4), V(15.0, 8.6, 4.4), V(22.0, 8.6, 4.1),
+    wire('COB weiss (GND) -> FET Pad 4 (GND)', 'w', 0.5, cob_start('cob_gnd') + [V(15.6, 8.6, 4.4), V(22.0, 8.6, 4.1),
          V(30.0, 8.6, 4.1), V(38.0, 8.6, 4.1), V(46.0, 8.6, 4.1), V(52.4, 9.0, 4.2), V(55.25, 12.6, 4.4), V(55.25, 20.0, 4.5), V(55.25, 27.0, 4.5),
          V(55.25, 32.0, 5.0), V(55.9, 35.6, 6.4), V(58.0, 38.0, 6.4), V(64.0, 38.0, 6.4), V(69.6, 38.0, 6.4), V(71.01, 40.0, 6.6),
          (up(e, 1.8), None), (up(e, 0.25), 'fet')])
     e = A['fet3']
-    wire('COB rot (5 V) -> FET Pad 3 (Drain Q1)', 'r', 0.5, cob_start('cob_5v') + [V(12.0, 9.6, 5.6), V(15.0, 9.6, 4.3), V(22.0, 9.6, 4.1),
+    wire('COB rot (5 V) -> FET Pad 3 (Drain Q1)', 'r', 0.5, cob_start('cob_5v') + [V(15.0, 9.6, 4.3), V(22.0, 9.6, 4.1),
          V(30.0, 9.6, 4.1), V(38.0, 9.6, 4.1), V(46.0, 9.6, 4.1), V(51.4, 9.9, 4.2), V(54.2, 13.0, 4.4), V(54.2, 20.0, 4.5), V(54.2, 27.0, 4.5),
          V(54.2, 32.0, 5.4), V(54.4, 36.0, 6.8), V(55.4, 39.4, 7.0), V(57.4, 40.6, 7.0), V(60.85, 41.4, 7.0), (up(e, 1.8), None), (up(e, 0.25), 'fet')])
-    wire('COB gruen (DIN) -> 470 Ohm -> SD-Kontakt 3 (GPIO23)', 'g', 0.5, cob_start('cob_din') + [V(12.4, 10.6, 7.0), V(15.0, 10.6, 4.4),
+    wire('COB gruen (DIN) -> 470 Ohm -> SD-Kontakt 3 (GPIO23)', 'g', 0.5, cob_start('cob_din') + [V(15.0, 10.6, 4.4),
          V(22.0, 10.6, 4.2), V(30.0, 10.6, 4.2), V(35.6, 10.6, 4.4), V(37.3, 12.4, 5.6), V(37.3, 18.0, 9.0), V(37.3, 24.0, 12.2), V(37.3, 30.0, 12.6),
          V(37.3, 36.0, 12.8), V(37.3, 42.0, 12.95), V(37.3, 50.0, 12.95), V(37.3, sd3.y-0.6, 13.6), V(38.3, sd3.y, 15.4), V(38.9, sd3.y, 17.2),
          (sd3 + V(0, 0, -0.05), 'cyd')], b='under', shrink=[(V(25.0, 10.6, 4.2), 5.0, 0.55)])
     # ---- Regenplatte -> LM393 (2 Dupont-Litzen, Stecker abgeschnitten, an die Winkelstifte geloetet) ----
-    for key, tgt, c, xl, yf, yt in (('rs_1', 'cmp_s1', 'o', 74.0, 14.0, 34.0), ('rs_2', 'cmp_s2', 'y', 75.2, 15.2, 35.0)):
+    for key, tgt, c, xl, yf, yt in (('rs_1', 'cmp_s1', 'o', 74.0, 14.0, 33.6), ('rs_2', 'cmp_s2', 'y', 75.2, 15.2, 35.0)):
         s = A[key]; e = A[tgt]
         wire('Regenplatte -> LM393 Sensor-Eingang (%s)' % ('orange' if c == 'o' else 'gelb'), c, 0.55, [(s + V(0, 2.4, 0), 'rs'), V(s.x, s.y-1.4, s.z+0.2), V(s.x-1.6, yf, 4.6), V(88.0, yf, 5.0),
              V(xl+2.5, yf+0.4, 5.6), V(xl, yf+4.0, 5.8), V(xl, yf+10.0, 5.9), V(xl, yt-2.0, 6.0), V(xl-1.6, yt, 6.0), V(e.x+1.5, yt, 5.6),
              V(e.x, yt + (1.0 if c == 'o' else 0.2), 5.4), (up(e, 1.6), None), (up(e, 0.25), 'cmp')], a='shrink', shrink=[(0.0, 5.0)])
     # ---- Waegezelle -> HX711 J1 ----
     for i, (key, tgt, c) in enumerate((('lc_r', 'hx_e+', 'r'), ('lc_k', 'hx_e-', 'k'), ('lc_w', 'hx_a-', 'w'), ('lc_g', 'hx_a+', 'g'))):
-        s = A[key]; e = A[tgt]; xl = {0: 170.6, 1: 169.6, 2: 168.6, 3: 167.6}[i]; yb = 92.4 + i*0.95
+        s = A[key]; e = A[tgt]; xl = {0: 170.6, 1: 169.6, 2: 168.6, 3: 167.6}[i]; yb = 92.4 + (3-i)*0.95
         wire('Waegezelle %s -> HX711 J1' % {0: 'rot E+', 1: 'schwarz E-', 2: 'weiss A-', 3: 'gruen A+'}[i], c, 0.38, [(s, 'lc'), V(s.x, s.y+1.2, s.z-0.6),
              V(s.x+2.0, yb, s.z-3.0), V(136.0, yb, 8.6), V(146.0, yb, 8.0), V(156.0, yb, 7.6), V(xl-1.6-(3-i)*0.0, yb, 7.2), V(xl, yb-1.8, 7.0), V(xl, 86.0, 6.8),
              V(xl, 80.0, 6.8), V(xl, e.y+1.4, 6.6), V(xl-1.2, e.y, 6.2), V(e.x+1.0, e.y, 5.8), (up(e, 2.0), None), (up(e, 0.25), 'hx')], a='none')
@@ -1054,7 +1055,7 @@ def xray(objs, alpha=0.18):
             mx = m.copy(); mx.name = m.name + ' (Roentgen)'; nt = mx.node_tree
             out = nt.nodes['Material Output']; src = out.inputs['Surface'].links[0].from_node
             tr = nt.nodes.new('ShaderNodeBsdfTransparent'); mix = nt.nodes.new('ShaderNodeMixShader')
-            mix.inputs['Fac'].default_value = alpha
+            mix.inputs['Fac'].default_value = 1.0 - alpha
             nt.links.new(tr.outputs[0], mix.inputs[1]); nt.links.new(src.outputs[0], mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs['Surface'])
             o.data.materials[i] = mx
 
@@ -1160,6 +1161,7 @@ build_all()
 
 if MODE == 'check':
     set_offsets({}); build_wires(); check()
+    if len(argv) > 2: exec(open(argv[2]).read())
 
 elif MODE == 'save':
     set_offsets({}); build_wires()
@@ -1189,7 +1191,10 @@ else:
     cyd_parts = [o for o in GROUPS['cyd'].children_recursive if o.type == 'MESH']
     if MODE == 'offen':
         set_offsets({}); hide(['cover', 'pad', 'mat', 'm3', 'm4']); build_wires()
-        xray([o for o in cyd_parts if o.name.startswith('CYD Platine') or o.name.startswith('TFT')], 0.86)
+        # Display-Modul ausblenden, Platine fast durchsichtig: Bauteile + Litzen darunter bleiben sichtbar
+        for o in cyd_parts:
+            if o.name.startswith('TFT') or 'Screen' in o.name or 'Display' in o.name: o.hide_render = True
+        xray([o for o in cyd_parts if o.name.startswith('CYD Platine')], 0.9)
         world_hdri(0.9, 30); sun('Key', (28, 0, 20), 2.6, 6); sun('Fill', (55, 0, 200), 0.6, 30)
         backdrop(-4.6, (0.55, 0.56, 0.58))
         cam = camera((90.0, 50.0, 10), 0, 90, 600, ortho=192)

@@ -60,4 +60,12 @@ Ein Bild pro Lötschritt, alle Pins und Werte aus `gehaeuse/ANLEITUNG.md` (Absch
 5. `fotos/loeten/loeten_5_fet_platine.png` – FET-Platine H1: Q1 AO3401A, BC547B, 10 kΩ, 4,7 kΩ, 47 kΩ, Elko 470 µF/25 V
 6. `fotos/loeten/loeten_6_led_regensensor.png` – LED-Streifen (470 Ω in DIN) und Regensensor (DO an GPIO19)
 
-Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen, wo der Regensensor seine 3,3 V abgreift und wie die Bauteile auf dem Lochraster liegen.
+Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und wo der Regensensor seine 3,3 V abgreift.
+
+### Bestückungsplan FET-Platine (Lochraster 3 × 7 cm)
+
+- `fotos/loeten/loeten_5b_lochraster_layout.png` – Bauteilseite: Q1/Q2 (AO3401A auf SOT-23-Adapter, Reihe B–E), T1 BC547B, R1 10 kΩ, R2 4,7 kΩ, R3/R4 47 kΩ (stehend), Elko C1 liegend (+ H04, − J04), Anschlusspunkte 1–10
+- `fotos/loeten/loeten_5b_lochraster_unterseite.png` – Lötseite gespiegelt: Lötbrücken, 2 isolierte Drähte (B03 → F01 LED +, B08 → F05 VIN), Prüfliste
+- Die 3 × 7-cm-Platine hat 10 Spalten (01–10) × 24 Reihen (A–X). Benutzt werden Reihe B–J (10 × 9 Löcher); durch Lochreihe A und K schneiden ergibt ca. 30 × 24,5 mm wie im Gehäuse (`mos_w`/`mos_l`). Der Kommentar „10 x 12 Loecher“ im .scad passt nicht zu diesem Raster (auf 30 mm liegen nur 10 Löcher).
+- Annahme Adapter: AO3401A mittig auf der 0,95-mm-Seite (G/S auf Pad 2/4, D auf dem mittleren Pad gegenüber) → G/S/D an Stift 2/4/8. Vor dem Einlöten mit dem Multimeter prüfen.
+- Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.

@@ -764,6 +764,25 @@ void textMitte(int16_t x0, int16_t breite, int16_t y, const String& s, uint8_t g
   text(x0 + (breite - textBreite(s, groesse)) / 2, y, s, groesse, farbe, hinter);
 }
 
+// Text mittig in einen Kasten (x0, breite) setzen, der 28-30 px hoch ist (y = Kasten-Oberkante).
+// Passt er in Größe 2 -> groß, sonst Größe 1 einzeilig, sonst Größe 1 auf zwei Zeilen
+// (Umbruch am letzten Leerzeichen, das noch passt). So wird nie etwas abgeschnitten.
+void textImKasten(int16_t x0, int16_t breite, int16_t y, int16_t hoehe, const String& s,
+                  uint16_t farbe, uint16_t hinter) {
+  int16_t platz = breite - 8;
+  if (textBreite(s, 2) <= platz) { textMitte(x0, breite, y + (hoehe - 16) / 2, s, 2, farbe, hinter); return; }
+  if (textBreite(s, 1) <= platz) { textMitte(x0, breite, y + (hoehe - 8) / 2, s, 1, farbe, hinter); return; }
+  int teil = -1;
+  for (int i = 0; i < (int)s.length(); i++) {
+    if (s[i] == ' ' && textBreite(s.substring(0, i), 1) <= platz) teil = i;
+  }
+  String a = teil > 0 ? s.substring(0, teil) : s;
+  String b = teil > 0 ? s.substring(teil + 1) : "";
+  int16_t oben = y + (hoehe - 18) / 2;
+  textMitte(x0, breite, oben, a, 1, farbe, hinter);
+  textMitte(x0, breite, oben + 10, b, 1, farbe, hinter);
+}
+
 // Haken (✓) aus Linien, weil der Standard-Font keinen hat
 void haken(int16_t x, int16_t y, uint16_t farbe) {
   for (int8_t d = 0; d < 3; d++) {
@@ -1599,11 +1618,11 @@ bool gewichtKalibStabil() {
 
 bool flascheGewichtNehmen(float& g, const char* was) {
   if (gewicht < FLASCHE_DA_G) {
-    kalibMeldungSetzen(String("Keine Flasche – bitte ") + was + " aufstellen", true);
+    kalibMeldungSetzen(String("Erst ") + was + " aufstellen", true);
     return false;
   }
   if (!gewichtKalibStabil()) {
-    kalibMeldungSetzen("Gewicht unruhig – ca. 1 s warten", true);
+    kalibMeldungSetzen("Gewicht unruhig - kurz warten", true);
     return false;
   }
   g = gewicht;
@@ -2209,7 +2228,7 @@ void hauptbildschirmZeichnen() {
   if (meldungAktiv) {
     st = kalibMeldung;
     bool fehler = kalibMeldung.indexOf("muss") >= 0 || kalibMeldung.indexOf("Zuerst") >= 0 ||
-                  kalibMeldung.indexOf("Keine") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
+                  kalibMeldung.indexOf("Erst ") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
     sf = fehler ? DUNKELROT : DUNKELGRUEN;
     sc = WEISS;
   } else if (touchGehalten && !langdruckErledigt && millis() - touchStartMs >= 1000) {
@@ -2230,9 +2249,8 @@ void hauptbildschirmZeichnen() {
   }
   if (geaendert(B_STATUS, st + String(sf))) {
     tft.fillRect(0, 284, BREITE, 36, SCHWARZ);
-    bool gross = textBreite(st, 2) <= 224;
     if (sf != SCHWARZ) tft.fillRoundRect(6, 286, 228, 30, 6, sf);
-    textMitte(6, 228, gross ? 294 : 297, st, gross ? 2 : 1, sc, sf);
+    textImKasten(6, 228, 286, 30, st, sc, sf);
   }
 }
 
@@ -2287,11 +2305,10 @@ void kalibrierbildschirmZeichnen() {
     bool meldungAktiv = kalibMeldung.length() > 0 && (int32_t)(kalibMeldungBisMs - millis()) > 0;
     if (meldungAktiv) {
       bool fehler = kalibMeldung.indexOf("muss") >= 0 || kalibMeldung.indexOf("Zuerst") >= 0 ||
-                    kalibMeldung.indexOf("Keine") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
+                    kalibMeldung.indexOf("Erst ") >= 0 || kalibMeldung.indexOf("unruhig") >= 0;
       uint16_t mf = fehler ? DUNKELROT : DUNKELGRUEN;
       tft.fillRoundRect(6, 160, 228, 28, 6, mf);
-      uint8_t mg = textBreite(kalibMeldung, 2) <= 220 ? 2 : 1;
-      textMitte(6, 228, mg == 2 ? 168 : 170, kalibMeldung, mg, WEISS, mf);
+      textImKasten(6, 228, 160, 28, kalibMeldung, WEISS, mf);
     } else if (kalSchritt == 0) {
       text(8, 168, "Schritt 1: leere Flasche, dann Leer", 1, HELLGRAU, SCHWARZ);
     } else if (kalSchritt == 1) {

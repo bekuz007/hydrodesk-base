@@ -39,3 +39,10 @@
 - Danach meldet die Firmware weiterhin „HX711 antwortet nicht“. Ursache: keine Stiftleiste angelötet, die Kabel stecken lose in den Löchern → kein sicherer Kontakt.
 - Nächster Schritt: Stiftleiste anlöten (Lötkolben besorgen), danach Waage testen und kalibrieren (`kalib`).
 - Vorbereitet: WLAN-Zugangsdaten werden aus `secrets.h` gelesen (Vorlage `wokwi/secrets.example.h`, Datei ist in `.gitignore`). Ohne `secrets.h` bleibt „Wokwi-GUEST“ für die Simulation.
+
+## 09.11.2026 – Schritt 3: Regensensor (LM393) testen
+
+- Aufbau ohne Löten über CN1: 3V3 → VCC, GND → GND, IO27 → DO, AO frei; Sensorplatte mit 2 Kabeln am Modul (Plan: `fotos/schritt3_regensensor.png`).
+- Testprogramm `tests/regensensor_test` liest IO27 (INPUT_PULLUP) alle 0,5 s und gibt „trocken“ / „NASS“ aus.
+- Ergebnis: Power-LED an. Mit Wassertropfen auf der Platte geht die zweite LED am Modul an, und der ESP32 meldet „NASS“. **Test bestanden.**
+- Im fertigen Gerät kommt DO an GPIO19 (SD-Slot, muss gelötet werden).

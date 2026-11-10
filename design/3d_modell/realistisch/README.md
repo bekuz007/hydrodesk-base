@@ -13,6 +13,8 @@ Gehäuse aus den echten Druck-STLs, alle Platinen mit echten Maßen und Fototext
 | `../../visualisierung/realistisch/hydrodesk_real_d_detail_sd_fet.png` | Nahaufnahme: Litzen am SD-Slot des CYD und FET-Platine |
 | `../../visualisierung/realistisch/hydrodesk_real_e_produkt.png` | Fertiges Gerät, geschlossen |
 
+Stand 10.11.2026: Flaschenplatte mit den Löchern aus der Probemontage (rund Ø 4,8, Mitte 7 und 22 mm von der vorderen Pad-Kante) und die M4-Schrauben an dieser Stelle; .blend/.glb neu gespeichert. Die vier Bilder im Haupt-README (`design/visualisierung/hydrodesk_*.png`) kommen aus diesem Modell (`design/visualisierung/realistisch/render_readme.sh`).
+
 Neu erzeugen (Blender 4.5): `design/visualisierung/realistisch/render_all.sh [Samples]`
 (Quellcode: `src/real_scene.py`, CYD-Rückseite: `src/cyd_layout.py`, Texturen: `src/real_tex.py`).
 Prüfung: `blender -b -P src/real_scene.py -- check x` meldet Kabel, die durch Teile/Wände gehen oder sich überschneiden – aktueller Stand: **34 Litzen, 0 Kollisionen, 0 Überlappungen, zusammen ca. 2,33 m Litze**.

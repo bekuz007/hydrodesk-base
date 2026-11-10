@@ -803,7 +803,7 @@ def make_screws():
         for i, (x, y) in enumerate([(cyd_x+u, cyd_y+v) for (u, v) in cyd_holes_uv] + cov_bosses):
             screw_csk('M3x12 %d' % i, x, y, H, 3, 12, 6.0, 1.7, 2.0)
     with grp('m4', (0, 0, 0), 0, C_EL, 'Schrauben M4x10 (Pad)'):
-        for i, yy in enumerate([15, 30]): screw_csk('M4x10 %d' % i, pad_cx, yy, pad_top_z, 4, 10, 8.0, 2.3, 2.5)
+        for i, yy in enumerate([12, 27]): screw_csk('M4x10 %d' % i, pad_cx, yy, pad_top_z, 4, 10, 8.0, 2.3, 2.5)
     with grp('m5', (0, 0, 0), 0, C_EL, 'Schrauben M5x12 (Boden)'):
         for i, yy in enumerate([70, 85]): screw_csk('M5x12 %d' % i, pad_cx, yy, 0.0, 5, 12, 10.0, 2.8, 3.0, up=True)
 
@@ -1156,7 +1156,7 @@ LAYER = ['bat', 'pol', 'tc', 'fet', 'cmp', 'rs', 'hx', 'lc', 'led', 'sw', 'div',
 def render(path):
     scn.render.filepath = path; bpy.ops.render.render(write_still=True); print('RENDER', path)
 
-if MODE == 'produkt': DIFF_GLOW = 2.2
+if MODE in ('produkt', 'v_produkt'): DIFF_GLOW = 2.2
 build_all()
 
 if MODE == 'check':
@@ -1224,4 +1224,6 @@ else:
         world_hdri(0.7, 200, bg=(0.11, 0.115, 0.13)); sun('Key', (50, 0, -35), 2.6, 5); sun('Rim', (62, 0, 195), 2.0, 10)
         backdrop(-4.6, (0.16, 0.165, 0.18))
         cam = camera((92, 48, 8), -24, 24, 760, 85)
-    render(OUT)
+    elif MODE.startswith('v_'):
+        exec(open(HERE + 'real_views.py').read())
+    if not MODE.startswith('v_'): render(OUT)

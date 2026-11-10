@@ -13,6 +13,18 @@ Weitere Ansichten des realistischen Modells (Draufsicht, Detail SD/FET, …) lie
 | `hydrodesk_teile.png` | Teileübersicht: alle 20 Teile (inkl. USB-Abdeckkappe, Diffusor-Leiste, Ein/Aus-Schalter und Klemmkeilen) maßstäblich auf einer Schneidematte (Raster 1 cm) mit nummerierter Legende; ohne Litzen, Schrumpfschlauch, Lötzinn und den 2 × 10-kΩ-Teiler |
 | `hydrodesk_produkt.png` | Produktbild: geschlossenes Gerät, Display mit Tagesfortschritt, vorne eine gleichmäßig blau leuchtende Lichtlinie (COB-LED-Streifen hinter dem milchigen Diffusor, keine einzelnen Lichtpunkte), Flasche nur angedeutet |
 
+Detailbilder (ebenfalls aus dem realistischen Modell, gleiche Kameras wie die technischen OpenSCAD-Vorschauen in `gehaeuse/preview/`, 1600 × 1100 px, ohne Beschriftung):
+
+| Datei | Inhalt | technische Vorschau |
+|---|---|---|
+| `hydrodesk_detail_kappe_eingesteckt.png` | USB-Abdeckkappe eingesteckt, Rückwand mit USB-C-Ausschnitt | `kappe_eingesteckt.png` |
+| `hydrodesk_detail_kappe_offen.png` | Kappe 14 mm herausgezogen, dahinter das CYD mit USB-Buchsen | `kappe_offen.png` |
+| `hydrodesk_detail_diffusor_offen.png` | Diffusor-Leiste 16 mm nach vorne gezogen, dahinter der COB-Streifen | `diffusor_offen.png` |
+| `hydrodesk_detail_schalter.png` | Ein/Aus-Schalter von außen links mit AN/AUS | `20_schalter_links_aussen.png` |
+| `hydrodesk_detail_fet_platine.png` | FET-Platine in ihrem Fach mit Seitenhaltern: Elko, 2 SOT-23-Adapter (AO3401A), BC547B, Widerstände (Deckel, Display, Akku, Kappe ausgeblendet, Litzen nicht gezeigt) | `24_fet_platine.png` |
+
+Die OpenSCAD-Vorschauen in `gehaeuse/preview/` bleiben bestehen (sie werden von `gehaeuse/render.sh` erzeugt und in `gehaeuse/ANLEITUNG.md` beschrieben); der Querschnitt `18_led_kammer_schnitt.png` ist nur dort vorhanden.
+
 ## So entstehen die Bilder
 
 1. **Blender 4.5 (Cycles)** baut das realistische Modell aus den STL-Dateien (`src/stl/`, Einbaulage aus OpenSCAD) und den nachgebauten Modulen
@@ -27,7 +39,7 @@ Neu rendern (nach einer Änderung am Modell oder an den STL-Dateien):
 cd design/visualisierung/src
 for p in base cover pad cap diff keil; do openscad -o stl/$p.stl w_$p.scad; done   # STL in Einbaulage
 cd ../realistisch
-./render_readme.sh          # braucht Blender 4.x mit Cycles (Pfad über BLENDER=... setzen), schreibt die 4 Bilder hierher
+./render_readme.sh          # (inkl. 5 Detailbilder) braucht Blender 4.x mit Cycles (Pfad über BLENDER=... setzen), schreibt die 4 Bilder hierher
 ```
 
 Auflösung: 2560 × 1440 px, 128 Samples. Rendern dauert auf 8 CPU-Kernen ca. 20 Minuten (Innenansicht mit den Kabeln am längsten).

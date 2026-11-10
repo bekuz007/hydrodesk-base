@@ -58,15 +58,15 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 
 | Abdeckkappe eingesteckt | Abdeckkappe herausgezogen |
 |---|---|
-| ![Abdeckkappe eingesteckt](gehaeuse/preview/kappe_eingesteckt.png) | ![Abdeckkappe offen](gehaeuse/preview/kappe_offen.png) |
+| ![Abdeckkappe eingesteckt](design/visualisierung/hydrodesk_detail_kappe_eingesteckt.png) | ![Abdeckkappe offen](design/visualisierung/hydrodesk_detail_kappe_offen.png) |
 
 | Diffusor-Leiste herausgezogen (COB-Streifen dahinter) | Schnitt durch die Lichtkammer |
 |---|---|
-| ![Diffusor offen](gehaeuse/preview/diffusor_offen.png) | ![Schnitt Lichtkammer](gehaeuse/preview/18_led_kammer_schnitt.png) |
+| ![Diffusor offen](design/visualisierung/hydrodesk_detail_diffusor_offen.png) | ![Schnitt Lichtkammer](gehaeuse/preview/18_led_kammer_schnitt.png) |
 
 | Ein/Aus-Schalter links (V4) | FET-Platine (V4) |
 |---|---|
-| ![Ein/Aus-Schalter](gehaeuse/preview/20_schalter_links_aussen.png) | ![FET-Platine](gehaeuse/preview/24_fet_platine.png) |
+| ![Ein/Aus-Schalter](design/visualisierung/hydrodesk_detail_schalter.png) | ![FET-Platine](design/visualisierung/hydrodesk_detail_fet_platine.png) |
 
 Renderbilder: [`design/visualisierung/`](design/visualisierung/) · 3D-Modell zum Drehen (GLB/STL/3MF): [`design/3d_modell/`](design/3d_modell/) · technische OpenSCAD-Vorschauen: [`gehaeuse/preview/`](gehaeuse/preview/)
 

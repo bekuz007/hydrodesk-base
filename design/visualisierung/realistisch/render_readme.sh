@@ -9,3 +9,8 @@ for v in produkt explosion innen teile; do
   echo "$v fertig"
 done
 python3 real_final.py ../raw/ ../../
+# Detailbilder 1600 x 1100 (ohne Beschriftung)
+for v in "fet fet_platine" "schalter schalter" "kappe_ein kappe_eingesteckt" "kappe_offen kappe_offen" "diffusor diffusor_offen"; do
+  set -- $v; $B -b -P real_scene.py -- v_$1 "$(pwd)/../../hydrodesk_detail_$2.png" $S 100 > ../raw/$1.log 2>&1 || { echo "Fehler bei $1"; exit 1; }
+  echo "$1 fertig"
+done

@@ -94,6 +94,21 @@ def finish(cam, specs, extra=None):
 
 def T(g, p): return np.array(p, float) + np.array(goff(g))
 
+# ---------- Detailbilder (gleiche Kameras wie die OpenSCAD-Vorschauen in gehaeuse/render.sh) ----------
+DETAIL = {   # Name: (OpenSCAD --camera: Ziel x,y,z, Drehung rx, rz, Abstand)
+    'fet': ((61, 55, 6), 50, 200, 95), 'schalter': ((0, 27, 9), 85, 270, 60),
+    'kappe_ein': ((29, 100, 15), 72, 205, 140), 'kappe_offen': ((29, 104, 15), 72, 205, 160),
+    'diffusor': ((40, -8, 10), 70, 330, 150)}
+def ocam(name):
+    t, rx, rz, dist = DETAIL[name]
+    c = camera(t, -rz, 90 - rx, dist, 60.3)          # OpenSCAD: 22,5 Grad vertikal -> Sensor 24 mm hoch, Brennweite 60,3 mm
+    c.data.sensor_fit = 'VERTICAL'; c.data.sensor_height = 24
+    scn.render.resolution_x, scn.render.resolution_y = 1600, 1100
+    return c
+def detail_light(rotz=140, key=2.6):
+    world_hdri(0.9, rotz); sun('Key', (48, 0, 32), key, 6); sun('Fill', (62, 0, 205), 1.0, 15)
+    backdrop(-4.6, (0.66, 0.67, 0.69))
+
 # ---------- Ansichten ----------
 if VIEW == 'explosion':
     Z = dict(feet=-34, m5=-58, base=0, el=42, cyd=92, pad=126, m4=142, mat=152, cover=178, m3=200)
@@ -237,3 +252,17 @@ elif VIEW == 'teile':
     keys = list(pts); uv, _ = proj_np(np.array([list(pts[k]) for k in keys]), cam)
     extra = {k: [float(uv[i, 0]), float(uv[i, 1])] for i, k in enumerate(keys)}
     finish(cam, {}, extra)
+
+elif VIEW == 'fet':      # Bodenwanne mit Schalter, Klemmkeilen und FET-Platine (ohne CYD/Akku), wie OpenSCAD "sw_detail"
+    set_offsets({}); hide(['cover', 'pad', 'mat', 'm3', 'm4', 'cyd', 'bat', 'cap'])
+    detail_light(140, 1.5); ocam('fet'); render(OUT)
+elif VIEW == 'schalter':
+    set_offsets({}); hide(['pad', 'mat', 'm3', 'm4']); detail_light(); ocam('schalter'); render(OUT)
+elif VIEW in ('kappe_ein', 'kappe_offen'):
+    set_offsets({'cap': (0, 14, 0)} if VIEW == 'kappe_offen' else {}); detail_light(); ocam(VIEW); render(OUT)
+elif VIEW == 'diffusor':
+    set_offsets({'diff': (0, -16, 0)}); detail_light(); ocam('diffusor'); render(OUT)
+
+elif VIEW == 'fetsolo':   # Vergleich: FET-Platine allein (Prueffoto)
+    set_offsets({}); hide([g for g in GROUPS if g != 'fet']); world_hdri(0.9, 140); sun('Key', (48, 0, 32), 2.6, 6)
+    cam = camera((50.7, 43, 8), -20, 40, 110, 85); scn.render.resolution_x, scn.render.resolution_y = 1200, 800; render(OUT)

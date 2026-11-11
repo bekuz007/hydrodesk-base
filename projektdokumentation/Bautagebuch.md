@@ -86,3 +86,13 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Änderung im Modell (`gehaeuse/hydrodesk_base.scad`, Parameter `pad_hole_dy = -3`): Die zwei runden M4-Senklöcher im Pad sind 3 mm zur vorderen Pad-Kante gerückt, von 10 und 25 mm auf 7 und 22 mm Abstand (Lochmitte zur Kante). Der Senkkopf-Rand liegt jetzt 2,7 mm von der Außenkante entfernt, der Tropfrand bleibt ganz.
 - Neu gedruckt werden muss **nur** `gehaeuse/stl/pad.stl`. Boden und Deckel bleiben unverändert. Vorschaubilder 13/14 sind neu gerendert.
 - Nachtrag: Die Pad-Löcher sind von Ø 4,5 auf Ø 4,8 mm vergrößert, weil gedruckte Löcher oft etwas enger werden. Die Senkung für den Schraubenkopf bleibt gleich.
+
+## 11.11.2026 – iPhone-App (Software)
+
+- Neuer Ordner `app-ios/`: Begleit-App für das iPhone in **Swift/SwiftUI** (iOS 17+), mit demselben Funktionsumfang wie die Android-App: Anmelden/Registrieren (Supabase) plus „Ohne Konto testen“, **Heute** (Fortschrittsring, Bluetooth-Status, letzter Schluck, heutige Schlucke), **Verlauf** (7-Tage-Balkendiagramm mit Swift Charts und Ziel-Linie, 30-Tage-Liste), **Profil** (Name, kg, cm, Tagesziel live, Demo-Modus, „Jetzt synchronisieren“, Abmelden) und **Admin** (Rolle `admin`).
+- Gleiche Logik wie Android: Tagesziel nach Mosteller (70 kg, 175 cm → 2750 ml), Schluck-Erkennung (Anstieg des Tagesstands = Schluck, unter 5 ml ignoriert, Rückgang = Gerät zurückgesetzt), Offline-first mit Sync in **dieselben Supabase-Tabellen** (`profiles`, `drink_entries`, View `user_today`).
+- Bluetooth mit CoreBluetooth: Gerät `HydroDesk`, Service-UUID `4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10`, Werte-Characteristic `4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10` (lesen + notify, Text „1250/2750 ml“) – aus `wokwi/sketch.ino` übernommen.
+- Lokale Speicherung mit SwiftData. Supabase-URL und -Key stehen in der gitignorierten `app-ios/Config/Secrets.xcconfig` (Vorlage `Secrets.xcconfig.example`), nicht im Code.
+- Fertiges `HydroDesk.xcodeproj` (mit XcodeGen aus `project.yml` erzeugt). Bauen und Starten geht auch ohne Xcode-Oberfläche aus VS Code (`app-ios/.vscode/tasks.json`, `xcodebuild` und `xcrun devicectl`); Xcode muss trotzdem installiert sein.
+- **Geprüft:** Logik (Tagesziel, Schluck-Erkennung, BLE-Parser, Verlauf, Profil-Prüfung) und der Supabase-Teil wurden auf einem Linux-Rechner mit Swift 6.2 gebaut; **34 Unit-Tests grün**. **Nicht geprüft:** SwiftUI-Oberfläche, SwiftData und CoreBluetooth wurden noch nicht in Xcode gebaut oder auf dem iPhone gestartet (auf Linux gibt es kein iOS-SDK). Bluetooth mit dem echten HydroDesk und der Login gegen das echte Supabase stehen noch aus.
+- Hinweis: Mit der kostenlosen Apple-ID läuft die App nur 7 Tage, danach neu aufs iPhone spielen.

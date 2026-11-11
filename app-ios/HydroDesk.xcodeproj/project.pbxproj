@@ -1,0 +1,620 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04145C8EA82E4608D92F47C3 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B724B67D8BED4935066A2CAE /* ProfileService.swift */; };
+		1545F12F17AEB36BD97EEBB5 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CAC66C22534FA142B6BF3E /* AuthService.swift */; };
+		23D7A0C1A440BCDAA452EC10 /* VerlaufView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D0FA01A851B9D9F334D904 /* VerlaufView.swift */; };
+		28DF67208A656C3BC09A2234 /* HeuteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3726720BA3CD43E2DA4959 /* HeuteView.swift */; };
+		2AC74DFF66B22406F0299D16 /* Verlauf.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DEFC8DE6D5E506BB1264BD6 /* Verlauf.swift */; };
+		2DE38344B6F4AC72E60CC381 /* BlePayloadParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 782CF8AFE487FA95BA1F0C20 /* BlePayloadParser.swift */; };
+		2EA9A09C5B181595121D06C5 /* BlePayloadParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9C4C30F9475FD1B160B3A3F /* BlePayloadParserTests.swift */; };
+		43167DB02DCD8C4EAF94D206 /* GoalCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B99295EF1157545A253D677D /* GoalCalculatorTests.swift */; };
+		4935D8FCF67806D7E058A8B5 /* ProfilPruefung.swift in Sources */ = {isa = PBXBuildFile; fileRef = D122A0A891F054D2DE21C63A /* ProfilPruefung.swift */; };
+		5198D1803CDC7503C5A03731 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C40479AA6F9571D01A0F1B8 /* RootView.swift */; };
+		5B2468E7F1AC21981EA10A69 /* DrinkEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9207F1FF9714FF6AF0655BBE /* DrinkEntry.swift */; };
+		622E67BB79E0CCB94E22CCA3 /* AuthFehler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2A53A3ED6D54B47B7C531A /* AuthFehler.swift */; };
+		6C1814C9D7B0DF628C62C2E7 /* Dtos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 180A96E9E9C75A4AA6CBCF55 /* Dtos.swift */; };
+		6D9E014B4812A7A065CDD89A /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF90A5EB38EACF58AF17B862 /* Theme.swift */; };
+		71FFA80B7DE05567EC4FF78E /* HydroBleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468B082DA7513DCF7D9A1ADC /* HydroBleManager.swift */; };
+		7B0C48F5B5E9D8806387DCE5 /* HydroDeskApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4746A8F403E7DA0794B588F /* HydroDeskApp.swift */; };
+		7CACAD21B7F8FC3F14649137 /* DrinkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A57B7EEF1C19331BFCD25F2 /* DrinkService.swift */; };
+		92168D157C154C43EDA56250 /* LogikTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CA5F173CF0B3A0C86FC0638 /* LogikTests.swift */; };
+		9CF8231756E12F98542A21A9 /* DemoGeraet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F68FDB09EC2968188FC25B6 /* DemoGeraet.swift */; };
+		AE72D35D192C3A5E0E88BA32 /* GeraeteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79DCA4BE86E9D3D9A9B1CDA /* GeraeteManager.swift */; };
+		B5D57E999E25E743608CFBCC /* RemoteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DADEB67A0AAD3E41BD7DB80 /* RemoteService.swift */; };
+		B86C56FDAB256D54EE1CA0B8 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD46FAFE870D1705EC648AA /* LoginView.swift */; };
+		C5912FE779C5E86505779953 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EADF524B6C1D07039CE26E /* AdminView.swift */; };
+		C7C3EDA1A2B117D66F7E247D /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA9EFB41A6DCB0FA4C7CB7CA /* Format.swift */; };
+		D3E82A4A8267E745666207CD /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB45D115996DB9F93A9BC7E /* AppSettings.swift */; };
+		DED9C92E98267D1DCEE735B9 /* GoalCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3673873D88A62A4BCF7EE5C9 /* GoalCalculator.swift */; };
+		E35DEAE9844FC943A70BBBB3 /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64A583A0C75A6481CAA98966 /* AppContainer.swift */; };
+		E41F95F61B9F013F20D53678 /* SchluckErkennung.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71A01EC3D535411ECB611D01 /* SchluckErkennung.swift */; };
+		E4504D29B0A7897462CD37F5 /* ProfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B49A9AE96EF92F22B8BEC6 /* ProfilView.swift */; };
+		ED471168F1962C7FE6662511 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 24C20221F34EB6C6791FFB64 /* Assets.xcassets */; };
+		F22D1A88C98F3AFDCE0485AF /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B4F6EA8E6AE6CE9D69E25FA0 /* Supabase */; };
+		F4C135D51BFF5BF6A3C873D4 /* SchluckErkennungTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7CEB7A30924ADBF3D063C6 /* SchluckErkennungTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D9BB6872C0E62FAFC3AD49C0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E99C9061BDAAD1AF91FAD2DC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 024E8FCB5CC467BDB242D45D;
+			remoteInfo = HydroDesk;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0CA5F173CF0B3A0C86FC0638 /* LogikTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogikTests.swift; sourceTree = "<group>"; };
+		0F68FDB09EC2968188FC25B6 /* DemoGeraet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoGeraet.swift; sourceTree = "<group>"; };
+		12EADF524B6C1D07039CE26E /* AdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminView.swift; sourceTree = "<group>"; };
+		180A96E9E9C75A4AA6CBCF55 /* Dtos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dtos.swift; sourceTree = "<group>"; };
+		1C40479AA6F9571D01A0F1B8 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		1DEFC8DE6D5E506BB1264BD6 /* Verlauf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Verlauf.swift; sourceTree = "<group>"; };
+		24C20221F34EB6C6791FFB64 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2BD46FAFE870D1705EC648AA /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		3673873D88A62A4BCF7EE5C9 /* GoalCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalCalculator.swift; sourceTree = "<group>"; };
+		468B082DA7513DCF7D9A1ADC /* HydroBleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HydroBleManager.swift; sourceTree = "<group>"; };
+		48CD94A5FDF03C43633722C9 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		4A57B7EEF1C19331BFCD25F2 /* DrinkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkService.swift; sourceTree = "<group>"; };
+		52B49A9AE96EF92F22B8BEC6 /* ProfilView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilView.swift; sourceTree = "<group>"; };
+		5C3726720BA3CD43E2DA4959 /* HeuteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeuteView.swift; sourceTree = "<group>"; };
+		64A583A0C75A6481CAA98966 /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
+		69D0FA01A851B9D9F334D904 /* VerlaufView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerlaufView.swift; sourceTree = "<group>"; };
+		6DADEB67A0AAD3E41BD7DB80 /* RemoteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteService.swift; sourceTree = "<group>"; };
+		71A01EC3D535411ECB611D01 /* SchluckErkennung.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchluckErkennung.swift; sourceTree = "<group>"; };
+		782CF8AFE487FA95BA1F0C20 /* BlePayloadParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlePayloadParser.swift; sourceTree = "<group>"; };
+		7FE149755A884370B9B72355 /* HydroDesk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HydroDesk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A2A53A3ED6D54B47B7C531A /* AuthFehler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFehler.swift; sourceTree = "<group>"; };
+		9207F1FF9714FF6AF0655BBE /* DrinkEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinkEntry.swift; sourceTree = "<group>"; };
+		9A7CEB7A30924ADBF3D063C6 /* SchluckErkennungTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchluckErkennungTests.swift; sourceTree = "<group>"; };
+		9F95A32CD81DD637C41FE4CD /* HydroDeskTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HydroDeskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B724B67D8BED4935066A2CAE /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
+		B99295EF1157545A253D677D /* GoalCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalCalculatorTests.swift; sourceTree = "<group>"; };
+		C79DCA4BE86E9D3D9A9B1CDA /* GeraeteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeraeteManager.swift; sourceTree = "<group>"; };
+		CFB45D115996DB9F93A9BC7E /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		D122A0A891F054D2DE21C63A /* ProfilPruefung.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilPruefung.swift; sourceTree = "<group>"; };
+		D1CAC66C22534FA142B6BF3E /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		D9C4C30F9475FD1B160B3A3F /* BlePayloadParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlePayloadParserTests.swift; sourceTree = "<group>"; };
+		EA9EFB41A6DCB0FA4C7CB7CA /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
+		EF90A5EB38EACF58AF17B862 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F4746A8F403E7DA0794B588F /* HydroDeskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HydroDeskApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ECEB22092E419FC9D1ABAF42 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F22D1A88C98F3AFDCE0485AF /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		143B493DB54AD19BCFBDC5D2 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				64A583A0C75A6481CAA98966 /* AppContainer.swift */,
+				CFB45D115996DB9F93A9BC7E /* AppSettings.swift */,
+				D1CAC66C22534FA142B6BF3E /* AuthService.swift */,
+				0F68FDB09EC2968188FC25B6 /* DemoGeraet.swift */,
+				4A57B7EEF1C19331BFCD25F2 /* DrinkService.swift */,
+				C79DCA4BE86E9D3D9A9B1CDA /* GeraeteManager.swift */,
+				B724B67D8BED4935066A2CAE /* ProfileService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		514CC9DA3A47A9E893766305 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7FE149755A884370B9B72355 /* HydroDesk.app */,
+				9F95A32CD81DD637C41FE4CD /* HydroDeskTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6BE221FFFE2CBF5AEF91C8AB /* HydroDeskTests */ = {
+			isa = PBXGroup;
+			children = (
+				D9C4C30F9475FD1B160B3A3F /* BlePayloadParserTests.swift */,
+				B99295EF1157545A253D677D /* GoalCalculatorTests.swift */,
+				0CA5F173CF0B3A0C86FC0638 /* LogikTests.swift */,
+				9A7CEB7A30924ADBF3D063C6 /* SchluckErkennungTests.swift */,
+			);
+			path = HydroDeskTests;
+			sourceTree = "<group>";
+		};
+		83AD3E47ACF4AA07D5D8C261 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				8A2A53A3ED6D54B47B7C531A /* AuthFehler.swift */,
+				782CF8AFE487FA95BA1F0C20 /* BlePayloadParser.swift */,
+				EA9EFB41A6DCB0FA4C7CB7CA /* Format.swift */,
+				3673873D88A62A4BCF7EE5C9 /* GoalCalculator.swift */,
+				D122A0A891F054D2DE21C63A /* ProfilPruefung.swift */,
+				71A01EC3D535411ECB611D01 /* SchluckErkennung.swift */,
+				1DEFC8DE6D5E506BB1264BD6 /* Verlauf.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		903F12A692529FFC6F87774D /* Remote */ = {
+			isa = PBXGroup;
+			children = (
+				180A96E9E9C75A4AA6CBCF55 /* Dtos.swift */,
+				6DADEB67A0AAD3E41BD7DB80 /* RemoteService.swift */,
+			);
+			path = Remote;
+			sourceTree = "<group>";
+		};
+		9139C296CA0578276FAAE41A /* HydroDesk */ = {
+			isa = PBXGroup;
+			children = (
+				24C20221F34EB6C6791FFB64 /* Assets.xcassets */,
+				F4746A8F403E7DA0794B588F /* HydroDeskApp.swift */,
+				D642BBC43FA4FCDBCBD043D2 /* BLE */,
+				83AD3E47ACF4AA07D5D8C261 /* Core */,
+				ADDBA8B57EAF569E225D30E6 /* Data */,
+				903F12A692529FFC6F87774D /* Remote */,
+				143B493DB54AD19BCFBDC5D2 /* Services */,
+				C559BC3B9A21301B2E2CFC8C /* UI */,
+			);
+			path = HydroDesk;
+			sourceTree = "<group>";
+		};
+		ADDBA8B57EAF569E225D30E6 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				9207F1FF9714FF6AF0655BBE /* DrinkEntry.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		B2D98AB1A6C59AD1B2974F32 = {
+			isa = PBXGroup;
+			children = (
+				E35694AC01E415F76662BE03 /* Config */,
+				9139C296CA0578276FAAE41A /* HydroDesk */,
+				6BE221FFFE2CBF5AEF91C8AB /* HydroDeskTests */,
+				514CC9DA3A47A9E893766305 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C559BC3B9A21301B2E2CFC8C /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				12EADF524B6C1D07039CE26E /* AdminView.swift */,
+				5C3726720BA3CD43E2DA4959 /* HeuteView.swift */,
+				2BD46FAFE870D1705EC648AA /* LoginView.swift */,
+				52B49A9AE96EF92F22B8BEC6 /* ProfilView.swift */,
+				1C40479AA6F9571D01A0F1B8 /* RootView.swift */,
+				EF90A5EB38EACF58AF17B862 /* Theme.swift */,
+				69D0FA01A851B9D9F334D904 /* VerlaufView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		D642BBC43FA4FCDBCBD043D2 /* BLE */ = {
+			isa = PBXGroup;
+			children = (
+				468B082DA7513DCF7D9A1ADC /* HydroBleManager.swift */,
+			);
+			path = BLE;
+			sourceTree = "<group>";
+		};
+		E35694AC01E415F76662BE03 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				48CD94A5FDF03C43633722C9 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		024E8FCB5CC467BDB242D45D /* HydroDesk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F43CB10198479C1C86A64A26 /* Build configuration list for PBXNativeTarget "HydroDesk" */;
+			buildPhases = (
+				9C8B0FDCE5C1C693D119A34D /* Sources */,
+				139F364EB54F88B51E587144 /* Resources */,
+				ECEB22092E419FC9D1ABAF42 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HydroDesk;
+			packageProductDependencies = (
+				B4F6EA8E6AE6CE9D69E25FA0 /* Supabase */,
+			);
+			productName = HydroDesk;
+			productReference = 7FE149755A884370B9B72355 /* HydroDesk.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3C2D9F97163F4C067D457457 /* HydroDeskTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5AFC72C7FF48050682AECFCC /* Build configuration list for PBXNativeTarget "HydroDeskTests" */;
+			buildPhases = (
+				6F65C2DCAF5E64E2E20244B2 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				751238D4AE8A1A449C039C43 /* PBXTargetDependency */,
+			);
+			name = HydroDeskTests;
+			packageProductDependencies = (
+			);
+			productName = HydroDeskTests;
+			productReference = 9F95A32CD81DD637C41FE4CD /* HydroDeskTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E99C9061BDAAD1AF91FAD2DC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					024E8FCB5CC467BDB242D45D = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					3C2D9F97163F4C067D457457 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 087A9F54E51B19395BF1671A /* Build configuration list for PBXProject "HydroDesk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B2D98AB1A6C59AD1B2974F32;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E881A69790C9E65E261D028C /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 514CC9DA3A47A9E893766305 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				024E8FCB5CC467BDB242D45D /* HydroDesk */,
+				3C2D9F97163F4C067D457457 /* HydroDeskTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		139F364EB54F88B51E587144 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ED471168F1962C7FE6662511 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6F65C2DCAF5E64E2E20244B2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2EA9A09C5B181595121D06C5 /* BlePayloadParserTests.swift in Sources */,
+				43167DB02DCD8C4EAF94D206 /* GoalCalculatorTests.swift in Sources */,
+				92168D157C154C43EDA56250 /* LogikTests.swift in Sources */,
+				F4C135D51BFF5BF6A3C873D4 /* SchluckErkennungTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9C8B0FDCE5C1C693D119A34D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C5912FE779C5E86505779953 /* AdminView.swift in Sources */,
+				E35DEAE9844FC943A70BBBB3 /* AppContainer.swift in Sources */,
+				D3E82A4A8267E745666207CD /* AppSettings.swift in Sources */,
+				622E67BB79E0CCB94E22CCA3 /* AuthFehler.swift in Sources */,
+				1545F12F17AEB36BD97EEBB5 /* AuthService.swift in Sources */,
+				2DE38344B6F4AC72E60CC381 /* BlePayloadParser.swift in Sources */,
+				9CF8231756E12F98542A21A9 /* DemoGeraet.swift in Sources */,
+				5B2468E7F1AC21981EA10A69 /* DrinkEntry.swift in Sources */,
+				7CACAD21B7F8FC3F14649137 /* DrinkService.swift in Sources */,
+				6C1814C9D7B0DF628C62C2E7 /* Dtos.swift in Sources */,
+				C7C3EDA1A2B117D66F7E247D /* Format.swift in Sources */,
+				AE72D35D192C3A5E0E88BA32 /* GeraeteManager.swift in Sources */,
+				DED9C92E98267D1DCEE735B9 /* GoalCalculator.swift in Sources */,
+				28DF67208A656C3BC09A2234 /* HeuteView.swift in Sources */,
+				71FFA80B7DE05567EC4FF78E /* HydroBleManager.swift in Sources */,
+				7B0C48F5B5E9D8806387DCE5 /* HydroDeskApp.swift in Sources */,
+				B86C56FDAB256D54EE1CA0B8 /* LoginView.swift in Sources */,
+				4935D8FCF67806D7E058A8B5 /* ProfilPruefung.swift in Sources */,
+				E4504D29B0A7897462CD37F5 /* ProfilView.swift in Sources */,
+				04145C8EA82E4608D92F47C3 /* ProfileService.swift in Sources */,
+				B5D57E999E25E743608CFBCC /* RemoteService.swift in Sources */,
+				5198D1803CDC7503C5A03731 /* RootView.swift in Sources */,
+				E41F95F61B9F013F20D53678 /* SchluckErkennung.swift in Sources */,
+				6D9E014B4812A7A065CDD89A /* Theme.swift in Sources */,
+				2AC74DFF66B22406F0299D16 /* Verlauf.swift in Sources */,
+				23D7A0C1A440BCDAA452EC10 /* VerlaufView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		751238D4AE8A1A449C039C43 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 024E8FCB5CC467BDB242D45D /* HydroDesk */;
+			targetProxy = D9BB6872C0E62FAFC3AD49C0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		20152FB200863E7EA23DA700 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HydroDesk/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5B4A45B743531152CF95F050 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HydroDesk.app/HydroDesk";
+			};
+			name = Debug;
+		};
+		95A5DF0070C84F386B0E19CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HydroDesk/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		962BD561286FC0ED81919F8D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HydroDesk.app/HydroDesk";
+			};
+			name = Release;
+		};
+		9F1B93D71816592709BE4C19 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 48CD94A5FDF03C43633722C9 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F1226EDAEA895908D4EB0ED5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 48CD94A5FDF03C43633722C9 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		087A9F54E51B19395BF1671A /* Build configuration list for PBXProject "HydroDesk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F1B93D71816592709BE4C19 /* Debug */,
+				F1226EDAEA895908D4EB0ED5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5AFC72C7FF48050682AECFCC /* Build configuration list for PBXNativeTarget "HydroDeskTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5B4A45B743531152CF95F050 /* Debug */,
+				962BD561286FC0ED81919F8D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F43CB10198479C1C86A64A26 /* Build configuration list for PBXNativeTarget "HydroDesk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				20152FB200863E7EA23DA700 /* Debug */,
+				95A5DF0070C84F386B0E19CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E881A69790C9E65E261D028C /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.55.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B4F6EA8E6AE6CE9D69E25FA0 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E881A69790C9E65E261D028C /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E99C9061BDAAD1AF91FAD2DC /* Project object */;
+}

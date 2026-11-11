@@ -1,0 +1,58 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "HydroDesk: Secrets.xcconfig anlegen (einmalig)",
+      "type": "shell",
+      "command": "cp -n Config/Secrets.xcconfig.example Config/Secrets.xcconfig && open -t Config/Secrets.xcconfig",
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: iPhones anzeigen",
+      "type": "shell",
+      "command": "xcrun devicectl list devices",
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: Bauen (iPhone)",
+      "type": "shell",
+      "command": "./tools/bauen.sh",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: Auf iPhone installieren und starten",
+      "type": "shell",
+      "command": "./tools/run-device.sh \"${input:iphone}\"",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: Logik-Tests (schnell, ohne Simulator)",
+      "type": "shell",
+      "command": "swift test",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: Alle Tests im Simulator",
+      "type": "shell",
+      "command": "./tools/test-simulator.sh",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "HydroDesk: Xcode-Projekt neu erzeugen (XcodeGen)",
+      "type": "shell",
+      "command": "xcodegen generate",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "iphone",
+      "type": "promptString",
+      "description": "Name oder ID deines iPhones (siehe Task \"HydroDesk: iPhones anzeigen\")"
+    }
+  ]
+}

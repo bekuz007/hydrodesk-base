@@ -1,0 +1,80 @@
+# XcodeGen-Beschreibung des Projekts (Ausweichlösung).
+# HydroDesk.xcodeproj liegt schon fertig im Ordner. Falls du es neu erzeugen willst:
+#   brew install xcodegen && cd app-ios && xcodegen generate
+name: HydroDesk
+options:
+  bundleIdPrefix: de.hydrodesk
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+# Basis-Einstellungen (Supabase, Team, Bundle-ID): Config/Base.xcconfig -> Config/Secrets.xcconfig
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    exactVersion: 2.55.6
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  HydroDesk:
+    type: application
+    platform: iOS
+    sources:
+      - path: HydroDesk
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+        INFOPLIST_FILE: HydroDesk/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_IDENTITY: Apple Development
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
+
+  HydroDeskTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: HydroDeskTests
+    dependencies:
+      - target: HydroDesk
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  HydroDesk:
+    build:
+      targets:
+        HydroDesk: all
+        HydroDeskTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - HydroDeskTests
+    archive:
+      config: Release

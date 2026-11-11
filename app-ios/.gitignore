@@ -1,0 +1,23 @@
+# Geheimnisse – NIEMALS committen
+Config/Secrets.xcconfig
+*.p12
+*.mobileprovision
+
+# Xcode / Swift Package Manager
+build/
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+Package.resolved
+
+# VS Code: nur diese zwei Dateien einchecken (Hauptordner ignoriert sonst .vscode/*)
+!.vscode/tasks.json
+!.vscode/extensions.json

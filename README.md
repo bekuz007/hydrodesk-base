@@ -31,6 +31,8 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **3D-gedrucktes Gehäuse** (OpenSCAD, parametrisch, sechs Druckdateien: Bodenwanne, Deckel, Pad, steckbare USB-Abdeckkappe, Diffusor-Leiste, 2 Klemmkeile für den Schalter; ohne Stützmaterial druckbar)
 - **Android-App** ([`app-android/`](app-android/)): Login (Supabase), Bluetooth-LE-Verbindung zum Gerät,
   Tagesziel aus Körperdaten, Verlauf mit Wochendiagramm, offline-fähig mit Sync, Admin-Übersicht, Demo-Modus
+- **iPhone-App** ([`app-ios/`](app-ios/)): gleicher Funktionsumfang in Swift/SwiftUI (iOS 17+, SwiftData, Swift Charts, CoreBluetooth),
+  gleiche Supabase-Tabellen wie Android; fertiges Xcode-Projekt, Bauen auch aus VS Code per Terminal
 
 ## 📐 Aufbau / Layout
 
@@ -157,6 +159,12 @@ hydrodesk-base/
 ├── app-android/                            # Android-App (Kotlin, Compose) – eigene Anleitung
 │   ├── README.md                           # Einrichtung Schritt für Schritt (Supabase, Android Studio)
 │   └── supabase/schema.sql                 # Datenbank-Schema mit Row Level Security
+├── app-ios/                                # iPhone-App (Swift, SwiftUI) – eigene Anleitung
+│   ├── README.md                           # Einrichtung Schritt für Schritt (Xcode, Secrets, iPhone, VS Code)
+│   ├── HydroDesk.xcodeproj                 # fertiges Xcode-Projekt (project.yml = XcodeGen-Beschreibung)
+│   ├── Config/Secrets.xcconfig.example     # Vorlage: Supabase-URL/Key, Team, Bundle-ID
+│   ├── HydroDesk/                          # Quellcode (Core, Remote, Data, Services, BLE, UI)
+│   └── HydroDeskTests/                     # XCTest-Unit-Tests
 ├── LICENSE
 └── README.md
 ```
@@ -170,6 +178,7 @@ hydrodesk-base/
 | Gehäuse-CAD (OpenSCAD, STL) | ✅ Version 4 (Ein/Aus-Schalter, FET-Platine) |
 | Wokwi-Simulation | ✅ Version 4 fertig (alle Varianten kompiliert, PC-Logiktest OK, auf wokwi.com testen) – inkl. Bluetooth-Symbol, LED-Status und Stromsparmodus |
 | Android-App (Kotlin, Compose, Supabase) | ✅ Version 1.0 – baut (`assembleDebug`), Unit-Tests grün, Demo-Modus; BLE mit echtem Gerät noch zu testen – siehe [`app-android/README.md`](app-android/README.md) |
+| iPhone-App (Swift, SwiftUI, Supabase) | 🟡 Version 1.0 geschrieben – Logik und Supabase-Teil mit Swift gebaut, 34 Unit-Tests grün; Oberfläche/Bluetooth noch **nicht in Xcode gebaut**, BLE mit echtem Gerät noch zu testen – siehe [`app-ios/README.md`](app-ios/README.md) |
 | Firmware (PlatformIO) | ⏳ offen |
 | Bau / Integration / Tests | ⏳ offen (Strommessungen nach Stromsparplan stehen noch aus) |
 
@@ -180,6 +189,8 @@ Als Vorlage dient [`firmware/secrets.example.h`](firmware/secrets.example.h).
 
 Supabase-URL und -Key der App kommen in `app-android/local.properties` (ebenfalls nicht im Git),
 Vorlage: [`app-android/local.properties.example`](app-android/local.properties.example).
+Bei der iPhone-App kommen sie in `app-ios/Config/Secrets.xcconfig` (ebenfalls nicht im Git),
+Vorlage: [`app-ios/Config/Secrets.xcconfig.example`](app-ios/Config/Secrets.xcconfig.example).
 
 ## 👥 Team
 
@@ -199,7 +210,7 @@ Gemeinsam: Planung, Integration, Tests, Bericht, Präsentation.
 
 | Teil | Lizenz |
 |---|---|
-| Code: Firmware (`wokwi/sketch.ino`, `firmware/`), Android-App (`app-android/`), Skripte (`.py`, `.sh`) | [PolyForm Noncommercial 1.0.0](LICENSE-CODE.md) |
+| Code: Firmware (`wokwi/sketch.ino`, `firmware/`), Android-App (`app-android/`), iPhone-App (`app-ios/`), Skripte (`.py`, `.sh`) | [PolyForm Noncommercial 1.0.0](LICENSE-CODE.md) |
 | Hardware, Design und Doku: Gehäuse (`gehaeuse/`, `.scad`, STL), 3D-Modell, Renders, Texte und Bilder | [CC BY-NC-SA 4.0](LICENSE-HARDWARE-DOCS.md) |
 
 - Nachbauen, Lernen und Verändern für private Zwecke, Schule und Forschung ist erlaubt – mit Nennung „HydroDesk Base von bekuz007“ und Link auf dieses Repository.

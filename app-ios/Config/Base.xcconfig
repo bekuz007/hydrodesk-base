@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
+//
+// Gemeinsame Einstellungen für Debug und Release. Hier steht NICHTS Geheimes.
+// Die eigenen Werte (Supabase, Team, Bundle-ID) stehen in Config/Secrets.xcconfig
+// (Vorlage: Secrets.xcconfig.example). Diese Datei ist in .gitignore und kommt nie auf GitHub.
+
+// Standardwerte (werden von Secrets.xcconfig überschrieben)
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+DEVELOPMENT_TEAM =
+// Muss weltweit eindeutig sein, sonst lehnt Apple die Signierung ab -> in Secrets.xcconfig ändern!
+APP_BUNDLE_ID = de.hydrodesk.app.change-me
+
+// "#include?" = Datei ist optional (ohne Secrets.xcconfig baut die App trotzdem, nur ohne Supabase)
+#include? "Secrets.xcconfig"

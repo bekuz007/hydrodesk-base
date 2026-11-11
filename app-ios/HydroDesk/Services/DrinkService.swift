@@ -101,6 +101,12 @@ final class DrinkService {
             for dto in entfernt where !vorhanden.contains(dto.id.lowercased()) {
                 if let neu = DrinkEntry.aus(dto: dto) { context.insert(neu) }
             }
+            // In Supabase gelöschte Einträge auch auf dem iPhone entfernen
+            // (nur bereits hochgeladene; noch nicht hochgeladene bleiben immer erhalten).
+            let aufServer = Set(entfernt.map { $0.id.lowercased() })
+            for eintrag in vorhandeneEintraege where eintrag.synced && !aufServer.contains(eintrag.id) {
+                context.delete(eintrag)
+            }
             try context.save()
 
             log.info("Sync fertig: \(offen.count) hochgeladen, \(entfernt.count) aus Supabase geprüft")

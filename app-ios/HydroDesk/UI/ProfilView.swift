@@ -18,6 +18,8 @@ struct ProfilView: View {
     @State private var speichert = false
     @State private var meldung: String?
     @State private var abmeldenFragen = false
+    /// Welches Feld gerade die Tastatur hat (Ziffernblock hat keine Return-Taste → „Fertig“-Knopf nötig)
+    @FocusState private var tastaturAktiv: Bool
 
     init(nutzer: AngemeldeterNutzer) {
         self.nutzer = nutzer
@@ -42,6 +44,14 @@ struct ProfilView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Fertig") { tastaturAktiv = false }
+                    .fontWeight(.semibold)
+            }
+        }
         .onAppear(perform: felderFuellen)
         .onChange(of: container.profile.profil) { _, _ in felderFuellen() }
         .alert("Abmelden?", isPresented: $abmeldenFragen) {
@@ -63,13 +73,17 @@ struct ProfilView: View {
             TextField("Name", text: $eingabe.name)
                 .textContentType(.name)
                 .textFieldStyle(.roundedBorder)
+                .focused($tastaturAktiv)
+                .submitLabel(.done)
             HStack {
                 TextField("Gewicht (kg)", text: $eingabe.gewicht)
                     .keyboardType(.decimalPad)
                     .textFieldStyle(.roundedBorder)
+                    .focused($tastaturAktiv)
                 TextField("Größe (cm)", text: $eingabe.groesse)
                     .keyboardType(.numberPad)
                     .textFieldStyle(.roundedBorder)
+                    .focused($tastaturAktiv)
             }
             if let vorschau {
                 Text("Tagesziel: \(Format.ml(vorschau.zielMl)) ml (Körperoberfläche \(Format.dezimal(vorschau.kof, stellen: 2)) m² × 1.500 ml)")
@@ -154,6 +168,7 @@ struct ProfilView: View {
     }
 
     private func speichern() {
+        tastaturAktiv = false   // Tastatur ausblenden
         // Gleiche Grenzen wie in der Firmware (Serial-Befehle „gewicht“ / „groesse“)
         if let fehler = ProfilPruefung.fehler(name: eingabe.name, gewichtText: eingabe.gewicht, groesseText: eingabe.groesse) {
             meldung = fehler

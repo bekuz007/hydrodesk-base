@@ -60,7 +60,7 @@ Die App wurde auf einem **Linux-Rechner ohne Xcode** geschrieben. Dort gibt es k
 | Logik: Tagesziel, Schluck-Erkennung, BLE-Text-Parser, Verlauf-Berechnung, Profil-Prüfung, Fehlertexte (`HydroDesk/Core/`) | ✅ Mit Swift 6.2 gebaut, **34 Unit-Tests laufen grün** (`swift test`) |
 | Supabase-Anbindung (`HydroDesk/Remote/`: Login, Profil, Einträge, Admin-Ansicht) | ✅ Mit Swift 6.2 gegen **supabase-swift 2.55.6** gebaut (Typprüfung, kein Test gegen einen echten Server) |
 | Dienste (`AppSettings`, `AuthService`, `ProfileService`, `DemoGeraet`) | ✅ Typprüfung mit Swift 6.2 auf Linux (nicht ausgeführt) |
-| SwiftUI-Oberfläche, SwiftData, CoreBluetooth, Swift Charts, `DrinkService`, `GeraeteManager` | ⚠️ **Nicht gebaut und nicht gestartet** – es gibt auf Linux kein iOS-SDK. Der Code wurde sorgfältig durchgesehen, kann aber beim ersten Bauen in Xcode noch kleine Fehler zeigen. |
+| SwiftUI-Oberfläche, SwiftData, CoreBluetooth, Swift Charts, `DrinkService`, `GeraeteManager` | ⚠️ **Nicht als iOS-App gebaut und nicht gestartet.** Der gesamte Swift-Code (alle 26 Dateien) lässt sich aber für macOS mit Xcode 26.3 fehlerfrei übersetzen (nur iOS-spezifische Modifier wie `keyboardType` wurden dafür weggelassen). Beim ersten iOS-Build können trotzdem kleine Fehler auftauchen. |
 | `HydroDesk.xcodeproj` | ✅ Mit **XcodeGen** erzeugt (`project.yml`), aber noch nicht in Xcode geöffnet |
 | Bluetooth mit dem echten HydroDesk, Login gegen echtes Supabase | ❌ Noch nicht getestet |
 

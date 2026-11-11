@@ -67,7 +67,7 @@ final class AuthService {
     private func aktualisieren() {
         if settings.offlineKonto {
             zustand = .angemeldet(AngemeldeterNutzer(
-                userId: HydroKonstanten.offlineUserId, email: "Offline (ohne Konto)", offline: true))
+                userId: HydroKonstanten.offlineUserId, email: "Ohne Konto – nur dieses iPhone", offline: true))
             return
         }
         switch sitzung {

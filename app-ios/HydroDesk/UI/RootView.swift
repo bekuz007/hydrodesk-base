@@ -13,7 +13,7 @@ struct RootView: View {
         Group {
             switch container.auth.zustand {
             case .laedt:
-                ProgressView()
+                StartView()
             case .abgemeldet:
                 LoginView()
             case .angemeldet(let nutzer):
@@ -37,15 +37,19 @@ struct RootView: View {
 private struct HauptBereich: View {
     let nutzer: AngemeldeterNutzer
     @Environment(AppContainer.self) private var container
+    @State private var tab: HauptTab = .heute
+
+    private enum HauptTab: Hashable { case heute, verlauf, profil }
 
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack {
-                HeuteView(nutzer: nutzer, heute: container.heute)
+                HeuteView(nutzer: nutzer, heute: container.heute, zumProfil: { tab = .profil })
                     .id(container.heute)   // nach Mitternacht neu aufbauen
                     .navigationTitle("Heute")
             }
             .tabItem { Label("Heute", systemImage: "drop.fill") }
+            .tag(HauptTab.heute)
 
             NavigationStack {
                 VerlaufView(nutzer: nutzer, heute: container.heute)
@@ -53,12 +57,14 @@ private struct HauptBereich: View {
                     .navigationTitle("Verlauf")
             }
             .tabItem { Label("Verlauf", systemImage: "chart.bar.fill") }
+            .tag(HauptTab.verlauf)
 
             NavigationStack {
                 ProfilView(nutzer: nutzer)
                     .navigationTitle("Profil")
             }
             .tabItem { Label("Profil", systemImage: "person.fill") }
+            .tag(HauptTab.profil)
         }
         // Nach dem Login: Profil laden und einmal synchronisieren
         .task(id: nutzer.userId) {

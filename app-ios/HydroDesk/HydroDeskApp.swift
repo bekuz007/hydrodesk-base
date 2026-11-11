@@ -28,7 +28,7 @@ struct HydroDeskApp: App {
         WindowGroup {
             RootView()
                 .environment(container)
-                .tint(Theme.wasserBlau)
+                .tint(Theme.wasserblau)
         }
         .modelContainer(modelContainer)
     }

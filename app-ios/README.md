@@ -29,12 +29,14 @@ Wer sich auf Android und iPhone mit demselben Konto anmeldet, sieht dieselben Da
 
 ## 1. Was kann die App?
 
-Gleicher Funktionsumfang wie die Android-App:
+Gleicher Funktionsumfang wie die Android-App. Das Aussehen folgt dem Design aus `HydroDesk_App_UI_Design.pdf`;
+alle Maße, Farben und Texte stehen in [`DESIGN_SPEC.md`](DESIGN_SPEC.md) (dort ist auch markiert, was die ursprüngliche
+Spezifikation nicht enthielt und ergänzt wurde).
 
 | Bildschirm | Inhalt |
 |---|---|
 | **Anmelden / Registrieren** | E-Mail + Passwort (Supabase Auth). Die Sitzung bleibt im Schlüsselbund des iPhones gespeichert – nach dem Neustart ist man weiter angemeldet. Zusätzlich **„Ohne Konto testen“** (nur lokal, ohne Supabase). |
-| **Heute** | Fortschrittsring mit *heute getrunken / Tagesziel*, „noch … ml“ bzw. „Ziel erreicht ✓“, Bluetooth-Status (**Suchen … / Verbunden / Getrennt**), Taste *Verbinden / Trennen*, letzter Schluck, Liste der heutigen Schlucke, Sync-Status. |
+| **Heute** | Fortschrittsring mit *heute getrunken / Tagesziel*, „noch … ml“ bzw. „Ziel erreicht“ (mit Häkchen-Symbol), Bluetooth-Status (**Suchen … / Verbunden / Getrennt**), Taste *Verbinden / Trennen*, letzter Schluck, Liste der heutigen Schlucke, Sync-Status. |
 | **Verlauf** | Balkendiagramm der letzten 7 Tage (**Swift Charts**, gestrichelte Ziel-Linie, grün = Ziel erreicht) und Liste pro Tag (30 Tage) mit Summe, Anzahl Schlucke und Fortschrittsbalken. |
 | **Profil** | Name, Gewicht (kg), Größe (cm) → **Tagesziel wird live berechnet** (gleiche Formel wie Firmware und Android). Demo-Modus-Schalter, „Jetzt synchronisieren“, Abmelden. |
 | **Admin** (nur Rolle `admin`) | Alle Nutzer mit heutiger Trinkmenge und Ziel. Erreichbar über *Profil → Admin: alle Nutzer anzeigen*. |
@@ -57,10 +59,10 @@ Die App wurde auf einem **Linux-Rechner ohne Xcode** geschrieben. Dort gibt es k
 
 | Teil | Stand |
 |---|---|
-| Logik: Tagesziel, Schluck-Erkennung, BLE-Text-Parser, Verlauf-Berechnung, Profil-Prüfung, Fehlertexte (`HydroDesk/Core/`) | ✅ Mit Swift 6.2 gebaut, **34 Unit-Tests laufen grün** (`swift test`) |
+| Logik: Tagesziel, Schluck-Erkennung, BLE-Text-Parser, Verlauf-Berechnung, Profil-Prüfung, Fehlertexte (`HydroDesk/Core/`) | ✅ Mit Swift 6.2 gebaut, **51 Unit-Tests laufen grün** (`swift test`) |
 | Supabase-Anbindung (`HydroDesk/Remote/`: Login, Profil, Einträge, Admin-Ansicht) | ✅ Mit Swift 6.2 gegen **supabase-swift 2.55.6** gebaut (Typprüfung, kein Test gegen einen echten Server) |
 | Dienste (`AppSettings`, `AuthService`, `ProfileService`, `DemoGeraet`) | ✅ Typprüfung mit Swift 6.2 auf Linux (nicht ausgeführt) |
-| SwiftUI-Oberfläche, SwiftData, CoreBluetooth, Swift Charts, `DrinkService`, `GeraeteManager` | ⚠️ **Nicht als iOS-App gebaut und nicht gestartet.** Der gesamte Swift-Code (alle 26 Dateien) lässt sich aber für macOS mit Xcode 26.3 fehlerfrei übersetzen (nur iOS-spezifische Modifier wie `keyboardType` wurden dafür weggelassen). Beim ersten iOS-Build können trotzdem kleine Fehler auftauchen. |
+| SwiftUI-Oberfläche (neues Design), SwiftData, CoreBluetooth, Swift Charts, `DrinkService`, `GeraeteManager` | ✅ **Mit Xcode 26.3 für das iPhone gebaut** (`BUILD SUCCEEDED`) und auf dem iPhone installiert. Wie genau es aussieht, muss man mit dem Design-PDF am Gerät vergleichen (Screenshots im Simulator waren nicht möglich). Nicht geprüft: Dynamic Type AX3 und iPhone SE. |
 | `HydroDesk.xcodeproj` | ✅ Mit **XcodeGen** erzeugt (`project.yml`), aber noch nicht in Xcode geöffnet |
 | Bluetooth mit dem echten HydroDesk, Login gegen echtes Supabase | ❌ Noch nicht getestet |
 
@@ -219,7 +221,7 @@ Ordner **`app-ios`** in VS Code öffnen (**File → Open Folder**). Dann `⇧⌘
 | **HydroDesk: iPhones anzeigen** | `xcrun devicectl list devices` – zeigt Name und ID deines iPhones |
 | **HydroDesk: Bauen (iPhone)** | `tools/bauen.sh` → `xcodebuild … build` |
 | **HydroDesk: Auf iPhone installieren und starten** *(Standard, `⇧⌘B`)* | Baut, installiert per `xcrun devicectl device install app` und startet per `xcrun devicectl device process launch`. Fragt nach dem iPhone-Namen. |
-| **HydroDesk: Logik-Tests (schnell, ohne Simulator)** | `swift test` – die 34 Unit-Tests der reinen Logik, in Sekunden |
+| **HydroDesk: Logik-Tests (schnell, ohne Simulator)** | `swift test` – die 51 Unit-Tests der reinen Logik, in Sekunden |
 | **HydroDesk: Alle Tests im Simulator** | `tools/test-simulator.sh` → `xcodebuild test` |
 | **HydroDesk: Xcode-Projekt neu erzeugen (XcodeGen)** | `xcodegen generate` (nur falls du `project.yml` änderst) |
 
@@ -330,6 +332,7 @@ flowchart LR
 ```
 app-ios/
 ├── README.md                       ← diese Anleitung
+├── DESIGN_SPEC.md                  ← vollständige Design- und Build-Spezifikation (Farben, Maße, Texte, 7 Gerätezustände)
 ├── HydroDesk.xcodeproj/            ← fertiges Xcode-Projekt (mit XcodeGen erzeugt)
 ├── project.yml                     ← XcodeGen-Beschreibung (Ausweichlösung, siehe unten)
 ├── Package.swift                   ← Hilfspaket NUR für `swift test` der reinen Logik
@@ -340,7 +343,7 @@ app-ios/
 ├── .vscode/                        ← tasks.json (Bauen/Starten/Tests), extensions.json
 ├── HydroDesk/
 │   ├── Info.plist                  ← u. a. NSBluetoothAlwaysUsageDescription, Supabase-Werte aus Secrets
-│   ├── Assets.xcassets/            ← App-Symbol, Akzentfarbe
+│   ├── Assets.xcassets/            ← App-Symbol, Akzentfarbe, Farb-Tokens (Light/Dark) aus dem Design
 │   ├── HydroDeskApp.swift          ← @main, SwiftData-Container, AppContainer
 │   ├── Core/                       ← reine Logik (ohne iOS-Frameworks, getestet)
 │   │   ├── GoalCalculator.swift        Tagesziel (Mosteller)
@@ -349,6 +352,7 @@ app-ios/
 │   │   ├── Verlauf.swift               Tagessummen, 7-Tage-Balken
 │   │   ├── ProfilPruefung.swift        Eingaben prüfen, Ziel-Vorschau
 │   │   ├── AuthFehler.swift            Fehlertexte auf Deutsch
+│   │   ├── Anzeige.swift               Zielherkunft, Sync-Texte, Gerätekarte (7 Zustände), Prozent
 │   │   └── Format.swift                Zahlen/Datum deutsch, Tagesgrenzen
 │   ├── Remote/                     ← Supabase (getestet gegen supabase-swift 2.55.6, nur Typprüfung)
 │   │   ├── Dtos.swift                  Zeilen der Tabellen profiles, drink_entries, View user_today
@@ -357,7 +361,8 @@ app-ios/
 │   ├── Services/                   ← AppContainer, AppSettings, AuthService, ProfileService,
 │   │                                  DrinkService (lokal + Sync), GeraeteManager, DemoGeraet
 │   ├── BLE/HydroBleManager.swift   ← CoreBluetooth: suchen, verbinden, notify
-│   └── UI/                         ← RootView, LoginView, HeuteView, VerlaufView, ProfilView, AdminView, Theme
+│   └── UI/                         ← RootView, StartView, LoginView, HeuteView, GeraeteKarte, VerlaufView, ProfilView,
+│                                      AdminView, Theme (Farben/Karte), Komponenten (Ring, Lichtlinie, Buttons …)
 └── HydroDeskTests/                 ← XCTest: Tagesziel, Parser, Schluck-Erkennung, Verlauf, Profil, Fehlertexte
 ```
 
@@ -372,7 +377,7 @@ app-ios/
 **Offline-first + Synchronisierung:** Jeder Schluck wird **zuerst lokal** gespeichert (`synced = false`) und danach per
 `upsert` mit derselben UUID zu Supabase hochgeladen (keine Duplikate). Außerdem holt der Sync die Einträge der letzten
 30 Tage (z. B. nach Handywechsel). Synchronisiert wird: nach jedem Schluck, beim Öffnen der App, stündlich solange die
-App offen ist und auf Knopfdruck („Jetzt synchronisieren“). Auf „Heute“ zeigt ein ⟳ hinter einem Eintrag, dass er noch
+App offen ist und auf Knopfdruck („Jetzt synchronisieren“). Auf „Heute“ zeigt das Sync-Symbol (zwei Pfeile im Kreis) vor dem Betrag, dass er noch
 nicht hochgeladen ist.
 
 **Tabellen in Supabase** (Schema: [`app-android/supabase/schema.sql`](../app-android/supabase/schema.sql), für beide Apps gleich):
@@ -455,7 +460,7 @@ Logs ansehen: Xcode → unten **Debug-Konsole**, oder Konsolen-App am Mac (Filte
 | Xcode | aktuelle Version aus dem App Store (Projekt im Format von Xcode 16 oder neuer) |
 | Swift-Sprachmodus | Swift 5 (bewusst, damit keine strengen Nebenläufigkeits-Fehler stören) |
 | supabase-swift | **2.55.6** (fest eingestellt, geprüft) |
-| Unit-Tests | 34, in `HydroDeskTests/` (laufen mit `swift test` und in Xcode mit ⌘U) |
+| Unit-Tests | 51, in `HydroDeskTests/` (laufen mit `swift test` und in Xcode mit ⌘U) |
 
 **Bekannte Grenzen / Ideen für später**
 

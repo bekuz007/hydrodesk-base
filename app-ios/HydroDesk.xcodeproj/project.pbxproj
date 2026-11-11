@@ -39,6 +39,11 @@
 		ED471168F1962C7FE6662511 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 24C20221F34EB6C6791FFB64 /* Assets.xcassets */; };
 		F22D1A88C98F3AFDCE0485AF /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B4F6EA8E6AE6CE9D69E25FA0 /* Supabase */; };
 		F4C135D51BFF5BF6A3C873D4 /* SchluckErkennungTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7CEB7A30924ADBF3D063C6 /* SchluckErkennungTests.swift */; };
+		96C2108899B737DA365434CF /* Anzeige.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AA102C8956A068FF72DD786 /* Anzeige.swift */; };
+		0965D81E9B45AD31B44974A7 /* Komponenten.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20C64905EDE19764471B7FDF /* Komponenten.swift */; };
+		A3D3755C8A15F4972D9D020D /* GeraeteKarte.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE479D572EA811FA514781E7 /* GeraeteKarte.swift */; };
+		5E6A5EB24BDBABD8F5361EAA /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298F403E7916E6AEE9EA0E5F /* StartView.swift */; };
+		2E6E180217C4FE936F2B2D70 /* AnzeigeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F936AAA16BAC105FE80BA9A /* AnzeigeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +91,11 @@
 		EA9EFB41A6DCB0FA4C7CB7CA /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
 		EF90A5EB38EACF58AF17B862 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F4746A8F403E7DA0794B588F /* HydroDeskApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HydroDeskApp.swift; sourceTree = "<group>"; };
+		7AA102C8956A068FF72DD786 /* Anzeige.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anzeige.swift; sourceTree = "<group>"; };
+		20C64905EDE19764471B7FDF /* Komponenten.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Komponenten.swift; sourceTree = "<group>"; };
+		CE479D572EA811FA514781E7 /* GeraeteKarte.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeraeteKarte.swift; sourceTree = "<group>"; };
+		298F403E7916E6AEE9EA0E5F /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
+		8F936AAA16BAC105FE80BA9A /* AnzeigeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnzeigeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +139,7 @@
 				D9C4C30F9475FD1B160B3A3F /* BlePayloadParserTests.swift */,
 				B99295EF1157545A253D677D /* GoalCalculatorTests.swift */,
 				0CA5F173CF0B3A0C86FC0638 /* LogikTests.swift */,
+				8F936AAA16BAC105FE80BA9A /* AnzeigeTests.swift */,
 				9A7CEB7A30924ADBF3D063C6 /* SchluckErkennungTests.swift */,
 			);
 			path = HydroDeskTests;
@@ -144,6 +155,7 @@
 				D122A0A891F054D2DE21C63A /* ProfilPruefung.swift */,
 				71A01EC3D535411ECB611D01 /* SchluckErkennung.swift */,
 				1DEFC8DE6D5E506BB1264BD6 /* Verlauf.swift */,
+				7AA102C8956A068FF72DD786 /* Anzeige.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -199,6 +211,9 @@
 				52B49A9AE96EF92F22B8BEC6 /* ProfilView.swift */,
 				1C40479AA6F9571D01A0F1B8 /* RootView.swift */,
 				EF90A5EB38EACF58AF17B862 /* Theme.swift */,
+				298F403E7916E6AEE9EA0E5F /* StartView.swift */,
+				CE479D572EA811FA514781E7 /* GeraeteKarte.swift */,
+				20C64905EDE19764471B7FDF /* Komponenten.swift */,
 				69D0FA01A851B9D9F334D904 /* VerlaufView.swift */,
 			);
 			path = UI;
@@ -322,6 +337,7 @@
 				2EA9A09C5B181595121D06C5 /* BlePayloadParserTests.swift in Sources */,
 				43167DB02DCD8C4EAF94D206 /* GoalCalculatorTests.swift in Sources */,
 				92168D157C154C43EDA56250 /* LogikTests.swift in Sources */,
+				2E6E180217C4FE936F2B2D70 /* AnzeigeTests.swift in Sources */,
 				F4C135D51BFF5BF6A3C873D4 /* SchluckErkennungTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -354,7 +370,11 @@
 				5198D1803CDC7503C5A03731 /* RootView.swift in Sources */,
 				E41F95F61B9F013F20D53678 /* SchluckErkennung.swift in Sources */,
 				6D9E014B4812A7A065CDD89A /* Theme.swift in Sources */,
+				5E6A5EB24BDBABD8F5361EAA /* StartView.swift in Sources */,
+				A3D3755C8A15F4972D9D020D /* GeraeteKarte.swift in Sources */,
+				0965D81E9B45AD31B44974A7 /* Komponenten.swift in Sources */,
 				2AC74DFF66B22406F0299D16 /* Verlauf.swift in Sources */,
+				96C2108899B737DA365434CF /* Anzeige.swift in Sources */,
 				23D7A0C1A440BCDAA452EC10 /* VerlaufView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

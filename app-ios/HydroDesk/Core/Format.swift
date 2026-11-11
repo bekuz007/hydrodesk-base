@@ -24,6 +24,12 @@ enum Format {
         return String(format: "%.\(stellen)f", gerundet).replacingOccurrences(of: ".", with: ",")
     }
 
+    /// 1250 → „1.250 ml“ (Leerzeichen vor der Einheit)
+    static func mlEinheit(_ wert: Int) -> String { ml(wert) + " ml" }
+
+    /// 45 → „45 %“ (Leerzeichen vor dem Prozentzeichen)
+    static func prozent(_ wert: Int) -> String { "\(wert) %" }
+
     /// Liter mit einer Nachkommastelle: 1250 → „1,3 l“
     static func liter(_ ml: Int) -> String {
         dezimal(Double(ml) / 1000.0, stellen: 1) + " l"
@@ -39,8 +45,16 @@ enum Format {
     /// Zeitpunkt → „14:32“
     static func uhrzeit(_ datum: Date) -> String { formatter("HH:mm").string(from: datum) }
 
+    /// Zeitpunkt → „14:32 Uhr“
+    static func uhrzeitUhr(_ datum: Date) -> String { uhrzeit(datum) + " Uhr" }
+
     /// Tag → „Dienstag, 6. Oktober“
     static func datumLang(_ datum: Date) -> String { formatter("EEEE, d. MMMM").string(from: datum) }
+
+    /// Tag → „Mo, 9. Nov.“ (abgekürzt, Wochentag ohne Punkt)
+    static func datumKurz(_ datum: Date) -> String {
+        wochentagKurz(datum) + ", " + formatter("d. MMM").string(from: datum)
+    }
 
     /// Tag → „Di“
     static func wochentagKurz(_ datum: Date) -> String {

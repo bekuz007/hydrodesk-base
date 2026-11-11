@@ -99,9 +99,18 @@ struct HeuteView: View {
                     }
                 }
                 if eintraege.count > maxZeilen {
-                    Text("… und \(eintraege.count - maxZeilen) weitere")
+                    NavigationLink {
+                        TagDetailView(nutzer: nutzer, tag: Tage.start())
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("… und \(eintraege.count - maxZeilen) weitere")
+                            Image(systemName: "chevron.right").imageScale(.small)
+                        }
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.wasserblau)
+                        .frame(minHeight: Theme.tippflaeche, alignment: .leading)
+                    }
+                    .accessibilityHint("Zeigt alle Einträge von heute")
                 }
             } else {
                 LeerZustand(symbol: "drop", text: "Heute noch nichts getrunken.")
@@ -115,35 +124,5 @@ struct HeuteView: View {
         // Schlägt der Abgleich fehl, steht hier die Fehlermeldung statt des normalen Texts
         let meldung = nutzer.offline ? nil : container.drinks.letzteSyncMeldung
         return SyncZeile(zustand: zustand, textUeberschreiben: meldung)
-    }
-}
-
-/// Eine Zeile der Schluckliste: Uhrzeit, Quelle, Menge (+ Sync-Symbol, solange nicht hochgeladen). Mind. 40 pt hoch.
-private struct SchluckZeile: View {
-    let eintrag: DrinkEntry
-    let nochNichtHochgeladen: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(Format.uhrzeitUhr(eintrag.timestamp))
-                .font(.body)
-                .monospacedDigit()
-            Text(eintrag.device)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 8)
-            if nochNichtHochgeladen {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("noch nicht hochgeladen")
-            }
-            Text("+\(Format.mlEinheit(eintrag.ml))")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Theme.wasserblau)
-                .monospacedDigit()
-        }
-        .frame(minHeight: 40)
-        .accessibilityElement(children: .combine)
     }
 }

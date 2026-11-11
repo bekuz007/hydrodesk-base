@@ -51,6 +51,9 @@ enum Format {
     /// Tag → „Dienstag, 6. Oktober“
     static func datumLang(_ datum: Date) -> String { formatter("EEEE, d. MMMM").string(from: datum) }
 
+    /// Tag → „Mittwoch, 11. Nov.“ (Titel der Tagesseite)
+    static func datumTitel(_ datum: Date) -> String { formatter("EEEE, d. MMM").string(from: datum) }
+
     /// Tag → „Mo, 9. Nov.“ (abgekürzt, Wochentag ohne Punkt)
     static func datumKurz(_ datum: Date) -> String {
         wochentagKurz(datum) + ", " + formatter("d. MMM").string(from: datum)

@@ -21,13 +21,11 @@ struct VerlaufView: View {
                            sort: \DrinkEntry.timestamp, order: .reverse)
     }
 
+    /// Tag, der per Tipp auf einen Balken geöffnet wird
+    @State private var gewaehlterTag: Date?
+
     /// Tagesziel wie auf „Heute“: Profil (mit Gewicht und Größe) → Gerät → Standardwert
-    private var ziel: Int {
-        let p = container.profile.profil
-        return ZielAuswahl.bestimmen(
-            profilZielMl: p?.dailyGoalMl, gewichtKg: p?.weightKg, groesseCm: p?.heightCm,
-            geraetZielMl: container.geraete.letzterMesswert?.zielMl).ml
-    }
+    private var ziel: Int { container.aktuellesZielMl }
 
     var body: some View {
         let summen = VerlaufRechner.tagesSummen(eintraege: eintraege.map { (zeit: $0.timestamp, ml: $0.ml) })
@@ -42,7 +40,7 @@ struct VerlaufView: View {
                 }
             } else {
                 Karte("Letzte 7 Tage") {
-                    WochenDiagramm(woche: woche, zielMl: ziel)
+                    WochenDiagramm(woche: woche, zielMl: ziel) { gewaehlterTag = $0 }
                     Text("Gestrichelte Linie = Tagesziel (\(Format.mlEinheit(ziel))), grün = Ziel erreicht")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -58,9 +56,18 @@ struct VerlaufView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 ForEach(summen) { tag in
-                    TagesZeile(tag: tag, zielMl: ziel)
+                    NavigationLink {
+                        TagDetailView(nutzer: nutzer, tag: tag.tag)
+                    } label: {
+                        TagesZeile(tag: tag, zielMl: ziel)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Zeigt alle Einträge dieses Tages")
                 }
             }
+        }
+        .navigationDestination(item: $gewaehlterTag) { tag in
+            TagDetailView(nutzer: nutzer, tag: tag)
         }
     }
 }
@@ -70,6 +77,8 @@ struct VerlaufView: View {
 struct WochenDiagramm: View {
     let woche: [TagesBalken]
     let zielMl: Int
+    /// Wird mit dem Tag aufgerufen, dessen Balken angetippt wurde
+    var beiAuswahl: (Date) -> Void = { _ in }
 
     var body: some View {
         // Höchster Wert bestimmt die Skala (mindestens das Ziel, plus 25 % Luft für die Werte über den Balken)
@@ -100,6 +109,22 @@ struct WochenDiagramm: View {
         }
         .chartYScale(domain: 0...hoechster)
         .chartYAxis(.hidden)
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                // Tipp irgendwo in der Spalte eines Tages (auch auf den Balken) öffnet die Tagesseite
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture { ort in
+                        guard let rahmen = proxy.plotFrame else { return }
+                        let x = ort.x - geo[rahmen].origin.x
+                        if let kurz = proxy.value(atX: x, as: String.self),
+                           let treffer = woche.first(where: { Format.wochentagKurz($0.tag) == kurz }) {
+                            beiAuswahl(treffer.tag)
+                        }
+                    }
+            }
+        }
         .frame(height: 200)
     }
 }
@@ -113,7 +138,14 @@ private struct TagesZeile: View {
         let erreicht = tag.totalMl >= zielMl
         Karte {
             VStack(alignment: .leading, spacing: 6) {
-                Text(Format.datumLang(tag.tag)).font(.body.weight(.semibold))
+                HStack {
+                    Text(Format.datumLang(tag.tag)).font(.body.weight(.semibold))
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
                 HStack(spacing: 6) {
                     Text(tag.schlucke == 1 ? "1 Schluck" : "\(tag.schlucke) Schlucke")
                         .font(.footnote)

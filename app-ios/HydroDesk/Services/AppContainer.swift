@@ -40,6 +40,14 @@ final class AppContainer {
         self.geraete = GeraeteManager(ble: ble, demo: demo, settings: settings, auth: auth, drinks: drinks)
     }
 
+    /// Aktuelles Tagesziel (ml): Profil mit Gewicht und Größe → vom Gerät gemeldet → Standardwert.
+    var aktuellesZielMl: Int {
+        let p = profile.profil
+        return ZielAuswahl.bestimmen(
+            profilZielMl: p?.dailyGoalMl, gewichtKg: p?.weightKg, groesseCm: p?.heightCm,
+            geraetZielMl: geraete.letzterMesswert?.zielMl).ml
+    }
+
     /// Prüft, ob ein neuer Tag begonnen hat.
     func tagPruefen() {
         let jetzt = Tage.start()

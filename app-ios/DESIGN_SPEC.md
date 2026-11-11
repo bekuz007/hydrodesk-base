@@ -175,6 +175,15 @@ Varianten mindestens: normal (45 %), Ziel erreicht (2.900 / 2.750 ml, 105 %), le
 - Überschrift „LETZTE 30 TAGE“ (`.footnote`, Großbuchstaben), darunter je Tag eine Karte: „Montag, 9. November“, „11 Schlucke · 2.800 ml“ (Menge in Wasserblau, bei Ziel grün), Häkchen bei Ziel, schmaler Balken [Anordnung aus dem Design].
 - **Leerzustand** (keine Einträge): nur eine Karte mit Symbol `chart.bar` und „Noch keine Einträge. Verbinde den HydroDesk oder schalte den Demo-Modus ein.“ (ohne Diagramm, wie im Design).
 
+### 7.4a Tagesseite (aus Verlauf und Heute) **[ergänzt – Wunsch des Nutzers, nicht im Design-PDF]**
+Zeigt **alle** Einträge eines Tages (auf „Heute“ sind es höchstens acht).
+- **Öffnen:** Tipp auf eine Tageskarte unter „LETZTE 30 TAGE“ (rechts mit `chevron.right`), Tipp auf einen Tag im 7-Tage-Diagramm (Spalte des Balkens, auch bei 0 ml) oder Tipp auf „… und N weitere“ auf „Heute“ (öffnet den heutigen Tag).
+- **Titel** (klein, `.inline`): Wochentag + Datum, z. B. „Mittwoch, 11. Nov.“
+- **Zusammenfassung** (Karte): Menge groß (SF Pro Rounded, `.title`) mit „/ 2.750 ml“ und Prozent, schmaler Balken, „6 Schlucke“, bei erreichtem Ziel `checkmark.circle.fill` + „Ziel erreicht“ (grün).
+- **Karte „Alle Einträge“:** Liste, neuester zuerst, dieselbe Zeile wie auf „Heute“ (Uhrzeit `HH:mm Uhr`, Quelle, `+200 ml`, Sync-Symbol, solange nicht hochgeladen). Leerzustand: Symbol `drop` + „An diesem Tag gibt es keine Einträge.“
+- **Daten:** lokale Datenbank (SwiftData; enthält die per Sync geholten letzten 30 Tage), gefiltert nach Nutzer:in und den Tagesgrenzen in der Ortszeit des Handys (00:00 Uhr inklusive bis 00:00 Uhr des Folgetags exklusive). Als Tagesziel gilt das aktuelle Tagesziel.
+- Logik und Tests: `Core/TagDetail.swift`, `HydroDeskTests/TagDetailTests.swift`.
+
 ### 7.5 Profil
 Drei Karten und eine Fußzeile:
 - **Körperdaten:** Zeilen „Name“, „Gewicht“ (kg, Dezimaltastatur), „Größe“ (cm); Beschriftung links, Eingabefeld rechts (Tertiär-Hintergrund, Radius 10, Einheit dahinter). Live-Vorschau in einer Box: „Tagesziel: 2.750 ml (Körperoberfläche 1,85 m² × 1.500 ml)“; ohne Eingabe: „Gewicht und Größe eingeben, dann wird das Tagesziel berechnet.“ Hinweis (`.footnote`): „Formel nach Mosteller, gerundet auf 50 ml, 1.500–3.500 ml. Richtwert, keine medizinische Empfehlung.“ Button „Speichern“ (Zustand „Speichert …“), Rückmeldung mit Häkchen „Gespeichert. Neues Tagesziel: 2.750 ml“.
@@ -273,6 +282,7 @@ Datum/Uhrzeit immer über `DateFormatter` mit `de_DE`, nie feste Strings zusamme
 12. **Gerätekarte:** „Gerät meldet …“ nur im Zustand „Verbunden“ (nicht im Demo-Modus); im Design-PDF ist die Übersichtsseite „alle sieben Zustände“ nur teilweise exportiert (1, 3, 5, 7) – die Zustände 2, 4 und 6 stammen aus der Tabelle der Spezifikation.
 13. **Beibehalten, weil weder Design noch Spezifikation etwas anderes sagen:** Texte bei Fehlern des Abgleichs („Synchronisierung läuft …/abgeschlossen/fehlgeschlagen“), Profil-Fehlermeldung „Lokal gespeichert, aber nicht in Supabase: …“, Serverfehler-Übersetzungen beim Login, automatischer Neustart der Gerätesuche, stündlicher Abgleich.
 14. **`DataStore`-Protokoll** nicht eingeführt (siehe oben).
+15. **Tagesseite** (Abschnitt 7.4a) auf Wunsch des Nutzers hinzugefügt.
 
 ### Noch nicht geprüft
 - Dynamic Type AX3 und iPhone SE (375 × 667 pt) wurden im Code berücksichtigt (Textstile, `ScaledMetric`, `ViewThatFits`), aber nicht auf einem echten SE bzw. mit AX3 ausprobiert.

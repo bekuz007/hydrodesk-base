@@ -11,7 +11,7 @@ Du musst **nichts konstruieren**: Die STL-Dateien sind fertig zum Drucken.
 |---|---|---|
 | `stl/base.stl` | **Bodenwanne**: Boden mit allen Haltern, Lichtkammer für den LED-Streifen vorne (mit Falz für den Diffusor), USB-Öffnungen hinten, Mulden für die Gummifüße | **1×** |
 | `stl/cover.stl` | **Deckel**: mit Display-Fenster und Öffnung für das Pad | **1×** |
-| `stl/pad.stl` | **Flaschen-Pad**: 90 × 90 mm Platte, liegt nur auf der Wägezelle | **1×** |
+| `stl/pad.stl` | **Flaschen-Pad**: 90 × 90 mm, liegt nur auf der Wägezelle; mit Spritzschutz (Rand, flache Mulde, Tropfkragen) | **1×** |
 | `stl/kappe_usb.stl` | **Abdeckkappe**: steckbarer Deckel für die breite USB-Öffnung des Displays hinten (Programmier-Anschluss) | **1×** (am besten 2×, falls eine verloren geht) |
 | `stl/diffusor_led.stl` | **Diffusor-Leiste**: 166,7 × 16,7 × 1 mm, wird vorne in den Falz vor den LED-Streifen gesetzt und macht aus den einzelnen LEDs eine gleichmäßige Lichtlinie | **1×** (weißes PLA oder naturfarbenes PETG, siehe Abschnitt 3) |
 | `stl/schalter_keile.stl` | **2 Klemmkeile** (je 7,6 mm lang, 1,1 mm dick) für den Ein/Aus-Schalter: werden von oben hinter den Schalter gedrückt und halten ihn in seiner Tasche (Abschnitt 7b) | **1×** (= 2 Keile; am besten 2× drucken, dann hast du Ersatz) |
@@ -27,10 +27,11 @@ Du musst **nichts konstruieren**: Die STL-Dateien sind fertig zum Drucken.
 
 ## 2. Maße des fertigen Geräts
 
-* **180 mm breit × 100 mm tief × 25 mm hoch** (mit Gummifüßen ca. 3 mm höher)
+* **180 mm breit × 100 mm tief × 25 mm hoch** (mit Gummifüßen ca. 3 mm höher); das Pad mit Tropfkragen ragt bis **28,9 mm** (Oberkante Rand), also ca. 3,9 mm über den Deckel
 * Links: Display (Hochformat), rechts: Flaschen-Pad 90 × 90 mm
 * Höhe 25 mm statt 20 mm, weil die Wägezelle allein schon 12,7 mm hoch ist:
-  Boden 2 + Sockel 3 + Wägezelle 12,7 + Pad 4,6 + Tropfrand 2,3 = 24,6 mm.
+  Boden 2 + Sockel 3 + Wägezelle 12,7 + Pad-Unterbau 2,2 + Pad-Platte (bis zur Standfläche) ca. 7 mm. Das Gehäuse selbst bleibt 25 mm hoch,
+  das Pad steht wegen des Tropfkragens (Dach über dem Spalt) darüber hinaus.
   Mit 20 mm geht es nicht.
 * Tiefe 100 mm statt 95 mm, weil das Pad 90 mm groß ist und rundherum 1 mm Luft
   und ein Deckelrand von 4 mm gebraucht werden (90 + 2 + 8 = 100).
@@ -57,7 +58,7 @@ Wie die Teile auf dem Druckbett liegen – **die STL-Dateien sind schon richtig 
 |---|---|---|---|---|
 | base | Boden nach unten (offene Seite oben) | nein | ca. 5 h 20 min*** | ca. 80 g*** |
 | cover | **Oberseite nach unten** (schöne glatte Sichtfläche) | nein | ca. 1 h 06 min | ca. 16 g |
-| pad | flache Unterseite nach unten, Rand oben | nein | ca. 1 h 26 min | ca. 27 g |
+| pad | flache Unterseite nach unten, Rand oben | nein | ca. 3 h (geschätzt, im Slicer prüfen) | ca. 55 g (geschätzt) |
 | kappe_usb | **Sichtseite (Flansch) nach unten**, Stopfen zeigt nach oben | nein | ca. 10 min** | ca. 1 g** |
 | diffusor_led | **flach** liegend (1 mm dünne Platte) | nein | ca. 15 min** | ca. 4 g** |
 | schalter_keile | **flach** liegend (die Keilform ist von oben zu sehen) | nein | ca. 5 min** | unter 1 g** |
@@ -92,7 +93,7 @@ Hinweise:
 | 2 | **M5 × 12 Senkkopfschraube** (DIN 7991, Innensechskant) | Wägezelle von **unten** am Boden festschrauben (feste Seite, M5-Löcher) |
 | 2 | **M4 × 10 Senkkopfschraube** (DIN 7991, Innensechskant) | Pad von **oben** an der Wägezelle festschrauben (freie Seite, M4-Löcher) |
 | 4 | **Gummifüße selbstklebend, Ø 12 mm** (max. 13 mm) | in die runden Mulden unten kleben |
-| 1 | Silikonmatte, **auf 86 × 86 mm zuschneiden** (1–1,5 mm dick) | oben in das Pad kleben (innerhalb des Rands) |
+| 1 | Silikonmatte, **rund Ø 64 mm zuschneiden** (1–1,5 mm dick) | in die Mulde des Pads kleben |
 | – | Doppelseitiges Klebeband (Schaumstoff) und/oder Heißkleber | Akku, Module, LED-Streifen festkleben; 2–4 kleine Klebepunkte (Glue Dots) für den Diffusor |
 | – | Kabelbinder (klein), dünne Litze | Kabel ordnen |
 | 1 | **Widerstand 470 Ω** (330–470 Ω geht) | in die Datenleitung direkt am Streifen-Eingang (DIN) löten |
@@ -165,10 +166,27 @@ mehr) – bei größerer Abweichung `sw_h` ändern und Bodenwanne + Keile neu ex
 * Die breite CYD-Öffnung wird im fertigen Gerät mit der **Abdeckkappe** verschlossen (siehe Abschnitt 7a).
   Zum Programmieren Kappe abziehen, danach wieder einstecken. Die USB-C-Ladebuchse bleibt immer offen.
 
-**Wasser-Erkennung (einfache Lösung):** Das Pad hat einen Tropfrand. Auf der linken Seite (zum Display hin)
-hat der Rand eine kleine **Kerbe**. Läuft Wasser auf dem Pad über, läuft es dort ab, tropft durch den
-**3-mm-Schlitz** im Deckel direkt auf den **Regensensor**, der darunter in einer Mulde im Boden liegt.
-Der Sensor meldet „nass“ → das ESP32 kann warnen. Danach Sensor und Mulde trocken wischen.
+**Spritzschutz am Pad (12.11.2026):** Kippt ein Glas um, bleibt das Wasser auf dem Pad:
+Der Rand ist **2,0 mm** hoch (2,8 mm über der Mulde), in der Mitte liegt eine **0,8 mm tiefe Mulde** mit ebenem Boden
+(66 × 66 mm), darin steht das Glas stabil. Den Spalt zwischen Pad und Deckel (1 mm) überdeckt ein **Tropfkragen**
+(Dach, 5 mm Überstand rundherum, 1,4 mm dick, mit 45°-Stütze und einer Tropfnase = Rille in der Unterseite).
+Überläuft das Wasser den Rand, tropft es **außen** vom Dach ab (auf den Deckel bzw. am Gehäuse vorbei) und läuft nicht in den Spalt.
+Die frühere **Ablaufkerbe im Rand ist entfallen**, damit das Wasser auf dem Pad bleibt. Der 3-mm-Schlitz im Deckel und der
+Regensensor sind unverändert; der Sensor meldet „nass“, wenn Wasser über das Dach auf den Deckel und in den Schlitz (liegt direkt unter der linken Dachkante) kommt.
+Danach Sensor und Mulde trocken wischen.
+
+| Maß am Pad (Spritzschutz) | Wert | Parameter |
+|---|---|---|
+| Rand über dem Boden / über der Mulde | 2,0 mm / 2,8 mm, 1,6 mm breit | `rim_h`, `rim_w`, `dish_d` |
+| Mulde | 0,8 mm tief, ebener Boden 66 × 66 mm, Flanke ca. 10 mm lang | `dish_d`, `dish_flat` |
+| Dach (Tropfkragen) | 5 mm über die Pad-Kante, 1,4 mm dick, Unterseite bei Z = 27,5 | `roof_ov`, `roof_t` |
+| Spalt Pad ↔ Deckelöffnung (seitlich) | 1,0 mm (unverändert) | `pad_gap` |
+| Luft Dach ↔ Deckeloberseite an der Öffnungskante | **1,5 mm** (mindestens 1,0 mm bei 0,5 mm Durchbiegung der Wägezelle, Annahme) | `roof_clr` |
+| Überdeckung des Spalts | 4 mm über dem Deckel (5 mm Dach minus 1 mm Spalt) | `roof_ov`, `pad_gap` |
+| Freistich vorne unter dem Pad | 1,6 mm über der verdickten Front-Innenwand, 1,5 mm vor der Wand | im Pad-Modul |
+
+Geprüft in OpenSCAD (`part = "pad_check"`, Pad verschoben um `pad_dx`, `pad_dy`, `pad_dz`): Pad ↔ Boden/Deckel ist **leer** bei
+±0,9 mm in X, ±0,9 mm in Y und 1,4 mm nach unten (Durchbiegung).
 Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anlöten (nicht höher als ca. 12 mm).
 
 ---
@@ -208,11 +226,15 @@ Tipp: Beim Regensensor die Stiftleiste abgewinkelt lassen oder Kabel direkt anl�
     **Gefühlvoll anziehen.**
 13. **Pad** von oben in die Öffnung legen. Die zwei Senklöcher müssen vorne über den M4-Löchern der Wägezelle liegen.
     Mit 2× M4 × 10 Senkkopf festschrauben. Prüfen: Das Pad darf **nirgends** den Deckel berühren
-    (rundherum ca. 1 mm Spalt) – sonst misst die Waage falsch.
+    (rundherum ca. 1 mm Spalt, Tropfkragen mindestens 1,5 mm über dem Deckel) – sonst misst die Waage falsch.
     Hinweis: Bei der Probemontage am 09.11.2026 lagen die M4-Gewinde der echten Wägezelle ca. 3 mm näher an der
     vorderen Pad-Kante als die Pad-Löcher, das Pad lag dadurch auf dem Deckelrand auf. Ab dieser Fassung
     (`pad_hole_dy = -3` im .scad) sitzen die Löcher 7 und 22 mm von der vorderen Pad-Kante (vorher 10 und 25 mm).
-14. **Silikonmatte** auf 86 × 86 mm zuschneiden und innen in das Pad kleben (deckt die Schraubenköpfe ab).
+    **Hinweis zu den Deckelschrauben:** Der Tropfkragen liegt über den vier Deckelschrauben direkt neben der Pad-Öffnung. Will man den Deckel wieder lösen, zuerst das Pad abschrauben.
+14. **Silikonmatte** rund auf Ø 64 mm zuschneiden und in die Mulde des Pads kleben.
+    **Wichtig (Wasserdicht):** Über den beiden M4-Schrauben liegt ein Schacht (Ø 9 mm, ca. 4 mm tief), damit die M4 × 10 weiter reichen.
+    Diesen Schacht nach dem Festschrauben mit einem Tropfen **neutralem Silikon** oder **Heißkleber** füllen (bündig mit dem Boden),
+    sonst kann Wasser durch das Schraubenloch ins Gehäuse laufen. Heißkleber lässt sich mit Heißluft wieder lösen.
 15. **Abdeckkappe** hinten in die breite USB-Öffnung drücken, bis der Flansch an der Wand anliegt
     (die Kerbe im Flansch zeigt nach **unten**).
 16. Fertig! Waage in der Software tarieren und kalibrieren (z. B. mit einer vollen 0,5-l-Flasche = ca. 500 g Wasser + Flasche).

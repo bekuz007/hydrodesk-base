@@ -103,3 +103,12 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Die Spezifikation war am Ende abgeschnitten. Die fehlenden Stellen wurden aus dem Design ergänzt; alles steht in `app-ios/DESIGN_SPEC.md` (Ergänzungen sind markiert).
 - **Geprüft:** 51 Unit-Tests grün (17 neue für Zielherkunft, Sync-Texte, die sieben Gerätezustände und die Zahlenformate), auf Linux und auf dem Mac; Bau für das iPhone mit Xcode erfolgreich und auf dem iPhone installiert. **Nicht geprüft:** Aussehen im Vergleich zum PDF am Gerät, Dynamic Type AX3, iPhone SE (Simulator ließ sich nicht starten).
 - Nachtrag: Im **Verlauf** öffnet ein Tipp auf einen Tag (Karte unter „Letzte 30 Tage“ oder Balken im Diagramm) jetzt eine **Tagesseite** mit allen Einträgen dieses Tages (neueste zuerst) und einer Zusammenfassung (Menge, Ziel, Prozent, Schlucke, „Ziel erreicht“). Auf „Heute“ führt „… und N weitere“ zur Tagesseite von heute. 6 neue Tests (57 grün).
+
+## 12.11.2026 – Pad: Spritzschutz (Rand, Mulde, Tropfkragen)
+
+- Ziel: Kippt ein Glas um, soll kein Wasser durch den Spalt zwischen Pad und Deckel ins Gehäuse laufen. Abflusslöcher wurden bewusst **nicht** gemacht (zu riskant).
+- Änderung nur am Pad (`gehaeuse/stl/pad.stl`, Modell `hydrodesk_base.scad`): Rand 2,0 mm hoch, flache Mulde 0,8 mm tief (ebener Boden 66 × 66 mm), rundum ein **Tropfkragen** (Dach, 5 mm Überstand, 1,4 mm dick, 45°-Stütze, Tropfnase). Druckbar **ohne Support**, Pad steht beim Drucken wie bisher.
+- Abstände: seitlich weiter 1,0 mm, Dach mindestens 1,5 mm über dem Deckel. Aufspannung auf der Wägezelle (Löcher, Rippen, Freikanal) unverändert.
+- Folgen: Pad steht jetzt bis 28,9 mm hoch (Gehäuse 25 mm). Die Ablaufkerbe im Rand ist weggefallen. Über den M4-Schrauben sitzt ein Schacht (Ø 9 mm), der mit Silikon/Heißkleber gefüllt werden muss. Silikonmatte jetzt rund Ø 64 mm. Deckelschrauben neben dem Pad sind vom Dach überdeckt (Pad zuerst abschrauben).
+- Beim Prüfen gefunden: Die verdickte Front-Innenwand (seit der Lichtkammer) ragte 2,3 mm in die Pad-Unterseite (Kollision in OpenSCAD). Das Pad hat jetzt vorne einen Freistich (1,6 mm Luft).
+- Geprüft nur im Modell (OpenSCAD-Kollisionstest, Vorschaubilder 25 bis 28). **Noch nicht gedruckt und nicht am echten Gerät getestet.**

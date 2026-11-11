@@ -14,6 +14,7 @@
 // =====================================================================
 
 part = "assembly";
+pad_dx = 0; pad_dy = 0; pad_dz = 0;   // nur fuer part="pad_check" (Verschiebung des Pads, Spieltest)
 
 $fn = 48;
 e   = 0.01;          // kleiner Ueberstand fuer saubere Boolean-Schnitte
@@ -156,8 +157,15 @@ lc_z0 = floor_t + lc_boss_h;               // Unterkante Waegezelle = 5
 pad_z0 = lc_z0 + lc_h;                     // Unterkante Pad-Rippen/-Sockel = 17.7
 pad_under = 2.2;                           // Rippen + Sockel unter der Platte (=Abstandshalter)
 pad_t = 2.4;                               // Plattenstaerke
-rim_h = 2.3;  rim_w = 1.6;                 // Tropfrand
-notch_w = 8;                               // Ablaufkerbe im Rand (links, Richtung Sensor)
+// --- Spritzschutz (12.11.2026): Rand + Mulde + Dach (Tropfkragen) ---
+rim_h    = 2.0;  rim_w = 1.6;              // Rand: 2,0 mm ueber dem Boden, 1,6 mm breit (kein Ablauf mehr nach aussen)
+dish_d   = 0.8;  dish_flat = 66;           // Mulde 0,8 mm tief, ebener Boden 66 x 66 mm, Flanke flach zum Rand
+roof_ov  = 5.0;                            // Dach steht 5 mm ueber die Pad-Kante (1 mm Spalt + 4 mm ueber dem Deckel)
+roof_clr = 1.5;                            // Luft Dachunterseite <-> Deckeloberseite an der Oeffnungskante
+roof_g   = 2.0;                            // 45-Grad-Stuetze unter dem Dach (druckbar ohne Support)
+roof_t   = 1.4;                            // Dachstaerke
+drip_w   = 0.9;  drip_d = 0.7;  drip_x = 3.3;   // Tropfnase (Rille in der Dachunterseite, 3,3 mm von der Pad-Kante)
+well_d   = 9.0;                            // Schraubenschacht ueber den Senkungen (M4 x 10 bleibt moeglich)
 rib_t = 1.6;                               // (nicht mehr benutzt)
 chan_w = 15;                               // Breite Freikanal ueber der Zelle (Zelle 12,7)
 pad_sock_y1 = lc_y0 + lc_hole_end + lc_hole_pitch + 4.5;  // Ende Auflage-Sockel (34.5)
@@ -167,8 +175,11 @@ pad_sock_y1 = lc_y0 + lc_hole_end + lc_hole_pitch + 4.5;  // Ende Auflage-Sockel
 // (7 und 22 mm von der vorderen Pad-Kante statt 10 und 25), runde Loecher wie vorher.
 pad_hole_dy   = -3.0;                      // Verschiebung der Pad-Loecher in Y (Richtung vordere Pad-Kante)
 pad_plate_z = pad_z0 + pad_under;          // 19.9
-pad_top_z   = pad_plate_z + pad_t;         // 22.3
-pad_rim_top = pad_top_z + rim_h;           // 24.6
+pad_seat_z  = pad_plate_z + pad_t;         // 22.3  (Auflage der M4-Senkschrauben, unveraendert)
+pad_roof_zu = H + roof_clr + roof_g - pad_gap;   // 27.5  flache Dachunterseite
+pad_rim_top = pad_roof_zu + roof_t;        // 28.9  Oberkante Rand/Dach
+pad_top_z   = pad_rim_top - rim_h;         // 26.9  Boden (Standflaeche)
+pad_dish_z  = pad_top_z - dish_d;          // 26.1  Boden der Mulde
 mat_t = 1.5;
 
 /* ===================== Regensensor / Ablauf ===================== */
@@ -216,7 +227,8 @@ foot_d = 13; foot_depth = 1.0; foot_in = 11;
 screw_pilot = screw_pilot_d();             // M3 selbstschneidend 2,5 (fuer Gewindeeinsatz: 4.0)
 cov_bosses = [[77,cov_front_y],[77,93],[175.5,20],[175.5,80]];   // vorne 9,2 statt 7 (tiefere Lichtkammer)
 cov_pad_h  = 2;                            // Verdickung unter dem Deckel an Schraubstellen
-assert(pad_rim_top <= H, "Pad ragt ueber das Gehaeuse - H erhoehen");
+assert(roof_g >= pad_gap, "Dach-Stuetze muss mindestens den Spalt zum Deckel ueberbruecken");
+assert(drip_x + drip_w < roof_ov, "Tropfnase liegt ausserhalb des Daches");
 assert(D - cap_plug_d >= D - wall, "Kappen-Stopfen ragt nach innen ueber die Wand (USB-Buchse!)");
 assert(cyd_cx + cap_fw/2 < tc_x + tc_w/2 - tc_plug_w/2 - 1, "Kappen-Flansch ueberdeckt die USB-C-Lademulde");
 assert(cyd_usb_zc + cap_fh/2 < base_h, "Kappen-Flansch ragt ueber die Wand");
@@ -453,32 +465,51 @@ module cover(){
 }
 
 /* ===================== PAD (in Einbaulage) ===================== */
+// Spritzschutz: Rand + flache Mulde halten verschuettetes Wasser auf dem Pad, das Dach (Tropfkragen) ueberdeckt
+// den Spalt Pad/Deckel. Aufspannung auf der Waegezelle (Rippen, Freikanal, Loecher) ist unveraendert.
+module roof_slab(){   // Dach: Platte + 45-Grad-Stuetze
+  translate([pad_x0-roof_ov, pad_y0-roof_ov, pad_roof_zu]) linear_extrude(roof_t)
+    rrect(pad_size+2*roof_ov, pad_size+2*roof_ov, pad_r+roof_ov);
+  hull(){
+    translate([pad_x0, pad_y0, pad_roof_zu-roof_g]) linear_extrude(e) rrect(pad_size, pad_size, pad_r);
+    translate([pad_x0-roof_g, pad_y0-roof_g, pad_roof_zu-e]) linear_extrude(e) rrect(pad_size+2*roof_g, pad_size+2*roof_g, pad_r+roof_g);
+  }
+}
 module pad(){
+  in_s = pad_size - 2*rim_w;
   difference(){
     union(){
-      rbox([pad_x0,pad_y0,pad_plate_z],[pad_size,pad_size,pad_t],pad_r);
-      // Tropfrand mit Ablaufkerbe links
-      difference(){
-        translate([pad_x0,pad_y0,pad_top_z-e]) linear_extrude(rim_h+e) difference(){
-          rrect(pad_size,pad_size,pad_r);
-          translate([rim_w,rim_w]) rrect(pad_size-2*rim_w,pad_size-2*rim_w,pad_r-rim_w);
-        }
-        translate([pad_x0-1, pad_cy-notch_w/2, pad_top_z]) cube([rim_w+2, notch_w, rim_h+1]);
-      }
+      rbox([pad_x0,pad_y0,pad_plate_z],[pad_size,pad_size,pad_top_z-pad_plate_z],pad_r);
+      roof_slab();
       // Unterseite: massiv (Sandwich-Platte, 20 % Infill) bis auf den Kanal ueber der Waegezelle
       rbox([pad_x0,pad_y0,pad_z0],[pad_size,pad_size,pad_under+e],pad_r);
     }
+    // Innenraum ueber dem Boden (Rand bleibt stehen)
+    translate([pad_x0+rim_w, pad_y0+rim_w, pad_top_z]) linear_extrude(10) rrect(in_s, in_s, pad_r-rim_w);
+    // flache Mulde: ebener Boden, Flanke steigt ueber ca. 10 mm zum Boden-Niveau am Rand
+    hull(){
+      translate([pad_cx-dish_flat/2, pad_cy-dish_flat/2, pad_dish_z]) linear_extrude(e) rrect(dish_flat, dish_flat, 6);
+      translate([pad_x0+rim_w, pad_y0+rim_w, pad_top_z-e]) linear_extrude(e) rrect(in_s, in_s, pad_r-rim_w);
+    }
+    // Tropfnase: Rille in der Dachunterseite, laeuft rundum
+    translate([pad_x0-drip_x-drip_w, pad_y0-drip_x-drip_w, pad_roof_zu-e]) linear_extrude(drip_d+e) difference(){
+      rrect(pad_size+2*(drip_x+drip_w), pad_size+2*(drip_x+drip_w), pad_r+drip_x+drip_w);
+      translate([drip_w,drip_w]) rrect(pad_size+2*drip_x, pad_size+2*drip_x, pad_r+drip_x);
+    }
+    // Freistich vorne: Die verdickte Front-Innenwand (bis Y = front_in, Oberkante Z = front_thick_top) ragte in Pad-Rippen/-Platte
+    // (Kollision laengs der Vorderkante, 2,3 mm tief) -> Pad darf dort nicht aufliegen; 1,6 mm Luft ueber der Wand, 1,5 mm vor der Wand
+    translate([pad_x0-1, pad_y0-1, pad_z0-1]) cube([pad_size+2, (front_in+1.5)-(pad_y0-1), (front_thick_top+1.6)-(pad_z0-1)]);
     // Freikanal ueber dem Biegebalken: Pad beruehrt die Zelle NUR am vorderen Ende (Sockel, Y < pad_sock_y1)
     translate([pad_cx-chan_w/2, pad_sock_y1, pad_z0-1]) cube([chan_w, pad_y0+pad_size-pad_sock_y1+1, pad_under+1]);
     // M4-Senkschrauben von oben in das freie Ende der Waegezelle
     // runde Loecher, um pad_hole_dy in Y verschoben (siehe Kommentar bei pad_hole_dy)
     for (yy=[lc_y0+lc_hole_end+pad_hole_dy, lc_y0+lc_hole_end+lc_hole_pitch+pad_hole_dy]) {
       translate([pad_cx,yy,pad_z0-1]) cylinder(d=4.8, h=10);   // 4,8 statt 4,5: Spiel fuer Drucktoleranz (09.11.2026)
-      translate([pad_cx,yy,pad_top_z-4.3]) cylinder(r1=0, r2=4.3, h=4.3+e);
+      translate([pad_cx,yy,pad_seat_z-4.3]) cylinder(r1=0, r2=4.3, h=4.3+e);   // Senkung, Auflage bleibt bei Z 22,3
+      translate([pad_cx,yy,pad_seat_z]) cylinder(d=well_d, h=10);              // Schacht nach oben (Schrauben bleiben M4 x 10)
     }
   }
 }
-
 
 /* ===================== ABDECKKAPPE (USB-Ausschnitt CYD) ===================== */
 // Modelliert in Drucklage: Flansch-Aussenseite auf dem Druckbett (z=0), Stopfen zeigt nach oben.
@@ -565,7 +596,7 @@ module components(){
   cob_strip();
   loadcell();
 }
-module mat(){ color([0.25,0.25,0.25]) translate([pad_x0+rim_w+0.5, pad_y0+rim_w+0.5, pad_top_z]) cube([pad_size-2*rim_w-1, pad_size-2*rim_w-1, mat_t]); }
+module mat(){ color([0.25,0.25,0.25]) translate([pad_cx, pad_cy, pad_dish_z]) cylinder(d=dish_flat-2, h=mat_t); }   // runde Anti-Rutsch-Matte in der Mulde
 
 housing_col = [0.82,0.82,0.82];
 pad_col     = [0.15,0.45,0.85];
@@ -589,6 +620,16 @@ else if (part == "sw_detail_offen") {   // wie sw_detail, Keile 14 mm hochgezoge
 else if (part == "sw_section") {   // Schnitt bei Y = Schaltermitte (Blick von vorne)
   intersection(){ translate([-5, sw_y-0.01, -1]) cube([30, 30, H+5]);
     union(){ color(housing_col) base(); color(housing_col) cover(); color([0.95,0.6,0.2]) for (s=[-1,1]) keil(s); components(); } }
+}
+else if (part == "pad_check") {   // Pad (um pad_dx/dy/dz verschoben) gegen Boden + Deckel: muss LEER sein
+  intersection(){ translate([pad_dx,pad_dy,pad_dz]) pad(); union(){ base(); cover(); } }
+}
+else if (part == "pad_section") {   // Schnitt bei X = pad_cx+25 (neben den Schraubenschaechten): Rand, Mulde, Dach, Spalt, Deckel
+  cx = pad_cx + 25;
+  translate([-cx, 0, 0]) intersection(){
+    translate([cx, -1, -1]) cube([W, D+2, H+8]);
+    union(){ color(housing_col) base(); color(housing_col) cover(); color(pad_col) pad(); mat(); }
+  }
 }
 else if (part == "parts_check") intersection(){ base(); translate([0,-0.05,0.05]) components(); }  // muss LEER sein
 else if (part == "diff_check")  union(){ intersection(){ diffusor(); base(); } intersection(){ diffusor(); components(); } }  // muss LEER sein

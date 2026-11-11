@@ -32,3 +32,6 @@ r sw_section 21_schalter_tasche_schnitt "--camera=9,27,9,90,0,0,50 --projection=
 r sw_detail 22_schalter_tasche_innen "--camera=10,27,7,55,0,125,75"
 r sw_detail_offen 23_schalter_einsetzen "--camera=10,27,9,55,0,125,85"
 r sw_detail 24_fet_platine         "--camera=61,55,6,50,0,200,95"
+r pad_section 25_pad_schnitt_vorderkante "--camera=0,10,24,90,0,270,48 --projection=o"
+r pad      27_pad_spritzschutz_ecke "--render --camera=100,10,10,62,0,35,110"
+r assembly 28_zusammenbau_pad_dach  "--camera=126,5,28,70,0,25,150"

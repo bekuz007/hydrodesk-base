@@ -49,7 +49,7 @@ Das eingebaute 2,8"-Touch-Display zeigt Tagesziel, Fortschritt und Erinnerungen 
 - **Links:** ESP32-Touch-Display („Cheap Yellow Display“ ESP32-2432S028R) im Hochformat, darunter Akku und 5-V-Wandler (Pololu S13V10F5)
 - **Mitte:** TC4056-USB-C-Lader an der Rückwand, FET-Platine (30 × 24,5 mm, 2 × AO3401A + BC547B), Auswertemodul des Regensensors
 - **Links außen:** Ein/Aus-Schiebeschalter (C&K OS102011MS2QN1) in einer Tasche der Seitenwand, gehalten von 2 Klemmkeilen
-- **Rechts:** 90 × 90 mm Flaschen-Pad, liegt nur auf der Wägezelle (1 mm Spalt rundherum); darunter Wägezelle, HX711 und Regensensor
+- **Rechts:** 90 × 90 mm Flaschen-Pad, liegt nur auf der Wägezelle (1 mm Spalt rundherum, überdeckt von einem Tropfkragen); mit Rand und flacher Mulde als Spritzschutz (Pad ragt bis 28,9 mm); darunter Wägezelle, HX711 und Regensensor
 - **Hinten:** USB-Öffnungen – Programmier-Öffnung des CYD mit **steckbarer Abdeckkappe**, USB-C zum Laden offen; **vorne:** Lichtkammer über fast die ganze Breite – der COB-Streifen klebt an ihrer Rückwand, davor sitzt die 1 mm dünne Diffusor-Leiste in einem Falz
 
 | Explosionsansicht | Innenansicht ohne Deckel |

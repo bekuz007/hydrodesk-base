@@ -1,0 +1,5 @@
+# Obsidian-Arbeitsstand nicht versionieren
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/graph-cache.json
+.trash/

@@ -1,0 +1,86 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": false,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "tag:#typ/projekt",
+      "color": {
+        "a": 1,
+        "rgb": 6000111
+      }
+    },
+    {
+      "query": "tag:#typ/hardware",
+      "color": {
+        "a": 1,
+        "rgb": 15769930
+      }
+    },
+    {
+      "query": "tag:#typ/gehaeuse",
+      "color": {
+        "a": 1,
+        "rgb": 13215339
+      }
+    },
+    {
+      "query": "tag:#typ/software",
+      "color": {
+        "a": 1,
+        "rgb": 3983046
+      }
+    },
+    {
+      "query": "tag:#typ/doku",
+      "color": {
+        "a": 1,
+        "rgb": 9149619
+      }
+    },
+    {
+      "query": "tag:#typ/werkzeug",
+      "color": {
+        "a": 1,
+        "rgb": 6471794
+      }
+    },
+    {
+      "query": "tag:#typ/status",
+      "color": {
+        "a": 1,
+        "rgb": 15254855
+      }
+    },
+    {
+      "query": "tag:#typ/entscheidung",
+      "color": {
+        "a": 1,
+        "rgb": 14900586
+      }
+    },
+    {
+      "query": "tag:#typ/team",
+      "color": {
+        "a": 1,
+        "rgb": 13929412
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.25,
+  "lineSizeMultiplier": 0.85,
+  "collapse-forces": false,
+  "centerStrength": 0.28,
+  "repelStrength": 14,
+  "linkStrength": 0.45,
+  "linkDistance": 175,
+  "scale": 1,
+  "close": false
+}

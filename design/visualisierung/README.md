@@ -13,6 +13,8 @@ Weitere Ansichten des realistischen Modells (Draufsicht, Detail SD/FET, …) lie
 | `hydrodesk_teile.png` | Teileübersicht: alle 20 Teile (inkl. USB-Abdeckkappe, Diffusor-Leiste, Ein/Aus-Schalter und Klemmkeilen) maßstäblich auf einer Schneidematte (Raster 1 cm) mit nummerierter Legende; ohne Litzen, Schrumpfschlauch, Lötzinn und den 2 × 10-kΩ-Teiler |
 | `hydrodesk_produkt.png` | Produktbild: geschlossenes Gerät, Display mit Tagesfortschritt, vorne eine gleichmäßig blau leuchtende Lichtlinie (COB-LED-Streifen hinter dem milchigen Diffusor, keine einzelnen Lichtpunkte), Flasche nur angedeutet |
 
+Zusätzlich gibt es eine **Lötübersicht** im gleichen Stil wie `hydrodesk_teile.png`, aber nur mit den Teilen, die gelötet werden, gruppiert nach Lötschritt 1 bis 6. Das Bild liegt unter `projektdokumentation/fotos/loeten/loeten_teileuebersicht.png` (Ansicht `v_loetteile`, Skript `realistisch/render_loetteile.sh`). Nicht gezeigt: Gehäuse, Schrauben, Füße, Litzen, Schrumpfschlauch und Lötzinn. Auf der Matte liegen zusätzlich die freien Widerstände 2 × 10 kΩ (Akku-Teiler) und 470 Ω (DIN), Bauform 0207.
+
 Detailbilder (ebenfalls aus dem realistischen Modell, gleiche Kameras wie die technischen OpenSCAD-Vorschauen in `gehaeuse/preview/`, 1600 × 1100 px, ohne Beschriftung):
 
 | Datei | Inhalt | technische Vorschau |
@@ -28,7 +30,7 @@ Die OpenSCAD-Vorschauen in `gehaeuse/preview/` bleiben bestehen (sie werden von 
 ## So entstehen die Bilder
 
 1. **Blender 4.5 (Cycles)** baut das realistische Modell aus den STL-Dateien (`src/stl/`, Einbaulage aus OpenSCAD) und den nachgebauten Modulen
-   (`realistisch/src/real_scene.py`, Maße und Quellen: `design/3d_modell/realistisch/README.md`) und rendert die Ansichten `v_produkt`, `v_explosion`, `v_innen`, `v_teile`
+   (`realistisch/src/real_scene.py`, Maße und Quellen: `design/3d_modell/realistisch/README.md`) und rendert die Ansichten `v_produkt`, `v_explosion`, `v_innen`, `v_teile` (sowie `v_loetteile` für die Lötübersicht)
    (`realistisch/src/real_views.py`: gleiche Kameras wie früher, Hilfslinien, angedeutete Flasche im Produktbild, Schneidematte mit Rastermaß in der Teileübersicht).
    Zu jedem Bild schreibt das Skript die Bildpunkte der Bauteile (`.json`).
 2. **Python/PIL** (`realistisch/src/real_final.py`) setzt Titel, deutsche Beschriftungen und Hinweislinien darüber. Die Linien zeigen genau auf sichtbare Punkte der Bauteile.

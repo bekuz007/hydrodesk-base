@@ -62,6 +62,10 @@ Ein Bild pro Lötschritt, alle Pins und Werte aus `gehaeuse/ANLEITUNG.md` (Absch
 6. `fotos/loeten/loeten_6_led_regensensor.png` – LED-Streifen (470 Ω in DIN) und Regensensor (DO an GPIO19)
    - `fotos/loeten/loeten_6b_led_regen_3d.png` – 3D-Ansicht (Blender) von LED-Streifen und Regensensor, nur zum Verstehen (kein Druckteil)
 
+Übersicht der Lötteile (gleiche Schneidematte und derselbe Stil wie `design/visualisierung/hydrodesk_teile.png`, aber nur das, was gelötet wird):
+
+- `fotos/loeten/loeten_teileuebersicht.png` – Lötübersicht: die Teile nach Lötschritt 1 bis 6, plus das Display-Board als Anschlussziel; ohne Gehäuse, Schrauben und Füße. Unten der Hinweis auf Litzen, Schrumpfschlauch und Lötzinn. Skript: `design/visualisierung/realistisch/render_loetteile.sh` (Ansicht `v_loetteile`).
+
 Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und wo der Regensensor seine 3,3 V abgreift.
 
 ### Bestückungsplan FET-Platine (Lochraster 3 × 7 cm)
@@ -74,6 +78,7 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.
 - `fotos/loeten/loeten_5c_fet_3d_oben.png` / `loeten_5c_fet_3d_unten.png` – 3D-Ansicht (Blender) der fertig bestückten FET-Platine nach diesem Plan, nur zum Verstehen (kein Druckteil)
 - 16.11.2026: 3D-Ansichten `loeten_4b_stromweg_3d.png` und `loeten_6b_led_regen_3d.png` in Blender ergänzt (gleicher Stil wie 5c; Skripte unter `design/loetplan/3d/`); selbstständige `.blend`-Dateien `loeten_4b_stromweg_3d.blend`, `loeten_6b_led_regen_3d.blend` und `loeten_5c_fet_3d.blend` (Texturen gepackt, Kameras gesetzt) ebenfalls dort).
+- 16.11.2026: Lötübersicht `fotos/loeten/loeten_teileuebersicht.png` ergänzt (Blender Cycles, Teile nach Lötschritt auf der Schneidematte).
 
 ## 09.11.2026 – WLAN und Uhrzeit
 

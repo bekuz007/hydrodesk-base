@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Copyright (c) 2026 bekuz007 (https://github.com/bekuz007/hydrodesk-base) - siehe LICENSE
 # Ansichten fuer die Uebersichtsbilder im README (gleiche Kameras wie die alten OpenSCAD/Blender-Bilder):
-#   v_produkt | v_explosion | v_innen | v_teile
+#   v_produkt | v_explosion | v_innen | v_teile | v_loetteile
 # Wird von real_scene.py per exec() geladen (gleiche Variablen). Schreibt neben das PNG eine .json mit den
 # Ankerpunkten (normiert 0..1) fuer die Beschriftung (real_final.py). HD_NO_RENDER=1: nur Anker, kein Rendern.
 import json, numpy as np
+if not os.path.isfile(os.path.join(SL, 'studio.exr')):
+    _alt = os.path.join(os.path.dirname(bpy.app.binary_path), '%d.%d' % tuple(bpy.app.version[:2]), 'datafiles/studiolights/world/')
+    if os.path.isfile(os.path.join(_alt, 'studio.exr')):
+        SL = _alt if _alt.endswith('/') else _alt + '/'
 VIEW = MODE[2:]
 scn.render.resolution_x, scn.render.resolution_y = 2560, 1440
 LIFT_IN = float(os.environ.get('HD_LIFT', '60'))
@@ -248,6 +252,111 @@ elif VIEW == 'teile':
         print('MASS %-7s %6.1f x %6.1f x %5.1f mm' % (g, mx.x - mn.x, mx.y - mn.y, mx.z - mn.z))
     pts['mat_tl_corner'] = Vector((0, MH, 0)); pts['mat_br_corner'] = Vector((MW, 0, 0))
     for k in ('ft_0', 'm3_0'): pass
+    bpy.context.view_layer.update()
+    keys = list(pts); uv, _ = proj_np(np.array([list(pts[k]) for k in keys]), cam)
+    extra = {k: [float(uv[i, 0]), float(uv[i, 1])] for i, k in enumerate(keys)}
+    finish(cam, {}, extra)
+
+
+elif VIEW == 'loetteile':
+    # Nur die zu loetenden Teile, gruppiert nach Loetschritt, gleiche Matte/Kamera wie v_teile.
+    # Freie Widerstaende (2 x 10 kOhm-Teiler, 470 Ohm in DIN): Bauform 0207 wie im Modell-README.
+    set_offsets({})
+    hide([g for g in ('cover', 'base', 'pad', 'mat', 'm3', 'm4', 'm5', 'feet', 'cap', 'diff', 'keil') if g in GROUPS])
+    MW, MH = 540, 330
+    world_hdri(0.85, 140); sun('Key', (35, 0, -30), 2.6, 8); sun('Rim', (62, 0, 205), 1.0, 15)
+    CUR[0] = C_ENV
+    bm_ = mat('Teile-Boden', (0.5, 0.5, 0.5), 0.9, emis=(0.57, 0.58, 0.60), estr=1.0)
+    bm_.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0, 0, 0, 1)
+    boden = box('Boden', -1500, -1500, -6.05, 3600, 3600, 4, bm_, 0.0, 1)
+    matobj = box('Schneidematte', 0, 0, -2, MW, MH, 2, None, 0.8, 3)
+    matobj.data.materials.append(tex_mat('Matte', 'cutting_mat.png', rough=0.75))
+    me = matobj.data; uvl = me.uv_layers.new()
+    for p in me.polygons:
+        for li in p.loop_indices:
+            v = me.vertices[me.loops[li].vertex_index].co; uvl.data[li].uv = (v.x/MW, v.y/MH)
+    CUR[0] = C_EL
+
+    def make_axial_0207(name, bands, label):
+        """Metallschichtwiderstand 0207, stehend um Z; later mit (0, 90, 0) auf die Matte legen."""
+        Lr = 6.3; z0 = 0.0; lead = 7.0
+        with grp(name, (0, 0, 0), 0, C_EL, label):
+            cyl(name, 0, 0, z0 + 0.5, 2.3, Lr - 1.0, M['res_body'], 24)
+            lathe(name + ' Kappe1', [(0, z0), (0.9, z0 + 0.05), (1.25, z0 + 0.4), (1.25, z0 + 0.9), (0, z0 + 0.9)], M['res_body'], 24, 0, 0)
+            lathe(name + ' Kappe2', [(0, z0 + Lr - 0.9), (1.25, z0 + Lr - 0.9), (1.25, z0 + Lr - 0.4), (0.9, z0 + Lr - 0.05), (0, z0 + Lr)], M['res_body'], 24, 0, 0)
+            cols = [BAND[bands[0]], BAND[bands[1]], BAND[bands[2]], BAND[1]]
+            for k, (zb, cc) in enumerate(zip([z0 + Lr - 1.3, z0 + Lr - 2.1, z0 + Lr - 2.9, z0 + 1.2], cols)):
+                cyl(name + ' Ring', 0, 0, zb, 2.36 if k else 2.6, 0.5, mat('Ring %s' % str(cc), srgb(cc), 0.45, coat=0.3), 24)
+            tube(name + ' Bein1', [(0, 0, -lead), (0, 0, z0 + 0.4)], M['tin'], 0.25)
+            tube(name + ' Bein2', [(0, 0, z0 + Lr - 0.4), (0, 0, z0 + Lr + lead)], M['tin'], 0.25)
+
+    make_axial_0207('r10a', (1, 0, 3), 'Widerstand 10 kOhm')
+    make_axial_0207('r10b', (1, 0, 3), 'Widerstand 10 kOhm')
+    make_axial_0207('r470', (4, 7, 1), 'Widerstand 470 Ohm')
+
+    def meshes_of(e): return [o for o in e.children_recursive if o.type in ('MESH', 'CURVE') and not o.hide_render]
+    def wbbox(e):
+        bpy.context.view_layer.update(); mn = Vector((1e9,) * 3); mx = Vector((-1e9,) * 3)
+        for o in meshes_of(e):
+            for c in o.bound_box:
+                w = o.matrix_world @ Vector(c)
+                mn = Vector((min(mn[i], w[i]) for i in range(3))); mx = Vector((max(mx[i], w[i]) for i in range(3)))
+        return mn, mx
+    def lay(name, x0, y0, rot=(0, 0, 0)):
+        e = GROUPS[name]
+        Rb = G_BASEMAT[name].to_3x3()
+        Rx = Euler([math.radians(a) for a in rot]).to_matrix()
+        e.matrix_basis = (Rx @ Rb).to_4x4()
+        mn, mx = wbbox(e)
+        e.matrix_basis = Matrix.Translation((x0 - mn.x, y0 - mn.y, 0.02 - mn.z)) @ (Rx @ Rb).to_4x4()
+
+    # Anordnung nach Loetschritt (Koordinaten: untere linke Ecke der Bounding-Box, mm)
+    LAYOUT = {
+        'hx': (36, 198, (0, 0, 0)), 'lc': (22, 250, (0, 0, -90)),
+        'cyd': (178, 186, (0, 0, 0)),
+        'bat': (276, 216, (0, 0, 0)), 'tc': (328, 226, (0, 0, 0)),
+        'pol': (360, 244, (0, 0, 0)), 'sw': (386, 248, (0, -90, 0)),
+        'r10a': (328, 176, (0, 90, 0)), 'r10b': (362, 176, (0, 90, 0)),
+        'fet': (472, 210, (0, 0, 0)),
+        'led': (30, 52, (-90, 0, 0)), 'rs': (230, 42, (0, 0, 0)),
+        'cmp': (300, 50, (0, 0, 0)), 'r470': (352, 72, (0, 90, 0)),
+    }
+    LAYOUT.update(json.loads(os.environ.get('HD_LAYOUT', '{}')))
+    for g, (x0, y0, r) in LAYOUT.items():
+        lay(g, x0, y0, tuple(r))
+
+    # Rahmen um die Schritt-Gruppen (auf der Matte, ueber dem Raster, unter den Teilen)
+    FRAMES = {
+        's1': (12, 155, 148, 318),
+        's2': (160, 155, 252, 318),
+        's34': (264, 155, 430, 318),
+        's5': (442, 155, 528, 318),
+        's6': (12, 18, 430, 143),
+    }
+    CUR[0] = C_ENV
+    fm = mat('Schritt-Rahmen', (0.82, 0.86, 0.80), 0.55, emis=(0.72, 0.78, 0.70), estr=0.45)
+    tw, th = 1.3, 0.55
+    for key, (x0, y0, x1, y1) in FRAMES.items():
+        box('Rahmen %s unten' % key, x0, y0, 0.04, x1 - x0, tw, th, fm)
+        box('Rahmen %s oben' % key, x0, y1 - tw, 0.04, x1 - x0, tw, th, fm)
+        box('Rahmen %s links' % key, x0, y0, 0.04, tw, y1 - y0, th, fm)
+        box('Rahmen %s rechts' % key, x1 - tw, y0, 0.04, tw, y1 - y0, th, fm)
+    CUR[0] = C_EL
+
+    cam = camera((MW/2 + 95, MH/2 - 4, 0), 0, 68, 3000, 100, ortho=760)
+    SHOW = ['hx', 'lc', 'cyd', 'bat', 'tc', 'pol', 'sw', 'r10a', 'r10b', 'fet', 'led', 'rs', 'cmp', 'r470']
+    TE = {g: wbbox(GROUPS[g]) for g in SHOW}
+    pts = {}
+    for g, (mn, mx) in TE.items():
+        pts[g + '_tl'] = Vector((mn.x, mx.y, mx.z))
+        pts[g + '_bc'] = Vector(((mn.x + mx.x)/2, mn.y, 0))
+        pts[g + '_c'] = Vector(((mn.x + mx.x)/2, (mn.y + mx.y)/2, mx.z))
+        print('MASS %-7s %6.1f x %6.1f x %5.1f mm  @ (%.1f, %.1f)-(%.1f, %.1f)' % (
+            g, mx.x - mn.x, mx.y - mn.y, mx.z - mn.z, mn.x, mn.y, mx.x, mx.y))
+    pts['mat_tl_corner'] = Vector((0, MH, 0)); pts['mat_br_corner'] = Vector((MW, 0, 0))
+    for key, (x0, y0, x1, y1) in FRAMES.items():
+        pts['frm_%s_tl' % key] = Vector((x0, y1, 0.6))
+        pts['frm_%s_br' % key] = Vector((x1, y0, 0.6))
     bpy.context.view_layer.update()
     keys = list(pts); uv, _ = proj_np(np.array([list(pts[k]) for k in keys]), cam)
     extra = {k: [float(uv[i, 0]), float(uv[i, 1])] for i, k in enumerate(keys)}

@@ -13,15 +13,16 @@ struct GeraeteKarte: View {
 
     @Environment(AppContainer.self) private var container
     @Environment(\.openURL) private var openURL
-    /// V5: Bildschirm „Gerät steuern“ offen?
-    @State private var steuerungOffen = false
+    /// V5: Info-Seite „HydroDesk“ offen?
+    @State private var infoOffen = false
 
     var body: some View {
         let geraete = container.geraete
         let messwert = geraete.letzterMesswert
+        let geraetStatus = geraete.geraeteStatus
         let modell = GeraeteKarteModell(
             status: geraete.status, demoModus: geraete.demoModus,
-            akkuProzent: messwert?.akkuProzent, zielErreicht: zielErreicht)
+            akkuProzent: geraetStatus?.akkuProzent ?? messwert?.akkuProzent, zielErreicht: zielErreicht)
 
         VStack(spacing: 0) {
             Lichtlinie(farbe: modell.lichtlinie, breite: nil)
@@ -31,7 +32,7 @@ struct GeraeteKarte: View {
                 if modell.status == .verbunden, let messwert {
                     HStack(spacing: 6) {
                         Text(GeraeteKarteModell.meldetText(messwert))
-                        if let akku = messwert.akkuProzent {
+                        if geraetStatus == nil, let akku = messwert.akkuProzent {
                             Text("·")
                             AkkuAnzeige(prozent: akku)
                         }
@@ -39,6 +40,13 @@ struct GeraeteKarte: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                }
+                // V5: Flascheninhalt und Akku direkt auf der Karte
+                if modell.status == .verbunden, let geraetStatus {
+                    Text(geraetStatus.kurzText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
                 if let hinweis = modell.hinweis {
                     Text(hinweis).font(.footnote).foregroundStyle(.secondary)
@@ -51,9 +59,9 @@ struct GeraeteKarte: View {
                     ForEach(modell.aktionen, id: \.self) { aktion in
                         knopf(aktion)
                     }
-                    // V5: Firmware kann gesteuert werden → eigener Bildschirm
+                    // V5: Firmware liefert Status → Info-Seite (von dort auch „einstellen“)
                     if geraete.steuerbar {
-                        Button("Gerät steuern") { steuerungOffen = true }
+                        Button("Details") { infoOffen = true }
                             .buttonStyle(.hydro(.haupt))
                     }
                 }
@@ -63,9 +71,12 @@ struct GeraeteKarte: View {
         .frame(maxWidth: .infinity)
         .background(Theme.karte)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusKarte))
+        // Ganze Karte antippbar, sobald das Gerät verbunden ist (Knöpfe haben Vorrang)
+        .contentShape(RoundedRectangle(cornerRadius: Theme.radiusKarte))
+        .onTapGesture { if geraete.steuerbar { infoOffen = true } }
         .accessibilityElement(children: .contain)
-        .sheet(isPresented: $steuerungOffen) {
-            GeraetSteuerungView()
+        .sheet(isPresented: $infoOffen) {
+            GeraetInfoView()
                 .environment(container)
         }
     }
@@ -116,10 +127,150 @@ struct GeraeteKarte: View {
     }
 }
 
+// MARK: - V5: Info-Seite „HydroDesk“
+
+/// Info-Seite zum verbundenen Gerät (Karte auf „Heute“ antippen): Flascheninhalt, Gewicht, Zustand,
+/// Tagesstand Gerät/App, Akku, Waage, Nässe, Profil. Nur Anzeige – Einstellungen über
+/// „Waage & Flasche einstellen“ (`GeraetSteuerungView`).
+struct GeraetInfoView: View {
+    @Environment(AppContainer.self) private var container
+    @Environment(\.dismiss) private var dismiss
+    @State private var steuerungOffen = false
+
+    var body: some View {
+        let geraete = container.geraete
+        let s = geraete.geraeteStatus
+
+        NavigationStack {
+            Form {
+                if !geraete.steuerbar {
+                    Section {
+                        Rueckmeldung(art: .fehler, text: "Verbindung zum HydroDesk ist weg. Bitte auf „Heute“ neu verbinden.")
+                    }
+                }
+
+                if let s {
+                    if s.nass {
+                        Section { Rueckmeldung(art: .fehler, text: "Wasser erkannt – das Gerät ist gesperrt und die LEDs sind aus.") }
+                    }
+                    if !s.waageOk {
+                        Section { Rueckmeldung(art: .fehler, text: "Waage antwortet nicht – Kabel am HX711 prüfen.") }
+                    }
+
+                    // 1. Flasche
+                    Section {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(s.flascheSteht ? "In der Flasche" : "Flasche")
+                            Spacer()
+                            Text(s.flascheSteht ? s.flascheText : "nicht auf dem Pad")
+                                .font(s.flascheSteht ? .title2.bold() : .body)
+                                .foregroundStyle(s.flascheSteht ? Color.primary : Color.secondary)
+                                .monospacedDigit()
+                        }
+                        if let anteil = s.fuellstand {
+                            ProgressView(value: anteil) {
+                                Text("\(Format.prozent(Int((anteil * 100).rounded()))) von \(Format.mlEinheit(s.kapazitaetMl))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .tint(Theme.wasserblau)
+                        }
+                        HStack {
+                            Text("Auf dem Pad")
+                            Spacer()
+                            Text("\(Format.ml(s.gewichtG)) g").foregroundStyle(.secondary).monospacedDigit()
+                            Text(s.ruhig ? "ruhig" : "…")
+                                .font(.caption)
+                                .foregroundStyle(s.ruhig ? Theme.zielgruen : Color.secondary)
+                        }
+                        zeile("Zustand", s.zustandText)
+                    } header: {
+                        Text("Flasche")
+                    } footer: {
+                        if s.flascheSteht && !s.flascheKalibriert {
+                            Text("Flasche noch nicht angelernt – der Inhalt ist nur geschätzt. Unter „Waage & Flasche einstellen“ leere und volle Flasche übernehmen.")
+                        }
+                    }
+
+                    // 2. Heute
+                    Section {
+                        zeile("Gerät", "\(Format.ml(s.heuteMl)) / \(Format.mlEinheit(s.zielMl))")
+                        if let app = appHeuteMl {
+                            zeile("App", Format.mlEinheit(app))
+                            if app == s.heuteMl {
+                                Rueckmeldung(art: .erfolg, text: "Gerät und App zeigen denselben Stand.")
+                            } else {
+                                Rueckmeldung(art: .info, text: "Wird abgeglichen – das Gerät übernimmt den Stand der App.")
+                            }
+                        }
+                    } header: {
+                        Text("Heute getrunken")
+                    }
+
+                    // 3. Gerät
+                    Section {
+                        HStack {
+                            Text("Akku")
+                            Spacer()
+                            if let akku = s.akkuProzent {
+                                AkkuAnzeige(prozent: akku)
+                            } else {
+                                Text(s.akkuText).foregroundStyle(.secondary)
+                            }
+                        }
+                        zeile("Bluetooth", geraete.status.text)
+                        zeile("Waage", s.waageOk ? "OK" : "Fehler")
+                        zeile("Nässe-Sensor", s.nass ? "Wasser erkannt" : "trocken")
+                        zeile("Profil", "\(Format.dezimal(s.profilKg, stellen: 1)) kg · \(s.profilCm) cm")
+                    } header: {
+                        Text("Gerät")
+                    }
+                } else {
+                    Section {
+                        Text("Warte auf Daten vom Gerät …").foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    Button("Waage & Flasche einstellen") { steuerungOffen = true }
+                        .disabled(!geraete.steuerbar)
+                } footer: {
+                    Text("Tara, Eichen, leere/volle Flasche anlernen, Profil übertragen.")
+                }
+            }
+            .navigationTitle("HydroDesk")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fertig") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $steuerungOffen) {
+                GeraetSteuerungView()
+                    .environment(container)
+            }
+        }
+    }
+
+    /// Summe aller heutigen Einträge in der App (wie auf „Heute“)
+    private var appHeuteMl: Int? {
+        guard let nutzer = container.auth.zustand.nutzer else { return nil }
+        return container.drinks.heuteSumme(userId: nutzer.userId)
+    }
+
+    private func zeile(_ titel: String, _ wert: String) -> some View {
+        HStack {
+            Text(titel)
+            Spacer()
+            Text(wert).foregroundStyle(.secondary).monospacedDigit()
+        }
+    }
+}
+
 // MARK: - V5: Gerät steuern
 
 /// Bildschirm „Gerät steuern“: Live-Gewicht, Flasche anlernen (Leer/Voll), Waage nullen/eichen,
-/// Profil übertragen und Tageszähler zurücksetzen. Schickt Text-Befehle per Bluetooth
+/// Profil übertragen. Erreichbar über die Info-Seite „HydroDesk“. Schickt Text-Befehle per Bluetooth
 /// (`GeraeteBefehl`) – dieselben wie im Seriellen Monitor der Firmware.
 struct GeraetSteuerungView: View {
     @Environment(AppContainer.self) private var container

@@ -107,6 +107,48 @@ struct GeraeteStatus: Equatable, Decodable {
     func profilPasst(gewichtKg: Double, groesseCm: Int) -> Bool {
         abs(profilKg - gewichtKg) < 0.05 && profilCm == groesseCm
     }
+
+    // MARK: Texte für die Info-Seite „HydroDesk“
+
+    /// Steht eine Flasche auf dem Pad? (Firmware-Zustand IDLE = keine Flasche)
+    var flascheSteht: Bool { zustand != "IDLE" && zustand != "KALIBRIERUNG" }
+
+    /// Zustand der Firmware in Klartext
+    var zustandText: String {
+        switch zustand {
+        case "IDLE": return "Keine Flasche auf dem Pad"
+        case "MESSEN": return "Misst – alles in Ordnung"
+        case "ERINNERUNG": return "Erinnert ans Trinken"
+        case "ZIEL_ERREICHT": return "Tagesziel erreicht"
+        case "NAESSE_SPERRE": return "Wasser erkannt – gesperrt"
+        case "KALIBRIERUNG": return "Flasche wird angelernt"
+        case "": return "Unbekannt"
+        default: return zustand
+        }
+    }
+
+    /// „ca. 161 ml“ bzw. „–“ ohne Flasche
+    var flascheText: String {
+        flascheSteht ? "ca. \(Format.mlEinheit(flascheMl))" : "–"
+    }
+
+    /// Füllstand der Flasche 0…1 (nur mit angelernter voller Flasche, sonst nil)
+    var fuellstand: Double? {
+        guard flascheSteht, kapazitaetMl > 0 else { return nil }
+        return min(1, max(0, Double(flascheMl) / Double(kapazitaetMl)))
+    }
+
+    /// „85 %“ oder „USB (kein Akku)“
+    var akkuText: String {
+        akkuProzent.map { Format.prozent($0) } ?? "USB (kein Akku)"
+    }
+
+    /// Kurzzeile für die Gerätekarte: „Flasche: ca. 161 ml · Akku 85 %“
+    var kurzText: String {
+        let flasche = flascheSteht ? "Flasche: ca. \(Format.mlEinheit(flascheMl))" : "Keine Flasche auf dem Pad"
+        let akku = akkuProzent.map { "Akku \(Format.prozent($0))" } ?? "USB"
+        return "\(flasche) · \(akku)"
+    }
 }
 
 /// V5: Rückmeldung des Geräts zum letzten Befehl, Format "<nr>|<text>" (nr zählt hoch).

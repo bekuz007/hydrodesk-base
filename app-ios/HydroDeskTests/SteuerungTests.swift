@@ -84,6 +84,26 @@ final class SteuerungTests: XCTestCase {
         XCTAssertFalse(s.profilPasst(gewichtKg: 70, groesseCm: 176))
     }
 
+    func testTexteFuerInfoSeite() throws {
+        let mitFlasche = try XCTUnwrap(GeraeteStatus.parse(Data(
+            #"{"heute":1250,"ziel":2750,"g":224,"kap":436,"fl":161,"kalib":1,"zu":"MESSEN","akku":85}"#.utf8)))
+        XCTAssertTrue(mitFlasche.flascheSteht)
+        XCTAssertEqual(mitFlasche.flascheText, "ca. 161 ml")
+        XCTAssertEqual(mitFlasche.zustandText, "Misst – alles in Ordnung")
+        XCTAssertEqual(mitFlasche.akkuText, "85 %")
+        XCTAssertEqual(mitFlasche.kurzText, "Flasche: ca. 161 ml · Akku 85 %")
+        XCTAssertEqual(try XCTUnwrap(mitFlasche.fuellstand), 161.0 / 436.0, accuracy: 0.0001)
+
+        let ohneFlasche = try XCTUnwrap(GeraeteStatus.parse(Data(
+            #"{"heute":0,"ziel":2000,"g":2,"fl":0,"zu":"IDLE","akku":-1}"#.utf8)))
+        XCTAssertFalse(ohneFlasche.flascheSteht)
+        XCTAssertEqual(ohneFlasche.flascheText, "–")
+        XCTAssertNil(ohneFlasche.fuellstand)
+        XCTAssertEqual(ohneFlasche.akkuText, "USB (kein Akku)")
+        XCTAssertEqual(ohneFlasche.kurzText, "Keine Flasche auf dem Pad · USB")
+        XCTAssertEqual(ohneFlasche.zustandText, "Keine Flasche auf dem Pad")
+    }
+
     func testAntwort() throws {
         let a = try XCTUnwrap(GeraeteAntwort.parse(Data("3|Leer gespeichert: 312 g".utf8)))
         XCTAssertEqual(a.nummer, 3)

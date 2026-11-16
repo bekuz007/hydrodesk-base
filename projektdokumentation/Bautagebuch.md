@@ -57,8 +57,10 @@ Ein Bild pro Lötschritt, alle Pins und Werte aus `gehaeuse/ANLEITUNG.md` (Absch
 2. `fotos/loeten/loeten_2_sd_slot.png` – microSD-Slot: Pin 5 CLK = GPIO18 (FET), Pin 3 CMD/MOSI = GPIO23 (LED-DIN), Pin 7 DAT0/MISO = GPIO19 (Regensensor)
 3. `fotos/loeten/loeten_3_akku_lader.png` – Akku an TC4056 B+/B−, OUT+/OUT− weiter
 4. `fotos/loeten/loeten_4_stromweg.png` – TC4056 → Q2 + Ein/Aus-Schalter → Pololu S13V10F5 → CYD und FET-Platine, Akku-Teiler 2 × 10 kΩ an GPIO35
+   - `fotos/loeten/loeten_4b_stromweg_3d.png` – 3D-Ansicht (Blender) desselben Stromwegs, nur zum Verstehen (kein Druckteil)
 5. `fotos/loeten/loeten_5_fet_platine.png` – FET-Platine H1: Q1 AO3401A, BC547B, 10 kΩ, 4,7 kΩ, 47 kΩ, Elko 470 µF/25 V
 6. `fotos/loeten/loeten_6_led_regensensor.png` – LED-Streifen (470 Ω in DIN) und Regensensor (DO an GPIO19)
+   - `fotos/loeten/loeten_6b_led_regen_3d.png` – 3D-Ansicht (Blender) von LED-Streifen und Regensensor, nur zum Verstehen (kein Druckteil)
 
 Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und wo der Regensensor seine 3,3 V abgreift.
 
@@ -71,6 +73,7 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Prüfung 5b/5c am 16.11.2026: Netzliste der Pläne (Skript) gegen die Schaltung in ANLEITUNG 7c abgeglichen – alle 9 Netze stimmen, 5c nutzt dieselben Daten (nicht neu gerendert, da sich am Layout nichts geändert hat). Ergänzt wurden nur Stiftnummern, weitere „nicht verbinden“-Paare (F01–F02, F05–F06, G02–G03, F02–G02, H01–H02, E02–E03–E04) und der Hinweis, dass die Chip-Beine 1/2/3 in Schritt 5 nicht die Adapter-Stifte sind.
 - Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.
 - `fotos/loeten/loeten_5c_fet_3d_oben.png` / `loeten_5c_fet_3d_unten.png` – 3D-Ansicht (Blender) der fertig bestückten FET-Platine nach diesem Plan, nur zum Verstehen (kein Druckteil)
+- 16.11.2026: 3D-Ansichten `loeten_4b_stromweg_3d.png` und `loeten_6b_led_regen_3d.png` in Blender ergänzt (gleicher Stil wie 5c; Skripte unter `design/loetplan/3d/`).
 
 ## 09.11.2026 – WLAN und Uhrzeit
 

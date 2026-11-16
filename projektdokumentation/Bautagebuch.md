@@ -73,7 +73,7 @@ Laut Doku noch offen: an welchem CYD-Anschluss die 5 V vom Pololu ankommen und w
 - Prüfung 5b/5c am 16.11.2026: Netzliste der Pläne (Skript) gegen die Schaltung in ANLEITUNG 7c abgeglichen – alle 9 Netze stimmen, 5c nutzt dieselben Daten (nicht neu gerendert, da sich am Layout nichts geändert hat). Ergänzt wurden nur Stiftnummern, weitere „nicht verbinden“-Paare (F01–F02, F05–F06, G02–G03, F02–G02, H01–H02, E02–E03–E04) und der Hinweis, dass die Chip-Beine 1/2/3 in Schritt 5 nicht die Adapter-Stifte sind.
 - Akku-Teiler 2 × 10 kΩ (GPIO35) passt nicht mehr auf die Platine (im Gehäusemodell auch nur 4 Widerstände) und wird frei verdrahtet wie in Schritt 4.
 - `fotos/loeten/loeten_5c_fet_3d_oben.png` / `loeten_5c_fet_3d_unten.png` – 3D-Ansicht (Blender) der fertig bestückten FET-Platine nach diesem Plan, nur zum Verstehen (kein Druckteil)
-- 16.11.2026: 3D-Ansichten `loeten_4b_stromweg_3d.png` und `loeten_6b_led_regen_3d.png` in Blender ergänzt (gleicher Stil wie 5c; Skripte unter `design/loetplan/3d/`).
+- 16.11.2026: 3D-Ansichten `loeten_4b_stromweg_3d.png` und `loeten_6b_led_regen_3d.png` in Blender ergänzt (gleicher Stil wie 5c; Skripte unter `design/loetplan/3d/`); selbstständige `.blend`-Dateien `loeten_4b_stromweg_3d.blend`, `loeten_6b_led_regen_3d.blend` und `loeten_5c_fet_3d.blend` (Texturen gepackt, Kameras gesetzt) ebenfalls dort).
 
 ## 09.11.2026 – WLAN und Uhrzeit
 

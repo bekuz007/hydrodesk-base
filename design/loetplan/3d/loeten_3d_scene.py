@@ -6,6 +6,10 @@ from mathutils import Vector
 from bpy_extras.object_utils import world_to_camera_view
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from loeten_3d_common import (
+    prepare_fresh_scene, apply_renames, group_by_prefix, pack_and_save, set_view_to_camera,
+)
 TEX = os.path.join(HERE, "tex")
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_R = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -16,8 +20,11 @@ OUT = argv[1]
 SAMPLES = int(argv[2]) if len(argv) > 2 else 64
 USE_EEVEE = len(argv) > 3 and argv[3].lower() in ("eevee", "preview", "1")
 
-bpy.ops.wm.read_factory_settings(use_empty=True)
-scn = bpy.context.scene
+SCENE_NAMES = {"4": "Loetschritt_4_Stromweg", "4b": "Loetschritt_4_Stromweg",
+               "6": "Loetschritt_6_LED_Regensensor", "6b": "Loetschritt_6_LED_Regensensor"}
+BLEND_NAMES = {"4": "loeten_4b_stromweg_3d.blend", "4b": "loeten_4b_stromweg_3d.blend",
+               "6": "loeten_6b_led_regen_3d.blend", "6b": "loeten_6b_led_regen_3d.blend"}
+scn = prepare_fresh_scene(SCENE_NAMES.get(MODE, "Szene"))
 if USE_EEVEE:
     scn.render.engine = "BLENDER_EEVEE_NEXT"
     ee = getattr(scn, "eevee", None)
@@ -324,25 +331,25 @@ def build_step4():
     box_tex("TC4056", tx0, ty0, 0, 17, 26, T, M["pcb_te"], os.path.join(TEX, "tc4056.png"))
     # USB-C at far end (y=26)
     u0 = tx0 + 8.5 - 4.5
-    box("USB-C", u0, ty0 + 25.2, T, 9.0, 2.2, 3.2, M["nickel"])
-    box("USB-C innen", u0 + 0.6, ty0 + 26.4, T + 0.5, 7.8, 1.4, 2.2, M["black"])
+    box("TC4056_USB_C", u0, ty0 + 25.2, T, 9.0, 2.2, 3.2, M["nickel"])
+    box("TC4056_USB_C_innen", u0 + 0.6, ty0 + 26.4, T + 0.5, 7.8, 1.4, 2.2, M["black"])
     # ICs
-    cbox("TC IC", tx0 + 8.5, ty0 + 14.0, T, 6.0, 4.9, 1.5, M["epoxy"])
-    cbox("LED rot", tx0 + 15.2, ty0 + 18.5, T, 0.8, 1.6, 0.5, M["led_r"])
-    cbox("LED blau", tx0 + 15.2, ty0 + 13.5, T, 0.8, 1.6, 0.5, M["led_b"])
+    cbox("TC4056_IC", tx0 + 8.5, ty0 + 14.0, T, 6.0, 4.9, 1.5, M["epoxy"])
+    cbox("TC4056_LED_rot", tx0 + 15.2, ty0 + 18.5, T, 0.8, 1.6, 0.5, M["led_r"])
+    cbox("TC4056_LED_blau", tx0 + 15.2, ty0 + 13.5, T, 0.8, 1.6, 0.5, M["led_b"])
     # pads OUT- B- B+ OUT+ at y=2.4
     pads_tc = [("tc_out-", 1.6, "OUT−"), ("tc_b-", 5.5, "B−"),
                ("tc_b+", 11.5, "B+"), ("tc_out+", 15.4, "OUT+")]
     for key, xmm, lab in pads_tc:
         ANCH[key] = pad(key, tx0 + xmm, ty0 + 2.4, T, 2.2)
     ANCH["TC4056"] = (tx0 + 8.5, ty0 + 16.0, T + 4.0)
-    text3d("t_tc", "TC4056", (tx0 + 8.5, ty0 + 16.5, T + 0.12), 2.0, M["text"], (0, 0, 0))
+    text3d("Beschriftung_TC4056", "TC4056", (tx0 + 8.5, ty0 + 16.5, T + 0.12), 2.0, M["text"], (0, 0, 0))
 
     # --- Q2 on a simplified FET board ---
     # Place to the right of TC4056
     qx0, qy0 = 28.0, 6.0
     qw, ql = 30.0, 24.0
-    box_tex("Q2Board", qx0, qy0, 0, qw, ql, 1.6, M["pcb"], os.path.join(TEX, "q2board.png"))
+    box_tex("FET_Platine_Q2", qx0, qy0, 0, qw, ql, 1.6, M["pcb"], os.path.join(TEX, "q2board.png"))
     # proto holes (decorative)
     for r in range(3, 8):
         for c in range(1, 10):
@@ -353,7 +360,7 @@ def build_step4():
     # SOT-23 adapter centered
     acx, acy = qx0 + 12.0, qy0 + 14.0
     ZA = 2.6
-    cbox("Q2 Adapter", acx, acy, ZA, 12.7, 10.2, 1.6, M["purple"])
+    cbox("Q2_Adapter", acx, acy, ZA, 12.7, 10.2, 1.6, M["purple"])
     for yy in (acy - 3.81, acy + 3.81):
         cbox("Stiftleiste", acx, yy, 0, 12.7, 2.5, ZA, M["plastic"])
         for i in range(5):
@@ -361,11 +368,11 @@ def build_step4():
             cbox("Stift", x, yy, -1.2, 0.64, 0.64, ZA + 1.6 + 1.2 + 1.0, M["gold"])
             sphere("ZinnA", (x, yy, ZA + 1.6), 0.5, M["tin"], 0.5)
     zc = ZA + 1.6
-    cbox("Q2 AO3401A", acx, acy, zc + 0.1, 2.9, 1.6, 1.0, M["black"])
+    cbox("Q2_Ein_Aus", acx, acy, zc + 0.1, 2.9, 1.6, 1.0, M["black"])
     for dx, s in ((-0.95, -1), (0.95, -1), (0, 1)):
         cbox("sotbein", acx + dx, acy + s * 1.15, zc + 0.04, 0.4, 0.9, 0.12, M["lead"])
     ANCH["Q2"] = (acx, acy, zc + 1.4)
-    text3d("t_q2", "Q2", (acx, acy, zc + 1.25), 1.8, M["text"])
+    text3d("Beschriftung_Q2", "Q2", (acx, acy, zc + 1.25), 1.8, M["text"])
 
     # Connection pads on the right edge of the FET board: S, G, D
     # S and G near the adapter (source/gate row), D a bit lower (drain)
@@ -373,12 +380,12 @@ def build_step4():
     s_xy = (qx0 + qw - 4.0, qy0 + 19.0)
     g_xy = (qx0 + qw - 4.0, qy0 + 13.5)
     d_xy = (qx0 + qw - 4.0, qy0 + 8.0)
-    ANCH["Q2S"] = pad("Q2S", s_xy[0], s_xy[1], 1.6, 2.6)
-    ANCH["Q2G"] = pad("Q2G", g_xy[0], g_xy[1], 1.6, 2.6)
-    ANCH["Q2D"] = pad("Q2D", d_xy[0], d_xy[1], 1.6, 2.6)
-    text3d("tS", "S", (s_xy[0] - 4.2, s_xy[1], 1.75), 2.0, M["text"])
-    text3d("tG", "G", (g_xy[0] - 4.2, g_xy[1], 1.75), 2.0, M["text"])
-    text3d("tD", "D", (d_xy[0] - 4.2, d_xy[1], 1.75), 2.0, M["text"])
+    ANCH["Q2S"] = pad("Pad_Q2_S", s_xy[0], s_xy[1], 1.6, 2.6)
+    ANCH["Q2G"] = pad("Pad_Q2_G", g_xy[0], g_xy[1], 1.6, 2.6)
+    ANCH["Q2D"] = pad("Pad_Q2_D", d_xy[0], d_xy[1], 1.6, 2.6)
+    text3d("Beschriftung_S", "S", (s_xy[0] - 4.2, s_xy[1], 1.75), 2.0, M["text"])
+    text3d("Beschriftung_G", "G", (g_xy[0] - 4.2, g_xy[1], 1.75), 2.0, M["text"])
+    text3d("Beschriftung_D", "D", (d_xy[0] - 4.2, d_xy[1], 1.75), 2.0, M["text"])
     # short traces on top from adapter area to pads (visual only, not extra nets)
     tube("trS", [(acx + 4.0, acy + 3.0, 1.72), (s_xy[0] - 1.2, s_xy[1], 1.72)],
          mat("tr_bat", srgb(NETC["bat"]), 0.3, 0.6), 0.35)
@@ -389,7 +396,7 @@ def build_step4():
 
     # 47 kΩ standing between S and G (on the board, toward the adapter)
     rx, ry = qx0 + qw - 9.5, qy0 + 16.2
-    ANCH["R47"] = standing_res("R47", rx, ry, (4, 7, 3))
+    ANCH["R47"] = standing_res("Widerstand_47k", rx, ry, (4, 7, 3))
     # second lead jumper to G pad area
     tube("R47b2", [(rx, ry, 6.6), (rx, ry, 7.8), (g_xy[0] - 1.5, g_xy[1], 7.0),
                    (g_xy[0], g_xy[1], 3.0), (g_xy[0], g_xy[1], 1.8)], M["lead"], 0.22)
@@ -402,12 +409,12 @@ def build_step4():
     # --- Ein/Aus-Schalter in front of the FET board (toward camera, -Y) ---
     # Enlarged slightly for readability (~1.8×), pins AUS Mitte AN left to right
     sx0, sy0, sz0 = 42.0, -20.0, 0.0
-    box("SW Body", sx0 - 8.0, sy0 - 4.0, 0.0, 16.0, 8.0, 9.0, M["plastic"])
+    box("Ein_Aus_Schalter", sx0 - 8.0, sy0 - 4.0, 0.0, 16.0, 8.0, 9.0, M["plastic"])
     # mounting lugs
-    box("SW Lug1", sx0 - 10.4, sy0 - 2.0, 6.5, 2.2, 4.0, 0.5, M["steel"])
-    box("SW Lug2", sx0 + 8.2, sy0 - 2.0, 6.5, 2.2, 4.0, 0.5, M["steel"])
+    box("Schalter_Lasche_1", sx0 - 10.4, sy0 - 2.0, 6.5, 2.2, 4.0, 0.5, M["steel"])
+    box("Schalter_Lasche_2", sx0 + 8.2, sy0 - 2.0, 6.5, 2.2, 4.0, 0.5, M["steel"])
     # slider (position AUS = left / -X), protruding toward -Y (camera)
-    box("SW Slider", sx0 - 7.2, sy0 - 7.5, 4.5, 4.0, 4.0, 3.2, M["black"])
+    box("Schalter_Schieber", sx0 - 7.2, sy0 - 7.5, 4.5, 4.0, 4.0, 3.2, M["black"])
     # 3 pins on +Y side (toward the FET board), left to right: AUS, Mitte, AN
     pin_xs = [sx0 - 5.0, sx0, sx0 + 5.0]
     pin_keys = ["SW_AUS", "SW_MITTE", "SW_AN"]
@@ -419,13 +426,13 @@ def build_step4():
         sphere("pinz", ANCH[key], 0.7, M["tin"], 0.6)
         text3d("t" + key, lab, (x, sy0 - 6.5, 11.2), 1.7, M["text_y"] if lab != "Mitte" else M["text"])
     ANCH["Schalter"] = (sx0, sy0, 12.0)
-    text3d("tSW", "Ein/Aus", (sx0, sy0, 10.5), 2.0, M["text"])
+    text3d("Beschriftung_Ein_Aus", "Ein/Aus", (sx0, sy0, 10.5), 2.0, M["text"])
 
     # --- Voltage divider (2 × 10 kΩ), freely wired, between Drain and GND ---
     dx0, dy0 = 70.0, 8.0
     # two standing 10k in a line along Y: upper (from drain) at y=14, lower (to GND) at y=4
-    ANCH["R10o"] = standing_res("R10o", dx0, dy0 + 10.0, (1, 0, 3))
-    ANCH["R10u"] = standing_res("R10u", dx0, dy0, (1, 0, 3))
+    ANCH["R10o"] = standing_res("Widerstand_10k_oben", dx0, dy0 + 10.0, (1, 0, 3))
+    ANCH["R10u"] = standing_res("Widerstand_10k_unten", dx0, dy0, (1, 0, 3))
     pad("R10o_pad", dx0, dy0 + 10.0, 0.0, 2.0)
     pad("R10u_pad", dx0, dy0, 0.0, 2.0)
     # mid point: jumper from top of lower / we connect the two bottoms? 
@@ -443,14 +450,14 @@ def build_step4():
                   (mid_x, mid_y, 7.5), (mid_x, mid_y, 1.0)], M["lead"], 0.22)
     tube("div2", [(dx0, dy0, 6.8), (dx0, dy0, 8.0),
                   (mid_x, mid_y + 0.2, 7.2), (mid_x, mid_y, 1.0)], M["lead"], 0.22)
-    text3d("t10a", "10 kΩ", (dx0 - 6.5, dy0 + 10.0, 5.0), 1.6, M["txtk"], (math.radians(90), 0, 0))
-    text3d("t10b", "10 kΩ", (dx0 - 6.5, dy0, 5.0), 1.6, M["txtk"], (math.radians(90), 0, 0))
+    text3d("Beschriftung_10k_oben", "10 kΩ", (dx0 - 6.5, dy0 + 10.0, 5.0), 1.6, M["txtk"], (math.radians(90), 0, 0))
+    text3d("Beschriftung_10k_unten", "10 kΩ", (dx0 - 6.5, dy0, 5.0), 1.6, M["txtk"], (math.radians(90), 0, 0))
 
     # --- P3 GPIO35 block ---
     px0, py0 = 64.0, -22.0
-    box_tex("P3", px0, py0, 0, 22.0, 12.0, 1.4, M["plastic"], os.path.join(TEX, "p3.png"))
+    box_tex("CYD_Stecker_P3", px0, py0, 0, 22.0, 12.0, 1.4, M["plastic"], os.path.join(TEX, "p3.png"))
     # one gold pin
-    ANCH["GPIO35"] = pad("GPIO35", px0 + 11.0, py0 + 4.0, 1.4, 2.2)
+    ANCH["GPIO35"] = pad("Pad_GPIO35", px0 + 11.0, py0 + 4.0, 1.4, 2.2)
     ANCH["P3"] = (px0 + 11.0, py0 + 8.0, 3.5)
 
     # --- Pololu, pads toward camera (-Y), VIN on the left, VOUT on the right ---
@@ -483,36 +490,36 @@ def build_step4():
         text3d("t" + key, lab, (x, p0y - 4.2, 2.2), 1.6, M["text"])
     # inductor + caps for recognition
     ocx, ocy = ox + pw / 2, oy + pl * 0.55
-    cyl("spule", ocx, ocy, pt, 6.0, 3.0, M["ferrite"], 24)
+    cyl("Pololu_Spule", ocx, ocy, pt, 6.0, 3.0, M["ferrite"], 24)
     cbox("pc1", ox + 2.8, oy + pl - 3.0, pt, 3.2, 2.0, 1.6, M["epoxy"])
     cbox("pc2", ox + pw - 2.8, oy + pl - 3.0, pt, 3.2, 2.0, 1.6, M["epoxy"])
     ANCH["Pololu"] = (ox + pw / 2, oy + pl * 0.7, pt + 4.0)
-    text3d("tpol", "Pololu", (ox + pw / 2, oy + pl * 0.78, pt + 3.2), 1.7, M["text"])
+    text3d("Beschriftung_Pololu", "Pololu", (ox + pw / 2, oy + pl * 0.78, pt + 3.2), 1.7, M["text"])
 
     # --- CYD 5 V stub ---
     cx0, cy0 = 128.0, 18.0
-    box_tex("CYD5V", cx0, cy0, 0, 28.0, 20.0, 1.4, M["pcb_ye"], os.path.join(TEX, "cyd5v.png"))
-    ANCH["CYD5V"] = pad("CYD5V", cx0 + 14.0, cy0 + 4.5, 1.4, 2.8)
+    box_tex("CYD_5V", cx0, cy0, 0, 28.0, 20.0, 1.4, M["pcb_ye"], os.path.join(TEX, "cyd5v.png"))
+    ANCH["CYD5V"] = pad("Pad_CYD_5V", cx0 + 14.0, cy0 + 4.5, 1.4, 2.8)
     ANCH["CYD"] = (cx0 + 14.0, cy0 + 12.0, 4.0)
     # GND pad on the same stub
-    ANCH["CYDGND"] = pad("CYDGND", cx0 + 22.0, cy0 + 4.5, 1.4, 2.2)
+    ANCH["CYDGND"] = pad("Pad_CYD_GND", cx0 + 22.0, cy0 + 4.5, 1.4, 2.2)
 
     # --- FET Source Q1 + Elko destination ---
     fx0, fy0 = 128.0, -14.0
-    box_tex("FETQ1", fx0, fy0, 0, 28.0, 20.0, 1.6, M["pcb"], os.path.join(TEX, "fet_q1.png"))
-    ANCH["Q1S"] = pad("Q1S", fx0 + 8.0, fy0 + 4.5, 1.6, 2.6)
-    ANCH["Q1GND"] = pad("Q1GND", fx0 + 22.0, fy0 + 4.5, 1.6, 2.2)
+    box_tex("FET_Platine_Q1_Elko", fx0, fy0, 0, 28.0, 20.0, 1.6, M["pcb"], os.path.join(TEX, "fet_q1.png"))
+    ANCH["Q1S"] = pad("Pad_Q1_Source", fx0 + 8.0, fy0 + 4.5, 1.6, 2.6)
+    ANCH["Q1GND"] = pad("Pad_Q1_GND", fx0 + 22.0, fy0 + 4.5, 1.6, 2.2)
     # small elko lying on the board
-    cyl("C1", fx0 + 16.0, fy0 + 13.0, 6.5, 8.0, 12.0, M["elko"], 32, "x")
-    cyl("C1d", fx0 + 16.0 - 6.0, fy0 + 13.0, 6.5, 7.6, 0.6, M["rubber"], 32, "x")
-    cyl("C1c", fx0 + 16.0 + 5.4, fy0 + 13.0, 6.5, 7.4, 0.6, M["alu"], 32, "x")
+    cyl("Elko_C1", fx0 + 16.0, fy0 + 13.0, 6.5, 8.0, 12.0, M["elko"], 32, "x")
+    cyl("Elko_C1_Boden", fx0 + 16.0 - 6.0, fy0 + 13.0, 6.5, 7.6, 0.6, M["rubber"], 32, "x")
+    cyl("Elko_C1_Deckel", fx0 + 16.0 + 5.4, fy0 + 13.0, 6.5, 7.4, 0.6, M["alu"], 32, "x")
     ANCH["Elko"] = (fx0 + 16.0, fy0 + 13.0, 11.5)
     ANCH["FETQ1"] = (fx0 + 14.0, fy0 + 14.0, 12.0)
 
     # --- GND bus along the front ---
     gy = -34.0
     gz = 2.0
-    tube("GNDbus", [(ANCH["tc_out-"][0], gy, gz), (fx0 + 28.0, gy, gz)], wire_mat("gnd"), 0.7)
+    tube("Litze_GND_Sammelleitung", [(ANCH["tc_out-"][0], gy, gz), (fx0 + 28.0, gy, gz)], wire_mat("gnd"), 0.7)
     ANCH["GNDbus"] = ((ANCH["tc_out-"][0] + fx0 + 28.0) / 2, gy, gz)
 
     # ---------- Wires (only connections from the plan) ----------
@@ -527,59 +534,59 @@ def build_step4():
     aus = ANCH["SW_AUS"]
     # junction above OUT+ path
     jbat = (op[0] + 12.0, 0.0, 10.0)
-    W("w_outp", "bat", [op, (op[0], op[1] - 6.0, 6.0), (op[0], op[1] - 8.0, 10.0),
+    W("Litze_Akku_plus", "bat", [op, (op[0], op[1] - 6.0, 6.0), (op[0], op[1] - 8.0, 10.0),
                         jbat, (qs[0], qs[1] - 8.0, 10.0), (qs[0], qs[1], qs[2])])
-    W("w_aus", "bat", [jbat, (aus[0], jbat[1], 10.0), (aus[0], aus[1] + 2.0, 8.0), aus])
+    W("Litze_Schalter_AUS", "bat", [jbat, (aus[0], jbat[1], 10.0), (aus[0], aus[1] + 2.0, 8.0), aus])
 
     # 2. OUT- -> GND bus
     om = ANCH["tc_out-"]
-    W("w_outm", "gnd", [om, (om[0], om[1] - 8.0, 5.0), (om[0], gy + 2.0, gz + 2.0), (om[0], gy, gz)])
+    W("Litze_OUT_minus", "gnd", [om, (om[0], om[1] - 8.0, 5.0), (om[0], gy + 2.0, gz + 2.0), (om[0], gy, gz)])
 
     # 3. Mitte -> Gate Q2 (violet)
     mid = ANCH["SW_MITTE"]
     qg = ANCH["Q2G"]
-    W("w_mitte", "gate", [mid, (mid[0], mid[1] + 4.0, 9.0), (qg[0] + 2.0, qg[1] - 10.0, 11.0),
+    W("Litze_Schalter_Mitte", "gate", [mid, (mid[0], mid[1] + 4.0, 9.0), (qg[0] + 2.0, qg[1] - 10.0, 11.0),
                           (qg[0], qg[1] - 3.0, 9.0), qg])
 
     # 4. AN -> GND bus
     an = ANCH["SW_AN"]
-    W("w_an", "gnd", [an, (an[0], an[1] + 3.0, 6.0), (an[0], gy + 3.0, gz + 3.0), (an[0], gy, gz)])
+    W("Litze_Schalter_AN", "gnd", [an, (an[0], an[1] + 3.0, 6.0), (an[0], gy + 3.0, gz + 3.0), (an[0], gy, gz)])
 
     # 5. Drain Q2 -> Pololu VIN (orange), branch to top of divider
     qd = ANCH["Q2D"]
     vin = ANCH["pol_vin"]
     r10top = (dx0, dy0 + 10.0, 7.2)
     jdr = (qd[0] + 10.0, qd[1], 10.5)
-    W("w_drain", "vin", [qd, (qd[0] + 4.0, qd[1], 8.0), jdr,
+    W("Litze_Drain_VIN", "vin", [qd, (qd[0] + 4.0, qd[1], 8.0), jdr,
                          (vin[0], vin[1] + 6.0, 10.0), (vin[0], vin[1], vin[2])])
-    W("w_divin", "vin", [jdr, (r10top[0], jdr[1], 10.5), r10top])
+    W("Litze_Teiler_oben", "vin", [jdr, (r10top[0], jdr[1], 10.5), r10top])
 
     # 6. Bottom of lower 10k -> GND bus
     r10bot = (dx0, dy0, 0.3)
-    W("w_divgnd", "gnd", [(dx0, dy0, 0.2), (dx0, dy0 - 6.0, 3.0), (dx0, gy, gz)])
+    W("Litze_Teiler_GND", "gnd", [(dx0, dy0, 0.2), (dx0, dy0 - 6.0, 3.0), (dx0, gy, gz)])
 
     # 7. Midpoint -> GPIO35 (dark)
     tm = ANCH["TEILER_M"]
     g35 = ANCH["GPIO35"]
-    W("w_gpio35", "dark", [tm, (tm[0], tm[1] - 6.0, 6.0), (g35[0], g35[1] + 6.0, 7.0), g35], 0.45)
+    W("Litze_GPIO35", "dark", [tm, (tm[0], tm[1] - 6.0, 6.0), (g35[0], g35[1] + 6.0, 7.0), g35], 0.45)
 
     # 8. Pololu GND -> GND bus
     pg = ANCH["pol_gnd"]
-    W("w_pgnd", "gnd", [pg, (pg[0], pg[1] - 6.0, 5.0), (pg[0], gy, gz)])
+    W("Litze_Pololu_GND", "gnd", [pg, (pg[0], pg[1] - 6.0, 5.0), (pg[0], gy, gz)])
 
     # 9. Pololu VOUT -> CYD 5V and FET Source Q1 (magenta)
     vo = ANCH["pol_vout"]
     c5 = ANCH["CYD5V"]
     q1s = ANCH["Q1S"]
     j5 = (vo[0] + 14.0, vo[1] - 2.0, 11.0)
-    W("w_vout", "v5", [vo, (vo[0], vo[1] - 5.0, 8.0), j5,
+    W("Litze_5V_CYD", "v5", [vo, (vo[0], vo[1] - 5.0, 8.0), j5,
                        (c5[0], c5[1] - 6.0, 10.0), (c5[0], c5[1], c5[2])])
-    W("w_q1s", "v5", [j5, (j5[0], q1s[1] - 4.0, 11.0), (q1s[0], q1s[1] - 4.0, 8.0), q1s])
+    W("Litze_5V_Source_Q1", "v5", [j5, (j5[0], q1s[1] - 4.0, 11.0), (q1s[0], q1s[1] - 4.0, 8.0), q1s])
 
     # 10. CYD GND and FET Q1 GND -> bus
-    W("w_cydg", "gnd", [ANCH["CYDGND"], (ANCH["CYDGND"][0], ANCH["CYDGND"][1] - 6.0, 5.0),
+    W("Litze_CYD_GND", "gnd", [ANCH["CYDGND"], (ANCH["CYDGND"][0], ANCH["CYDGND"][1] - 6.0, 5.0),
                         (ANCH["CYDGND"][0], gy, gz)])
-    W("w_q1g", "gnd", [ANCH["Q1GND"], (ANCH["Q1GND"][0], ANCH["Q1GND"][1] - 5.0, 4.0),
+    W("Litze_Q1_GND", "gnd", [ANCH["Q1GND"], (ANCH["Q1GND"][0], ANCH["Q1GND"][1] - 5.0, 4.0),
                        (ANCH["Q1GND"][0], gy, gz)])
 
     ANCH["AkkuPlus"] = jbat
@@ -595,9 +602,9 @@ def build_step6():
     lx0, ly0, lz = 8.0, 16.0, 0.0
     length, width = 70.0, 6.0
     # input stiffener with large pads (recognizable solder pads at the strip entrance)
-    box("COB Padboard", lx0 - 2.0, ly0 - 3.5, 0.0, 16.0, 13.0, 0.8, M["cob_fpc"])
-    box_tex("COB", lx0, ly0, lz, length, width, 0.3, M["cob_fpc"], os.path.join(TEX, "cob_top.png"))
-    cbox("COB Silikon", lx0 + length / 2 + 6, ly0 + width / 2, 0.28, length - 14, 5.2, 1.7, M["cob_sil"])
+    box("LED_Streifen_Padboard", lx0 - 2.0, ly0 - 3.5, 0.0, 16.0, 13.0, 0.8, M["cob_fpc"])
+    box_tex("LED_Streifen", lx0, ly0, lz, length, width, 0.3, M["cob_fpc"], os.path.join(TEX, "cob_top.png"))
+    cbox("LED_Streifen_Silikon", lx0 + length / 2 + 6, ly0 + width / 2, 0.28, length - 14, 5.2, 1.7, M["cob_sil"])
     # cut marks and warm segments on top of the silicone (stay on the strip)
     for i in range(0, 5):
         x = lx0 + 18 + i * 11.0
@@ -626,7 +633,7 @@ def build_step6():
     din = ANCH["LEDDIN"]
     r_a = (din[0] - 14.0, din[1], 3.2)
     r_b = (din[0] - 6.0, din[1], 3.2)
-    mid470 = resistor("R470", r_a, r_b, (4, 7, 1), body_r=1.2)
+    mid470 = resistor("Widerstand_470Ohm", r_a, r_b, (4, 7, 1), body_r=1.2)
     ANCH["R470"] = mid470
     # heat shrink over the resistor body and over the three pad joints
     shrink("hs470", (mid470[0] - 3.0, mid470[1], mid470[2]),
@@ -647,24 +654,24 @@ def build_step6():
         ANCH[name] = start
         return start
 
-    lead_in("w5v", "led", ANCH["LED5V"], ly0 + 8.5, 7.0, -28.0)
+    lead_in("Litze_5V_Drain_Q1", "led", ANCH["LED5V"], ly0 + 8.5, 7.0, -28.0)
     # green goes to the left end of the 470Ω, not directly to DIN
-    lead_in("wDIN", "din", r_a, ly0 + 4.5, 6.0, -28.0)
-    tube("wDINend", [r_b, (din[0] - 2.0, din[1], 3.0), din], wire_mat("din"), 0.55)
-    lead_in("wGND", "white", ANCH["LEDGND"], ly0 + 0.5, 4.5, -28.0)
-    ANCH["DrainQ1"] = ANCH["w5v"]
-    ANCH["GPIO23"] = ANCH["wDIN"]
-    ANCH["LEDGNDin"] = ANCH["wGND"]
+    lead_in("Litze_GPIO23_DIN", "din", r_a, ly0 + 4.5, 6.0, -28.0)
+    tube("Litze_470Ohm_nach_DIN", [r_b, (din[0] - 2.0, din[1], 3.0), din], wire_mat("din"), 0.55)
+    lead_in("Litze_LED_GND", "white", ANCH["LEDGND"], ly0 + 0.5, 4.5, -28.0)
+    ANCH["DrainQ1"] = ANCH["Litze_5V_Drain_Q1"]
+    ANCH["GPIO23"] = ANCH["Litze_GPIO23_DIN"]
+    ANCH["LEDGNDin"] = ANCH["Litze_LED_GND"]
 
     # --- LM393 module ---
     mx0, my0 = 100.0, 6.0
     mw, ml, mt = 16.0, 30.0, 1.6
     box_tex("LM393", mx0, my0, 0, mw, ml, mt, M["pcb_bl"], os.path.join(TEX, "lm393.png"))
     # pot
-    cbox("Pot", mx0 + 8.0, my0 + 20.0, mt, 6.6, 6.6, 4.0, M["pot"])
-    cyl("PotRotor", mx0 + 8.0, my0 + 20.0, mt + 4.0, 3.4, 0.5, M["potw"], 24)
+    cbox("LM393_Poti", mx0 + 8.0, my0 + 20.0, mt, 6.6, 6.6, 4.0, M["pot"])
+    cyl("LM393_Poti_Rotor", mx0 + 8.0, my0 + 20.0, mt + 4.0, 3.4, 0.5, M["potw"], 24)
     # IC
-    cbox("LM IC", mx0 + 8.0, my0 + 12.5, mt, 6.0, 4.9, 1.5, M["epoxy"])
+    cbox("LM393_IC", mx0 + 8.0, my0 + 12.5, mt, 6.0, 4.9, 1.5, M["epoxy"])
     cbox("LED PWR", mx0 + 3.0, my0 + 9.0, mt, 0.8, 1.6, 0.5, M["led_r"])
     cbox("LED DO", mx0 + 13.0, my0 + 9.0, mt, 0.8, 1.6, 0.5, M["led_g"])
     # pads VCC GND DO AO along the near edge (small y) — matches texture bottom
@@ -703,12 +710,12 @@ def build_step6():
         ANCH[name] = start
         return start
 
-    lead_mod("wVCC", "v33", ANCH["LM_VCC"], 72.0, -14.0, 8.0)
-    lead_mod("wLMGND", "gnd", ANCH["LM_GND"], 72.0, -18.0, 6.0)
-    lead_mod("wDO", "teal", ANCH["LM_DO"], 72.0, -22.0, 4.5)
-    ANCH["V33"] = ANCH["wVCC"]
-    ANCH["GPIO19"] = ANCH["wDO"]
-    ANCH["LMGNDin"] = ANCH["wLMGND"]
+    lead_mod("Litze_3V3_VCC", "v33", ANCH["LM_VCC"], 72.0, -14.0, 8.0)
+    lead_mod("Litze_LM393_GND", "gnd", ANCH["LM_GND"], 72.0, -18.0, 6.0)
+    lead_mod("Litze_DO_GPIO19", "teal", ANCH["LM_DO"], 72.0, -22.0, 4.5)
+    ANCH["V33"] = ANCH["Litze_3V3_VCC"]
+    ANCH["GPIO19"] = ANCH["Litze_DO_GPIO19"]
+    ANCH["LMGNDin"] = ANCH["Litze_LM393_GND"]
 
     # --- Rain plate ---
     rx0, ry0 = 132.0, 2.0
@@ -717,16 +724,16 @@ def build_step6():
     # But it may dominate. I'll use 0.75 scale for composition (still clearly a plate).
     scp = 0.75
     rw, rl = 40.0 * scp, 54.0 * scp
-    box_tex("Platte", rx0, ry0, 0, rw, rl, rt, M["black"], os.path.join(TEX, "rain_plate.png"))
+    box_tex("Sensorplatte", rx0, ry0, 0, rw, rl, rt, M["black"], os.path.join(TEX, "rain_plate.png"))
     # two pads / angled header at the edge facing the module (left, -X)
-    ANCH["PL1"] = pad("PL1", rx0 + 3.0, ry0 + rl * 0.45, rt, 2.2)
-    ANCH["PL2"] = pad("PL2", rx0 + 3.0, ry0 + rl * 0.55, rt, 2.2)
+    ANCH["PL1"] = pad("Pad_Platte_1", rx0 + 3.0, ry0 + rl * 0.45, rt, 2.2)
+    ANCH["PL2"] = pad("Pad_Platte_2", rx0 + 3.0, ry0 + rl * 0.55, rt, 2.2)
     ANCH["Platte"] = (rx0 + rw / 2, ry0 + rl / 2, rt + 2.0)
     # two dark wires, orientation does not matter
     s1, s2 = ANCH["LM_S1"], ANCH["LM_S2"]
     p1, p2 = ANCH["PL1"], ANCH["PL2"]
-    tube("ws1", [s1, (s1[0], s1[1] + 4, 8.0), (p1[0] - 6, p1[1], 8.0), p1], wire_mat("plate"), 0.5)
-    tube("ws2", [s2, (s2[0], s2[1] + 6, 7.0), (p2[0] - 6, p2[1], 7.0), p2], wire_mat("plate"), 0.5)
+    tube("Litze_Sensorplatte_1", [s1, (s1[0], s1[1] + 4, 8.0), (p1[0] - 6, p1[1], 8.0), p1], wire_mat("plate"), 0.5)
+    tube("Litze_Sensorplatte_2", [s2, (s2[0], s2[1] + 6, 7.0), (p2[0] - 6, p2[1], 7.0), p2], wire_mat("plate"), 0.5)
     # heat shrink on plate joints and module sensor joints
     for key, m in (("PL1", M["shrink_c"]), ("PL2", M["shrink_c"]), ("LM_S1", M["shrink_c"]), ("LM_S2", M["shrink_c"])):
         p = ANCH[key]
@@ -768,13 +775,13 @@ def setup_view(mode):
     light("fill", (cen.x + 120, cen.y + 40, 90), 50000, 45)
     light("rim", (cen.x + 20, cen.y + 100, 70), 30000, 35)
 
-    cd = bpy.data.cameras.new("cam")
+    cd = bpy.data.cameras.new("Kamera")
     cd.type = "PERSP"
     cd.lens = lens
     cd.sensor_width = sensor
     cd.clip_start = 1
     cd.clip_end = 1000
-    cam = bpy.data.objects.new("cam", cd)
+    cam = bpy.data.objects.new("Kamera", cd)
     coll.objects.link(cam)
     scn.camera = cam
     cam.location = cam_loc
@@ -829,9 +836,9 @@ def add_world_lights(cen):
         o.location = loc
         o.rotation_euler = (cen - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
 
-    add_light("key", (cen.x - 90, cen.y - 140, 160), 160000, 55)
-    add_light("fill", (cen.x + 140, cen.y + 50, 100), 55000, 50)
-    add_light("rim", (cen.x + 20, cen.y + 120, 80), 32000, 40)
+    add_light("Licht_Haupt", (cen.x - 90, cen.y - 140, 160), 160000, 55)
+    add_light("Licht_Fuell", (cen.x + 140, cen.y + 50, 100), 55000, 50)
+    add_light("Licht_Kante", (cen.x + 20, cen.y + 120, 80), 32000, 40)
 
 
 def fit_ortho_camera(view_dir, margin=1.22):
@@ -871,12 +878,12 @@ def fit_ortho_camera(view_dir, margin=1.22):
     aspect = scn.render.resolution_x / scn.render.resolution_y
     scale = max(width, height * aspect)
     add_world_lights(cen)
-    cd = bpy.data.cameras.new("cam")
+    cd = bpy.data.cameras.new("Kamera")
     cd.type = "ORTHO"
     cd.ortho_scale = scale
     cd.clip_start = 1
     cd.clip_end = 2000
-    cam = bpy.data.objects.new("cam", cd)
+    cam = bpy.data.objects.new("Kamera", cd)
     coll.objects.link(cam)
     scn.camera = cam
     cam.location = cen + vd * 400
@@ -885,13 +892,100 @@ def fit_ortho_camera(view_dir, margin=1.22):
     print("camera scale", round(scale, 2), "center", tuple(round(c, 2) for c in cen))
 
 
+
+def labels_facing_camera(items, size=3.2):
+    """3D-Text, zur Kamera ausgerichtet, damit die Beschriftung in Blender lesbar ist."""
+    cam = scn.camera
+    rot = cam.rotation_euler.copy() if cam else (0, 0, 0)
+    # Kamera-Achsen
+    if cam:
+        right = cam.matrix_world.to_quaternion() @ Vector((1, 0, 0))
+        up = cam.matrix_world.to_quaternion() @ Vector((0, 1, 0))
+    else:
+        right, up = Vector((1, 0, 0)), Vector((0, 0, 1))
+    for key, text, dx, dy, dz in items:
+        if key not in ANCH:
+            print("warn: kein Anker", key)
+            continue
+        base = Vector(ANCH[key])
+        pos = base + right * dx + up * dy + Vector((0, 0, dz))
+        text3d("Beschriftung_" + key, text, tuple(pos), size, M["txtk"], rot, extrude=0.08)
+
+
+def finish_and_save(mode):
+    # Zusätzliche lesbare 3D-Beschriftungen (utf-8, echte Umlaute)
+    if mode in ("4", "4b"):
+        labels_facing_camera([
+            ("TC4056", "TC4056", -8, 14, 2),
+            ("Q2", "Q2 Ein/Aus\nAO3401A", 0, 12, 2),
+            ("R47", "47 kΩ  (G–S)", -12, 8, 2),
+            ("Schalter", "Ein/Aus-Schalter\nAUS · Mitte · AN", 0, -12, 2),
+            ("R10o", "Akku-Teiler\n2 × 10 kΩ", 0, 12, 2),
+            ("P3", "GPIO35\nCYD-Stecker P3", 8, -10, 2),
+            ("Pololu", "Pololu S13V10F5\n(kein EN-Pin)", 0, 10, 2),
+            ("CYD", "CYD 5 V\n(Anschluss offen)", 0, 10, 2),
+            ("Elko", "Source Q1 + Elko\n(Schritt 5)", 8, -8, 2),
+            ("GNDbus", "GND (alle zusammen)", 0, -8, 2),
+        ], 3.0)
+        group_by_prefix([
+            ("TC4056", ["TC4056", "Pad_OUT", "Pad_B_"]),
+            ("FET_Platine_Q2", ["FET_Platine_Q2", "Q2_", "Pad_Q2", "Widerstand_47k", "Beschriftung_Q", "Beschriftung_S", "Beschriftung_G", "Beschriftung_D", "Beschriftung_R47", "trS", "trG", "trD", "R47"]),
+            ("Ein_Aus_Schalter", ["Ein_Aus_Schalter", "Schalter_", "Beschriftung_Ein", "tSW", "SW_"]),
+            ("Akku_Teiler", ["Widerstand_10k", "Beschriftung_10k", "TEILER", "div1", "div2", "R10"]),
+            ("CYD_Stecker_P3", ["CYD_Stecker_P3", "Pad_GPIO35", "Beschriftung_P3", "Beschriftung_GPIO35"]),
+            ("Pololu", ["Pololu", "Pad_Pololu", "Beschriftung_Pololu", "pc1", "pc2"]),
+            ("CYD_5V", ["CYD_5V", "Pad_CYD", "Beschriftung_CYD"]),
+            ("FET_Platine_Q1_Elko", ["FET_Platine_Q1", "Pad_Q1", "Elko_", "Beschriftung_Elko", "Beschriftung_FET"]),
+            ("Litzen", ["Litze_"]),
+            ("Licht", ["Licht_"]),
+            ("Kamera", ["Kamera"]),
+            ("Beschriftung", ["Beschriftung_"]),
+        ])
+    else:
+        labels_facing_camera([
+            ("LED", "LED-Streifen (Eingang)\nPfeil zeigt vom Eingang weg", 0, 12, 2),
+            ("R470", "470 Ω direkt am Streifen", -8, 10, 2),
+            ("DrainQ1", "5 V  ←  Drain Q1", -6, 8, 2),
+            ("GPIO23", "GPIO23 (SD-Pin 3)", -6, -8, 2),
+            ("LEDGNDin", "GND (weiß)", 8, -8, 2),
+            ("LM393", "Regensensor-Modul\nLM393", 0, 10, 2),
+            ("V33", "3,3 V *  →  VCC", -10, 6, 2),
+            ("GPIO19", "DO  →  GPIO19", 6, -8, 2),
+            ("LM_AO", "AO frei", 8, 4, 2),
+            ("Platte", "Sensorplatte\n2 Kabel, egal wie rum", 0, 10, 2),
+            ("Schrumpf", "Schrumpfschlauch", 8, 8, 2),
+        ], 3.0)
+        group_by_prefix([
+            ("LED_Streifen", ["LED_Streifen", "Pad_LED", "Widerstand_470", "ledglow", "cut", "pfeil", "Beschriftung_LED", "Beschriftung_R470", "Schrumpf", "hs470", "hsLED"]),
+            ("LM393", ["LM393", "Pad_LM393", "Beschriftung_LM", "Beschriftung_V33", "Beschriftung_GPIO19"]),
+            ("Sensorplatte", ["Sensorplatte", "Pad_Platte", "Beschriftung_Platte"]),
+            ("Litzen", ["Litze_"]),
+            ("Licht", ["Licht_"]),
+            ("Kamera", ["Kamera"]),
+            ("Beschriftung", ["Beschriftung_"]),
+        ])
+    set_view_to_camera()
+    # In der gespeicherten Datei soll F12 anständig rendern
+    if hasattr(scn, 'cycles'):
+        scn.cycles.samples = 64
+        scn.cycles.use_denoising = True
+    blend = os.path.join(HERE, BLEND_NAMES[mode])
+    if OUT.lower().endswith(".blend"):
+        blend = os.path.abspath(OUT)
+    pack_and_save(blend)
+
+
 if MODE in ("4", "4b"):
     build_step4()
     fit_ortho_camera((-0.40, -0.95, 0.88), 1.08)
-    project_and_render()
+    if SAMPLES > 0 and not OUT.lower().endswith(".blend"):
+        project_and_render()
+    finish_and_save(MODE)
 elif MODE in ("6", "6b"):
     build_step6()
     fit_ortho_camera((-0.35, -0.95, 0.90), 1.08)
-    project_and_render()
+    if SAMPLES > 0 and not OUT.lower().endswith(".blend"):
+        project_and_render()
+    finish_and_save(MODE)
 else:
     raise SystemExit("MODE must be 4 or 6, got %r" % MODE)

@@ -34,6 +34,19 @@ Stand aus der Wokwi-Simulation V4 (dort hinter dem Schalter `#define HYDRO_BLE 1
   * Mit OTA-Updates: `min_spiffs.csv` (1,9 MB App)
 * **GATT:** Dienst `4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10`, Characteristic
   `4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10` (lesen + notify, Text „heute/Ziel ml“, z. B. `1250/2750 ml`).
+* **Steuerung per App (V5):** drei weitere Characteristics im selben Dienst (MTU 185):
+
+  | UUID | Richtung | Inhalt |
+  |---|---|---|
+  | `4f9a0003-…` | App → Gerät (schreiben) | Text-Befehl wie im Seriellen Monitor, höchstens 47 Zeichen: `profil 75.0 180`, `tara`, `eichen 203`, `leer`, `voll`, `reset`, `status` … |
+  | `4f9a0004-…` | Gerät → App (lesen + notify) | JSON, z. B. `{"heute":1250,"ziel":2750,"g":420,"ruhig":1,"kg":75.0,"cm":180,"leer":312,"voll":1012,"kap":700,"fl":108,"kalib":1,"zu":"MESSEN","akku":-1,"nass":0,"waage":1}` (höchstens 1× pro Sekunde, nach einem Befehl sofort; `akku` −1 = USB ohne Akku) |
+  | `4f9a0005-…` | Gerät → App (lesen + notify) | `<nr>\|<text>`: Rückmeldung zum letzten Befehl, z. B. `3\|Leer gespeichert: 312 g` (`nr` zählt hoch) |
+
+  Der Befehl wird im BLE-Callback nur in einen Puffer kopiert und im `loop()` (`btVerwalten`) mit
+  `befehlAusfuehren()` ausgeführt – derselben Funktion wie für den Seriellen Monitor. `leer`/`voll`
+  aus der App wechseln (wie die Touch-Tasten) **nicht** in den Kalibrier-Bildschirm.
+  Neuer Befehl `profil <kg> <cm>` setzt Gewicht und Größe in einem Schritt.
+  Die iPhone-App gleicht das Profil beim Verbinden automatisch ab (App-Profil gewinnt).
 * **Ablauf (V4, Option A):** Bluetooth ist nur in **Fenstern** sichtbar: beim Start 2 min
   (`BT_SUCH_TIMEOUT_MS`), nach **Antippen des Bluetooth-Symbols** 2 min und **60 s still** nach jedem
   erkannten Trinken/Nachfüllen (`BT_SYNC_FENSTER_MS`). Bei Trennung startet ein Fenster derselben

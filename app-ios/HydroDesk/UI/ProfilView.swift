@@ -248,11 +248,14 @@ struct ProfilView: View {
             let ergebnis = await container.profile.speichern(
                 userId: nutzer.userId, name: eingabe.name.trimmingCharacters(in: .whitespaces),
                 gewichtKg: kg, groesseCm: cm)
+            // V5: Profil gleich auch auf dem HydroDesk speichern (wenn verbunden)
+            let geraetText = container.geraete.profilSenden() ? " Auch an den HydroDesk übertragen." : ""
             if let fehler = ergebnis.fehler {
-                meldung = ProfilMeldung(art: .fehler, text: "Lokal gespeichert, aber nicht in Supabase: \(fehler)")
+                meldung = ProfilMeldung(art: .fehler, text: "Lokal gespeichert, aber nicht in Supabase: \(fehler)" + geraetText)
             } else {
                 gefuellt = eingabe   // gespeicherter Stand gilt als „nicht geändert“
-                meldung = ProfilMeldung(art: .erfolg, text: "Gespeichert. Neues Tagesziel: \(Format.mlEinheit(ergebnis.ziel))")
+                meldung = ProfilMeldung(art: .erfolg,
+                                        text: "Gespeichert. Neues Tagesziel: \(Format.mlEinheit(ergebnis.ziel))." + geraetText)
             }
             speichert = false
         }

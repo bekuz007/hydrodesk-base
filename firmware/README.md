@@ -38,7 +38,7 @@ Stand aus der Wokwi-Simulation V4 (dort hinter dem Schalter `#define HYDRO_BLE 1
 
   | UUID | Richtung | Inhalt |
   |---|---|---|
-  | `4f9a0003-…` | App → Gerät (schreiben) | Text-Befehl wie im Seriellen Monitor, höchstens 47 Zeichen: `profil 75.0 180`, `tara`, `eichen 203`, `leer`, `voll`, `reset`, `status` … |
+  | `4f9a0003-…` | App → Gerät (schreiben) | Text-Befehl wie im Seriellen Monitor, höchstens 47 Zeichen: `profil 75.0 180`, `tara`, `eichen 203`, `leer`, `voll`, `reset`, `heute 1250`, `status` … |
   | `4f9a0004-…` | Gerät → App (lesen + notify) | JSON, z. B. `{"heute":1250,"ziel":2750,"g":420,"ruhig":1,"kg":75.0,"cm":180,"leer":312,"voll":1012,"kap":700,"fl":108,"kalib":1,"zu":"MESSEN","akku":-1,"nass":0,"waage":1}` (höchstens 1× pro Sekunde, nach einem Befehl sofort; `akku` −1 = USB ohne Akku) |
   | `4f9a0005-…` | Gerät → App (lesen + notify) | `<nr>\|<text>`: Rückmeldung zum letzten Befehl, z. B. `3\|Leer gespeichert: 312 g` (`nr` zählt hoch) |
 
@@ -46,6 +46,14 @@ Stand aus der Wokwi-Simulation V4 (dort hinter dem Schalter `#define HYDRO_BLE 1
   `befehlAusfuehren()` ausgeführt – derselben Funktion wie für den Seriellen Monitor. `leer`/`voll`
   aus der App wechseln (wie die Touch-Tasten) **nicht** in den Kalibrier-Bildschirm.
   Neuer Befehl `profil <kg> <cm>` setzt Gewicht und Größe in einem Schritt.
+  Neuer Befehl `heute <ml>` (0…20000) setzt den Tageszähler. Die iPhone-App schickt damit die Summe
+  aller heutigen Einträge aus der Datenbank, sobald das Gerät etwas anderes zeigt (App-Stand gewinnt,
+  wie beim Profil). Der übernommene Wert zählt in der App nicht als Schluck.
+* **Trink-Erkennung (seit 16.11.2026):** Ein *ruhiges* Gewicht unter `FLASCHE_DA_G` (40 g) gilt als
+  „Flasche abgehoben“, nicht mehr als „getrunken“. Grund: Das leere Pad zeigte durch Nullpunkt-Drift
+  26…29 g, also knapp über `FLASCHE_WEG_G` (25 g). Das Anheben zählte dann als Trinken und das
+  Zurückstellen als Nachfüllen. Mit kalibrierter Flasche gilt zusätzlich: mehr als 20 g leichter als
+  das Leergewicht bedeutet abgehoben. Gewichte unter 40 g werden nicht mehr als Leergewicht gelernt.
   Die iPhone-App gleicht das Profil beim Verbinden automatisch ab (App-Profil gewinnt).
 * **Ablauf (V4, Option A):** Bluetooth ist nur in **Fenstern** sichtbar: beim Start 2 min
   (`BT_SUCH_TIMEOUT_MS`), nach **Antippen des Bluetooth-Symbols** 2 min und **60 s still** nach jedem

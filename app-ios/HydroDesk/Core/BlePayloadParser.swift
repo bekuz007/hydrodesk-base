@@ -31,6 +31,8 @@ enum GeraeteBefehl: Equatable {
     case flascheVoll
     /// Tageszähler auf 0
     case tagZuruecksetzen
+    /// Tageszähler auf den Stand der App setzen (Summe aller heutigen Einträge)
+    case heuteSetzen(ml: Int)
 
     var text: String {
         switch self {
@@ -42,6 +44,7 @@ enum GeraeteBefehl: Equatable {
         case .flascheLeer: return "leer"
         case .flascheVoll: return "voll"
         case .tagZuruecksetzen: return "reset"
+        case let .heuteSetzen(ml): return "heute \(max(0, min(ml, 20_000)))"
         }
     }
 }

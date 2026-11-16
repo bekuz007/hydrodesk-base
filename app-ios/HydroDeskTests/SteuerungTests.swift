@@ -19,6 +19,27 @@ final class SteuerungTests: XCTestCase {
         XCTAssertEqual(GeraeteBefehl.flascheLeer.text, "leer")
         XCTAssertEqual(GeraeteBefehl.flascheVoll.text, "voll")
         XCTAssertEqual(GeraeteBefehl.tagZuruecksetzen.text, "reset")
+        XCTAssertEqual(GeraeteBefehl.heuteSetzen(ml: 1250).text, "heute 1250")
+        XCTAssertEqual(GeraeteBefehl.heuteSetzen(ml: -5).text, "heute 0")          // nie negativ
+        XCTAssertEqual(GeraeteBefehl.heuteSetzen(ml: 99_999).text, "heute 20000")  // Grenze der Firmware
+    }
+
+    /// Der Stand, den die App dem Gerät schickt, darf danach NICHT als Schluck zählen.
+    func testUebernommenerTagesstandIstKeinSchluck() {
+        final class Speicher: GeraetewertSpeicher {
+            var werte: [String: Int] = [:]
+            func letzterWert(schluessel: String, tag: String) -> Int? { werte["\(schluessel)|\(tag)"] }
+            func setLetzterWert(schluessel: String, tag: String, wert: Int) { werte["\(schluessel)|\(tag)"] = wert }
+        }
+        let e = SchluckErkennung(speicher: Speicher())
+        let tag = "2026-11-16"
+        // Gerät meldet 800 ml (selbst gezählt)
+        XCTAssertNil(e.verarbeiten(userId: "u", quelle: "HydroDesk", tag: tag, heuteMl: 800, gespeicherteSumme: { 800 }))
+        // App schickt den Stand der Datenbank (1250 ml), Gerät bestätigt → kein Schluck
+        e.uebernehmen(userId: "u", quelle: "HydroDesk", tag: tag, heuteMl: 1250)
+        XCTAssertNil(e.verarbeiten(userId: "u", quelle: "HydroDesk", tag: tag, heuteMl: 1250, gespeicherteSumme: { 0 }))
+        // Danach echter Schluck auf dem Gerät: +150 ml
+        XCTAssertEqual(e.verarbeiten(userId: "u", quelle: "HydroDesk", tag: tag, heuteMl: 1400, gespeicherteSumme: { 0 }), 150)
     }
 
     func testStatusJsonDerFirmware() throws {

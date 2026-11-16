@@ -73,7 +73,42 @@ final class GeraeteManager {
 
     private func verarbeiten(_ wert: DeviceReading, quelle: String) {
         guard let nutzer = auth.zustand.nutzer else { return }
+        if quelle == HydroBleManager.quelle, let gesendet = heuteGesendet {
+            if wert.heuteMl == gesendet.ml {
+                // Gerät hat den Stand der App übernommen → neuer Ausgangswert, KEIN Schluck
+                heuteGesendet = nil
+                drinks.geraetewertUebernehmen(userId: nutzer.userId, quelle: quelle, heuteMl: wert.heuteMl)
+                return
+            }
+            // Noch der alte Wert vom Gerät (Befehl unterwegs) → nicht als Schluck zählen
+            if Date().timeIntervalSince(gesendet.zeit) < Self.heuteWartezeit { return }
+            // Keine Bestätigung (z. B. Firmware ohne Befehl „heute“) → normal weiter, 1 min nicht erneut senden
+            heuteGesendet = nil
+            heuteGesperrtBis = Date().addingTimeInterval(60)
+        }
         drinks.geraetewertVerarbeiten(userId: nutzer.userId, wert: wert, quelle: quelle)
+        if quelle == HydroBleManager.quelle { heuteAbgleichen() }
+    }
+
+    // MARK: - Tagesstand abgleichen (V5)
+
+    /// So lange auf die Bestätigung von `heute <ml>` warten (Werte in dieser Zeit sind noch der alte Stand)
+    private static let heuteWartezeit: TimeInterval = 5
+    /// Zuletzt an das Gerät geschickter Tagesstand (bis das Gerät ihn meldet)
+    @ObservationIgnored private var heuteGesendet: (ml: Int, zeit: Date)?
+    /// Nach einem unbestätigten Versuch eine Weile nicht erneut senden
+    @ObservationIgnored private var heuteGesperrtBis: Date?
+
+    /// Zeigt das Gerät einen anderen Tagesstand als die App? → Stand der App (Datenbank) senden.
+    /// Die App ist die Quelle: dort zählen auch Einträge von Hand, aus anderen Geräten und Löschungen.
+    /// Wird nach jedem Messwert und bei jeder Änderung der heutigen Einträge aufgerufen.
+    func heuteAbgleichen() {
+        guard steuerbar, heuteGesendet == nil, let nutzer = auth.zustand.nutzer,
+              let geraet = ble.letzterMesswert else { return }
+        if let sperre = heuteGesperrtBis, Date() < sperre { return }
+        let summe = drinks.heuteSumme(userId: nutzer.userId)
+        guard geraet.heuteMl != summe, senden(.heuteSetzen(ml: summe)) else { return }
+        heuteGesendet = (summe, Date())
     }
 
     // MARK: - Bedienung

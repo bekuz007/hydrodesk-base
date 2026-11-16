@@ -126,7 +126,6 @@ struct GeraetSteuerungView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var eichGramm = "203"
-    @State private var resetFragen = false
     /// Nummer der Antwort, die beim Öffnen schon da war (alte Antworten nicht anzeigen)
     @State private var startAntwort = 0
 
@@ -231,8 +230,8 @@ struct GeraetSteuerungView: View {
 
                 Section {
                     if let s { zeile("Heute getrunken (Gerät)", Format.mlEinheit(s.heuteMl)) }
-                    Button("Tageszähler auf 0 setzen", role: .destructive) { resetFragen = true }
-                        .disabled(!geraete.steuerbar)
+                    Text("Das Gerät zeigt automatisch denselben Stand wie die App. Falsche Einträge in der App löschen – das Gerät übernimmt die Korrektur.")
+                        .foregroundStyle(.secondary)
                 } header: {
                     Text("Heute")
                 }
@@ -243,11 +242,6 @@ struct GeraetSteuerungView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fertig") { dismiss() }
                 }
-            }
-            .confirmationDialog("Tageszähler auf dem Gerät auf 0 setzen?", isPresented: $resetFragen,
-                                titleVisibility: .visible) {
-                Button("Auf 0 setzen", role: .destructive) { _ = geraete.senden(.tagZuruecksetzen) }
-                Button("Abbrechen", role: .cancel) {}
             }
             .onAppear { startAntwort = geraete.letzteAntwort?.nummer ?? 0 }
         }

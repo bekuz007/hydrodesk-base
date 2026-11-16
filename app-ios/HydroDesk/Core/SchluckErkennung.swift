@@ -43,4 +43,10 @@ struct SchluckErkennung {
         let differenz = heuteMl - vergleich
         return differenz >= Self.minSchluckMl ? differenz : nil
     }
+
+    /// Die App hat dem Gerät einen neuen Tagesstand geschickt (`heute <ml>`).
+    /// Diesen Wert als Ausgangswert merken, damit er NICHT als Schluck zählt.
+    func uebernehmen(userId: String, quelle: String, tag: String, heuteMl: Int) {
+        speicher.setLetzterWert(schluessel: "\(userId)_\(quelle)", tag: tag, wert: heuteMl)
+    }
 }

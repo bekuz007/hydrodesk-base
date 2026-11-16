@@ -270,6 +270,12 @@ Gelötet auf ein Stück Lochraster (30 × 24,5 mm). Die zwei AO3401A sind sehr k
 **SOT-23-Adapter** löten, dann wie ein normales Bauteil einstecken. Anschlüsse AO3401A (SOT-23): **1 = Gate, 2 = Source,
 3 = Drain**. BC547B (TO-92, flache Seite zu dir, Beine unten): **C – B – E**.
 
+**Auf dem 10-poligen SOT-23-Adapter (SOT23 0.95MM)** gelten die Adapter-Stifte, nicht die Chip-Beine: Der Chip sitzt mit
+zwei Beinen auf den Pads 2 und 4 der Stift-1–5-Seite und mit dem einzelnen Bein auf dem mittleren Pad der Stift-10–6-Seite.
+Damit ist **Gate = Stift 2, Source = Stift 4, Drain = Stift 8** (Stift 4 muss eingelötet sein). Auf der Platine liegt
+Stift 1 unten links in Reihe E (Spalte 01 bzw. 06); die Stifte 1–5 stecken in Reihe E, die Stifte 10 → 6 in Reihe B
+(Plan `loeten_5b`). Vor dem Einlöten am einzelnen Adapter prüfen: Diodentest, rot an Stift 8, schwarz an Stift 4 → ca. 0,5–0,7 V.
+
 **H2 – Ein/Aus (Akku → Rest des Geräts):**
 
 | Von | Nach |

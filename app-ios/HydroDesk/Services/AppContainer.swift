@@ -29,15 +29,17 @@ final class AppContainer {
         let drinks = DrinkService(context: modelContext, settings: settings, remote: remote)
         let ble = HydroBleManager()
         let demo = DemoGeraet()
+        let profile = ProfileService(remote: remote, settings: settings)
 
         self.settings = settings
         self.remote = remote
         self.auth = auth
-        self.profile = ProfileService(remote: remote, settings: settings)
+        self.profile = profile
         self.drinks = drinks
         self.ble = ble
         self.demo = demo
-        self.geraete = GeraeteManager(ble: ble, demo: demo, settings: settings, auth: auth, drinks: drinks)
+        self.geraete = GeraeteManager(ble: ble, demo: demo, settings: settings, auth: auth, drinks: drinks,
+                                      profile: profile)
     }
 
     /// Aktuelles Tagesziel (ml): Profil mit Gewicht und Größe → vom Gerät gemeldet → Standardwert.

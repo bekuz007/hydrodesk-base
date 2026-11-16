@@ -25,19 +25,32 @@ final class HydroBleManager: NSObject {
 
     private static let serviceUUID = CBUUID(string: HydroBleKonstanten.serviceUUID)
     private static let werteUUID = CBUUID(string: HydroBleKonstanten.werteUUID)
+    // V5: Steuerung (fehlen bei älterer Firmware → App funktioniert dann nur lesend wie bisher)
+    private static let befehlUUID = CBUUID(string: HydroBleKonstanten.befehlUUID)
+    private static let statusUUID = CBUUID(string: HydroBleKonstanten.statusUUID)
+    private static let antwortUUID = CBUUID(string: HydroBleKonstanten.antwortUUID)
     private static let scanDauer: Duration = .seconds(30)      // so lange suchen …
     private static let scanPause: Duration = .seconds(15)      // … dann Pause, dann wieder suchen
     private static let wiederverbinden: Duration = .seconds(3) // Wartezeit nach einer Trennung
 
     private(set) var status: VerbindungsStatus = .getrennt
     private(set) var letzterMesswert: DeviceReading?
+    /// V5: ausführlicher Zustand des Geräts (Gewicht, Profil, Flasche …), nil bei alter Firmware
+    private(set) var geraeteStatus: GeraeteStatus?
+    /// V5: letzte Rückmeldung des Geräts auf einen Befehl
+    private(set) var letzteAntwort: GeraeteAntwort?
+    /// V5: Kann die App das Gerät steuern? (Firmware hat die Befehls-Characteristic)
+    var steuerbar: Bool { status == .verbunden && befehl != nil }
 
     /// Wird für jeden empfangenen Wert aufgerufen.
     @ObservationIgnored var beiMesswert: ((DeviceReading) -> Void)?
+    /// V5: wird für jeden neuen Gerätestatus aufgerufen (z. B. für den Profil-Abgleich)
+    @ObservationIgnored var beiGeraeteStatus: ((GeraeteStatus) -> Void)?
 
     @ObservationIgnored private var zentrale: CBCentralManager?
     @ObservationIgnored private var geraet: CBPeripheral?
     @ObservationIgnored private var werte: CBCharacteristic?
+    private var befehl: CBCharacteristic?
     /// Will der Nutzer verbunden sein? Nur dann wird automatisch neu verbunden.
     @ObservationIgnored private var gewuenscht = false
     @ObservationIgnored private var scanLaeuft = false
@@ -58,6 +71,17 @@ final class HydroBleManager: NSObject {
             return
         }
         weiter()
+    }
+
+    /// V5: Befehl an das Gerät schicken. Die Antwort kommt über `letzteAntwort`.
+    /// - Returns: false, wenn nicht verbunden oder die Firmware keine Steuerung kann
+    @discardableResult
+    func senden(_ befehl: GeraeteBefehl) -> Bool {
+        guard status == .verbunden, let geraet, let zeichen = self.befehl,
+              let daten = befehl.text.data(using: .utf8) else { return false }
+        log.info("Befehl senden: \(befehl.text)")
+        geraet.writeValue(daten, for: zeichen, type: .withResponse)
+        return true
     }
 
     /// Verbindung trennen und NICHT automatisch neu verbinden.
@@ -126,6 +150,8 @@ final class HydroBleManager: NSObject {
         if let g = geraet { zentrale?.cancelPeripheralConnection(g) }
         geraet = nil
         werte = nil
+        befehl = nil
+        geraeteStatus = nil
     }
 
     private func spaeterNeuVersuchen(_ warten: Duration) {
@@ -151,6 +177,8 @@ final class HydroBleManager: NSObject {
     private func getrenntBehandeln() {
         geraet = nil
         werte = nil
+        befehl = nil
+        geraeteStatus = nil
         status = .getrennt
         spaeterNeuVersuchen(Self.wiederverbinden)
     }
@@ -170,6 +198,7 @@ extension HydroBleManager: CBCentralManagerDelegate, CBPeripheralDelegate {
                 scanLaeuft = false
                 geraet = nil
                 werte = nil
+                befehl = nil
                 if gewuenscht { status = .bluetoothAus }
             case .poweredOn:
                 if gewuenscht { weiter() }
@@ -225,7 +254,8 @@ extension HydroBleManager: CBCentralManagerDelegate, CBPeripheralDelegate {
                 zentrale?.cancelPeripheralConnection(peripheral)
                 return
             }
-            peripheral.discoverCharacteristics([Self.werteUUID], for: dienst)
+            peripheral.discoverCharacteristics(
+                [Self.werteUUID, Self.befehlUUID, Self.statusUUID, Self.antwortUUID], for: dienst)
         }
     }
 
@@ -239,19 +269,39 @@ extension HydroBleManager: CBCentralManagerDelegate, CBPeripheralDelegate {
             }
             werte = zeichen
             peripheral.setNotifyValue(true, for: zeichen)   // Benachrichtigungen einschalten
+
+            // V5: Steuerung, falls die Firmware sie kann (sonst bleibt die App nur lesend)
+            let alle = service.characteristics ?? []
+            befehl = alle.first { $0.uuid == Self.befehlUUID }
+            for extra in alle where extra.uuid == Self.statusUUID || extra.uuid == Self.antwortUUID {
+                peripheral.setNotifyValue(true, for: extra)
+            }
+            log.info("Steuerung \(self.befehl == nil ? "nicht verfügbar (alte Firmware)" : "verfügbar")")
+        }
+    }
+
+    nonisolated func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic,
+                                error: Error?) {
+        MainActor.assumeIsolated {
+            guard let error else { return }
+            log.warning("Befehl nicht angekommen: \(error.localizedDescription)")
+            letzteAntwort = GeraeteAntwort(nummer: (letzteAntwort?.nummer ?? 0) + 1,
+                                           text: "Befehl nicht angekommen: \(error.localizedDescription)")
         }
     }
 
     nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic,
                                 error: Error?) {
         MainActor.assumeIsolated {
+            let istWerte = characteristic.uuid == Self.werteUUID
             if let error {
                 log.warning("Notify fehlgeschlagen: \(error.localizedDescription)")
-                zentrale?.cancelPeripheralConnection(peripheral)
+                // Nur ohne die Werte-Characteristic ist die Verbindung nutzlos
+                if istWerte { zentrale?.cancelPeripheralConnection(peripheral) }
                 return
             }
             guard characteristic.isNotifying else { return }
-            status = .verbunden
+            if istWerte { status = .verbunden }
             // Aktuellen Wert einmal lesen – das Gerät sendet sonst erst bei der nächsten Änderung
             peripheral.readValue(for: characteristic)
         }
@@ -260,8 +310,22 @@ extension HydroBleManager: CBCentralManagerDelegate, CBPeripheralDelegate {
     nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
                                 error: Error?) {
         MainActor.assumeIsolated {
-            guard error == nil, characteristic.uuid == Self.werteUUID, let daten = characteristic.value else { return }
-            verarbeiten(daten)
+            guard error == nil, let daten = characteristic.value else { return }
+            switch characteristic.uuid {
+            case Self.werteUUID:
+                verarbeiten(daten)
+            case Self.statusUUID:
+                if let neu = GeraeteStatus.parse(daten) {
+                    geraeteStatus = neu
+                    beiGeraeteStatus?(neu)
+                } else {
+                    log.warning("Status unlesbar: \(String(decoding: daten, as: UTF8.self))")
+                }
+            case Self.antwortUUID:
+                if let antwort = GeraeteAntwort.parse(daten), antwort.nummer > 0 { letzteAntwort = antwort }
+            default:
+                break
+            }
         }
     }
 }

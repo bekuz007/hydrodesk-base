@@ -264,6 +264,11 @@ const char*    BT_NAME              = "HydroDesk"; // so heißt das Gerät in de
 // Eigene 128-Bit-UUIDs (zufällig erzeugt) für den HydroDesk-Dienst
 const char*    BT_SERVICE_UUID      = "4f9a0001-6c1e-4b8e-9d6a-2b7c1e0a4d10";
 const char*    BT_WERTE_UUID        = "4f9a0002-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // lesen + notify: "1250/2750 ml"
+// V5: Steuerung per App (gleiche Text-Befehle wie im Seriellen Monitor)
+const char*    BT_BEFEHL_UUID       = "4f9a0003-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // schreiben: z. B. "profil 75 180", "tara", "leer"
+const char*    BT_STATUS_UUID       = "4f9a0004-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // lesen + notify: JSON mit Gewicht, Profil, Flasche ...
+const char*    BT_ANTWORT_UUID      = "4f9a0005-6c1e-4b8e-9d6a-2b7c1e0a4d10"; // lesen + notify: "<nr>|<text>" zum letzten Befehl
+const uint16_t BT_MTU               = 185;    // größere Pakete, damit der Status-JSON in ein Notify passt
 
 // --- Stromsparen (V4). Nur wirksam mit STROMSPAREN 1 bzw. nach "stromsparen 1"
 const uint32_t ANZEIGE_DIMMEN_NACH_MS    = 30UL * 1000UL;   // 30 s ohne Aktivität -> GEDIMMT
@@ -538,6 +543,10 @@ bool     weckBeruehrung   = false;          // diese Berührung hat nur geweckt 
 uint32_t waageLetzteMessungMs = 0;          // für den Wecktakt im Light-Sleep
 uint32_t schlafZyklen     = 0;              // Anzahl Light-Sleep-Zyklen (Status)
 
+// Steuerung per App (V5): Antwort auf den letzten Befehl mitschreiben (für BLE "Antwort")
+bool     antwortMitschreiben = false;       // true, solange befehlAusfuehren() läuft
+String   befehlAntwort    = "";             // letzte Log-/Fehlerzeile dieses Befehls
+
 // ============================================================================
 //  HILFSFUNKTIONEN: LOG, TELEGRAM-STUB, ZAHLEN
 // ============================================================================
@@ -563,6 +572,16 @@ void logZeile(const char* kategorie, const String& text) {
   Serial.print(kategorie);
   Serial.print("] ");
   Serial.println(text);
+  if (antwortMitschreiben) befehlAntwort = text;   // V5: Rückmeldung für die App
+}
+
+// V5: Hinweis/Fehler zu einem Befehl – im Seriellen Monitor UND als Antwort an die App
+void melden(const String& text) {
+  Serial.println(text);
+  if (antwortMitschreiben) befehlAntwort = text;
+}
+void melden(const __FlashStringHelper* text) {
+  melden(String(text));
 }
 
 // Telegram wird NICHT simuliert. Später hier den Bot-Aufruf einbauen.
@@ -1745,12 +1764,40 @@ void touchAuswerten() {
 //               BLE-Task -> dort nur Merker setzen, ausgewertet wird im loop().
 //  HYDRO_BLE 0: Wokwi kann kein Bluetooth -> Zustand per Serial-Befehl "bt ...".
 // ============================================================================
+String befehlAusfuehren(String zeile, bool vonApp);   // steht bei den seriellen Befehlen
+
 #if HYDRO_BLE
 NimBLEServer*         bleServer   = nullptr;
 NimBLECharacteristic* bleWerte    = nullptr;
+NimBLECharacteristic* bleBefehl   = nullptr;  // V5: App -> Gerät (schreiben)
+NimBLECharacteristic* bleStatus   = nullptr;  // V5: Gerät -> App (JSON, lesen + notify)
+NimBLECharacteristic* bleAntwort  = nullptr;  // V5: Gerät -> App ("<nr>|<text>", lesen + notify)
 volatile bool         bleVerbunden = false;   // von den Callbacks gesetzt
 volatile uint16_t     bleTrennGrund = 0;
 bool                  bleLaeuft    = false;   // V4: BLE-Stack eingeschaltet?
+
+// V5: Befehle aus der App kommen in der BLE-Task an -> nur in den Puffer kopieren,
+// ausgeführt wird im loop() (btVerwalten), damit Waage/Display nicht gleichzeitig benutzt werden.
+portMUX_TYPE          bleBefehlMux = portMUX_INITIALIZER_UNLOCKED;
+char                  bleBefehlPuffer[48];
+volatile bool         bleBefehlDa  = false;
+uint32_t              bleAntwortNr = 0;       // zählt hoch -> die App erkennt eine neue Antwort
+bool                  bleStatusSofort = false; // nach einem Befehl Status ohne Wartezeit senden
+
+class HydroBefehlCallbacks : public NimBLECharacteristicCallbacks {
+  void onWrite(NimBLECharacteristic* c, NimBLEConnInfo& info) override {
+    (void)info;
+    NimBLEAttValue v = c->getValue();
+    size_t n = v.length();
+    if (n >= sizeof(bleBefehlPuffer)) n = sizeof(bleBefehlPuffer) - 1;
+    portENTER_CRITICAL(&bleBefehlMux);
+    memcpy(bleBefehlPuffer, v.data(), n);
+    bleBefehlPuffer[n] = '\0';
+    bleBefehlDa = true;                         // ein noch nicht abgeholter Befehl wird überschrieben
+    portEXIT_CRITICAL(&bleBefehlMux);
+  }
+};
+HydroBefehlCallbacks bleBefehlCallbacks;
 
 class HydroServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* server, NimBLEConnInfo& info) override {
@@ -1769,17 +1816,47 @@ String bleWerteText() {
   return String(getrunkenHeute) + "/" + String(tagesziel) + " ml";
 }
 
+// V5: alles, was die App zum Anzeigen und Steuern braucht – kurz, damit es in ein Notify passt
+// (höchstens ca. 170 Byte bei MTU 185). Wahrheitswerte als 0/1.
+// Beispiel: {"heute":1250,"ziel":2750,"g":420,"ruhig":1,"kg":75.0,"cm":180,"leer":312,"voll":1012,
+//            "kap":700,"fl":108,"kalib":1,"zu":"MESSEN","akku":-1,"nass":0,"waage":1}
+String bleStatusJson() {
+  return String("{\"heute\":") + getrunkenHeute +
+         ",\"ziel\":" + tagesziel +
+         ",\"g\":" + (int)lroundf(gewicht) +
+         ",\"ruhig\":" + (gewichtRuhig ? 1 : 0) +
+         ",\"kg\":" + String(profilKg, 1) +
+         ",\"cm\":" + profilCm +
+         ",\"leer\":" + (int)lroundf(leergewicht) +
+         ",\"voll\":" + (int)lroundf(vollgewicht) +
+         ",\"kap\":" + flaschenKapazitaetMl +
+         ",\"fl\":" + flascheninhaltMl() +
+         ",\"kalib\":" + (flascheKalibriert ? 1 : 0) +
+         ",\"zu\":\"" + zustandName(zustand) + "\"" +
+         ",\"akku\":" + (AKKU_ANGESCHLOSSEN ? akkuProzent : -1) +
+         ",\"nass\":" + (nass ? 1 : 0) +
+         ",\"waage\":" + (waageOk ? 1 : 0) + "}";
+}
+
 // BLE-Stack einschalten und Dienst anlegen. V4: bei jedem Fenster neu (nach deinit(true)).
 void bleStarten() {
   if (bleLaeuft) return;
   bleVerbunden = false;
   NimBLEDevice::init(BT_NAME);
+  NimBLEDevice::setMTU(BT_MTU);                 // V5: Status-JSON passt in ein Paket
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(&bleCallbacks, false);
   bleServer->advertiseOnDisconnect(false);      // Suchen steuert der Sketch selbst (Timeout!)
   NimBLEService* dienst = bleServer->createService(BT_SERVICE_UUID);
   bleWerte = dienst->createCharacteristic(BT_WERTE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
   bleWerte->setValue(bleWerteText().c_str());
+  // V5: Steuerung per App
+  bleBefehl = dienst->createCharacteristic(BT_BEFEHL_UUID, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
+  bleBefehl->setCallbacks(&bleBefehlCallbacks);
+  bleStatus = dienst->createCharacteristic(BT_STATUS_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+  bleStatus->setValue(bleStatusJson().c_str());
+  bleAntwort = dienst->createCharacteristic(BT_ANTWORT_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+  bleAntwort->setValue((String(bleAntwortNr) + "|").c_str());
   bleServer->start();
 
   // Werbepaket: Flags + Dienst-UUID; Name in der Scan-Antwort (zusammen > 31 Byte)
@@ -1806,6 +1883,9 @@ void bleStoppen() {
   NimBLEDevice::deinit(true);
   bleServer = nullptr;
   bleWerte = nullptr;
+  bleBefehl = nullptr;
+  bleStatus = nullptr;
+  bleAntwort = nullptr;
   bleVerbunden = false;
   bleLaeuft = false;
   logZeile("BT", "BLE-Stack aus (deinit)");
@@ -1898,6 +1978,38 @@ void btVerwalten() {
     letzteNotify = millis();
     bleWerte->setValue(wert.c_str());
     if (btZustand == BT_VERBUNDEN) bleWerte->notify();
+  }
+
+  // V5: Befehl aus der App ausführen und Antwort zurückschicken
+  if (bleBefehlDa) {
+    char puffer[sizeof(bleBefehlPuffer)];
+    portENTER_CRITICAL(&bleBefehlMux);
+    memcpy(puffer, bleBefehlPuffer, sizeof(puffer));
+    bleBefehlDa = false;
+    portEXIT_CRITICAL(&bleBefehlMux);
+    logZeile("BT", String("Befehl von der App: \"") + puffer + "\"");
+    String antwort = befehlAusfuehren(String(puffer), true);
+    if (antwort.length() > 160) antwort = antwort.substring(0, 160);
+    bleAntwortNr++;
+    if (bleLaeuft && bleAntwort) {
+      bleAntwort->setValue((String(bleAntwortNr) + "|" + antwort).c_str());
+      if (btZustand == BT_VERBUNDEN) bleAntwort->notify();
+    }
+    bleStatusSofort = true;
+  }
+
+  // V5: Status-JSON aktuell halten und bei Änderung senden (höchstens 1x/s, nach Befehl sofort)
+  static String letzterStatus;
+  static uint32_t letzteStatusNotify = 0;
+  if (bleLaeuft && bleStatus && (bleStatusSofort || millis() - letzteStatusNotify >= BT_NOTIFY_MS)) {
+    String status = bleStatusJson();
+    letzteStatusNotify = millis();                // höchstens 1x pro Sekunde neu zusammenbauen
+    if (status != letzterStatus || bleStatusSofort) {
+      letzterStatus = status;
+      bleStatus->setValue(status.c_str());
+      if (btZustand == BT_VERBUNDEN) bleStatus->notify();
+    }
+    bleStatusSofort = false;
   }
 #endif
   if (btZustand == BT_SUCHEN && (int32_t)(millis() - btFensterEndeMs) >= 0) {
@@ -2350,7 +2462,7 @@ void drawUI() {
 //  SERIELLE BEFEHLE
 // ============================================================================
 void hilfeAusgeben() {
-  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | zeit <HH:MM> | tara | eichen <g> | hilfe"));
+  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | profil <kg> <cm> | zeit <HH:MM> | tara | eichen <g> | hilfe"));
   Serial.println(F("Flasche:  kalib | leer | voll"));
   Serial.println(F("Energie:  stromsparen 0 | stromsparen 1 | sync (Uhr per WLAN abgleichen)"));
 #if HYDRO_BLE
@@ -2458,15 +2570,16 @@ void stromsparenSetzen(bool an) {
   }
 }
 
-void serielleBefehle() {
-  static String zeile;
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\r') continue;
-    if (c != '\n') { if (zeile.length() < 40) zeile += c; continue; }
-    zeile.trim();
-    zeile.toLowerCase();
-    if (zeile.length() > 0) aktivitaet("Serieller Befehl");
+// Führt einen Text-Befehl aus – aus dem Seriellen Monitor ODER (V5) aus der App per Bluetooth.
+// Rückgabe: Rückmeldung für die App (letzte Log-/Fehlerzeile des Befehls, sonst "OK").
+String befehlAusfuehren(String zeile, bool vonApp) {
+  zeile.trim();
+  zeile.toLowerCase();
+  if (zeile.length() == 0) return "";
+  aktivitaet(vonApp ? "Befehl von der App" : "Serieller Befehl");
+  antwortMitschreiben = true;
+  befehlAntwort = "";
+  {
     int leer = zeile.indexOf(' ');
     String befehl = leer < 0 ? zeile : zeile.substring(0, leer);
     String wert = leer < 0 ? String("") : zeile.substring(leer + 1);
@@ -2484,7 +2597,7 @@ void serielleBefehle() {
         speicher.putFloat("kg", profilKg);
         zielAktualisieren(true);
       } else {
-        Serial.println(F("Bitte Körpergewicht 30..250 kg angeben, z. B. \"gewicht 75\""));
+        melden(F("Bitte Körpergewicht 30..250 kg angeben, z. B. \"gewicht 75\""));
       }
     } else if (befehl == "groesse") {
       int cm = wert.toInt();
@@ -2493,7 +2606,21 @@ void serielleBefehle() {
         speicher.putInt("cm", profilCm);
         zielAktualisieren(true);
       } else {
-        Serial.println(F("Bitte Körpergröße 120..230 cm angeben, z. B. \"groesse 180\""));
+        melden(F("Bitte Körpergröße 120..230 cm angeben, z. B. \"groesse 180\""));
+      }
+    } else if (befehl == "profil") {
+      // V5 (App): "profil 75 180" setzt Gewicht und Größe in einem Schritt
+      int sp = wert.indexOf(' ');
+      float kg = sp > 0 ? wert.substring(0, sp).toFloat() : 0;
+      int cm = sp > 0 ? wert.substring(sp + 1).toInt() : 0;
+      if (kg >= 30 && kg <= 250 && cm >= 120 && cm <= 230) {
+        profilKg = kg;
+        profilCm = cm;
+        speicher.putFloat("kg", profilKg);
+        speicher.putInt("cm", profilCm);
+        zielAktualisieren(true);
+      } else {
+        melden(F("Format: profil <kg> <cm>, z. B. \"profil 75 180\" (30..250 kg, 120..230 cm)"));
       }
     } else if (befehl == "zeit") {
       int dp = wert.indexOf(':');
@@ -2507,19 +2634,19 @@ void serielleBefehle() {
         bildschirmNeu = true;
         logZeile("UHR", "Uhr von Hand gestellt (NTP kann sie später wieder korrigieren)");
       } else {
-        Serial.println(F("Format: zeit HH:MM, z. B. \"zeit 23:59\""));
+        melden(F("Format: zeit HH:MM, z. B. \"zeit 23:59\""));
       }
     } else if (befehl == "tara") {
       taraSetzen();
     } else if (befehl == "eichen") {
       float gramm = wert.toFloat();
       if (wert.length() == 0 || gramm <= 0.0f) {
-        Serial.println(F("Format: eichen <gramm>, z. B. \"eichen 500\" (bekanntes Gewicht auflegen)"));
+        melden(F("Format: eichen <gramm>, z. B. \"eichen 500\" (bekanntes Gewicht auflegen)"));
       } else {
         float delta = rohMittel - tara;
         float neu = delta / gramm;
         if (fabsf(neu) < 0.01f) {
-          Serial.println(F("Faktor zu klein (|faktor| < 0.01). Gewicht prüfen, Tara erneut setzen."));
+          melden(F("Faktor zu klein (|faktor| < 0.01). Gewicht prüfen, Tara erneut setzen."));
         } else {
           faktor = neu;
           speicher.putFloat("faktor", faktor);
@@ -2532,18 +2659,18 @@ void serielleBefehle() {
       }
     } else if (befehl == "kalib" || befehl == "kalibrierung") {
       if (zustand == NAESSE_SPERRE) {
-        Serial.println(F("Während Nässe-Sperre keine Kalibrierung."));
+        melden(F("Während Nässe-Sperre keine Kalibrierung."));
       } else if (zustand != KALIBRIERUNG) {
         zustandWechseln(KALIBRIERUNG, "Befehl kalib");
       } else {
-        Serial.println(F("Schon in Kalibrierung. Schritte: leer → voll → Fertig"));
+        melden(F("Schon in Kalibrierung. Schritte: leer → voll → Fertig"));
       }
     } else if (befehl == "leer") {
-      if (zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl leer");
-      kalSchritt = 0;
+      if (!vonApp && zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl leer");
+      if (zustand == KALIBRIERUNG) kalSchritt = 0;
       kalibLeerBestaetigen();
     } else if (befehl == "voll") {
-      if (zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl voll");
+      if (!vonApp && zustand != KALIBRIERUNG) zustandWechseln(KALIBRIERUNG, "Befehl voll");
       kalibVollBestaetigen();
     } else if (befehl == "bt") {
       btBefehl(wert);
@@ -2551,10 +2678,23 @@ void serielleBefehle() {
       wlanAbgleichStarten("Befehl sync");
     } else if (befehl == "stromsparen") {
       if (wert == "0" || wert == "1") stromsparenSetzen(wert == "1");
-      else Serial.println(F("stromsparen 0 (wie V3) | stromsparen 1 (V4)"));
-    } else if (zeile.length() > 0) {
-      hilfeAusgeben();
+      else melden(F("stromsparen 0 (wie V3) | stromsparen 1 (V4)"));
+    } else {
+      if (vonApp) melden("Unbekannter Befehl: " + befehl);
+      else hilfeAusgeben();
     }
+  }
+  antwortMitschreiben = false;
+  return befehlAntwort.length() > 0 ? befehlAntwort : String("OK");
+}
+
+void serielleBefehle() {
+  static String zeile;
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\r') continue;
+    if (c != '\n') { if (zeile.length() < 40) zeile += c; continue; }
+    befehlAusfuehren(zeile, false);
     zeile = "";
   }
 }

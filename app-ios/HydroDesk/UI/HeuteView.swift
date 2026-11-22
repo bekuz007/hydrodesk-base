@@ -49,6 +49,8 @@ struct HeuteView: View {
             schluckeKarte
             syncZeile
         }
+        // Eintrag von Hand, gelöscht oder aus Supabase geladen → Gerät auf denselben Stand bringen
+        .onChange(of: heuteMl) { container.geraete.heuteAbgleichen() }
     }
 
     // ---------------- 1. Fortschritt

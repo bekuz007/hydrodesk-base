@@ -41,7 +41,24 @@ final class DrinkService {
         return treffer.reduce(0) { $0 + $1.ml }
     }
 
+    /// Alles, was der Nutzer heute getrunken hat (alle Quellen) – derselbe Wert wie auf „Heute“.
+    func heuteSumme(userId: String) -> Int {
+        let von = Tage.start()
+        let bis = Tage.ende()
+        let abfrage = FetchDescriptor<DrinkEntry>(predicate: #Predicate<DrinkEntry> {
+            $0.userId == userId && $0.timestamp >= von && $0.timestamp < bis
+        })
+        let treffer = (try? context.fetch(abfrage)) ?? []
+        return treffer.reduce(0) { $0 + $1.ml }
+    }
+
     // MARK: - Schluck-Erkennung
+
+    /// Die App hat dem Gerät den Tagesstand geschickt → als Ausgangswert merken (kein Schluck).
+    func geraetewertUebernehmen(userId: String, quelle: String, heuteMl: Int) {
+        SchluckErkennung(speicher: settings)
+            .uebernehmen(userId: userId, quelle: quelle, tag: Tage.schluessel(), heuteMl: heuteMl)
+    }
 
     /// Verarbeitet einen Messwert des Geräts (Logik siehe `SchluckErkennung`).
     /// - Returns: die erkannte Menge in ml oder nil (kein neuer Schluck)

@@ -180,6 +180,7 @@ const uint32_t STABIL_MS            = 1500;   // so lange muss das Gewicht ruhig
 const uint32_t KALIB_STABIL_MS      = 1000;   // Kalibrierung: ~1 s ruhiges Gewicht vor Übernahme
 const float    MIN_SCHLUCK_G        = 15.0f;  // kleinere Abnahmen werden ignoriert (Rauschen)
 const float    MIN_NACHFUELL_G      = 20.0f;  // ab dieser Zunahme gilt "nachgefüllt"
+const float    LEER_TOLERANZ_G      = 20.0f;  // kalibrierte Flasche: so viel leichter als leer = abgehoben
 const float    NEGATIV_FEHLER_G     = -30.0f; // deutlich negatives Gewicht = Tara falsch
 
 // --- Leergewicht der Flasche (wird automatisch gelernt, siehe leergewichtLernen())
@@ -1183,6 +1184,7 @@ void flascheKalibSpeichern() {
  */
 void leergewichtKandidat(float kandidat) {
   if (flascheKalibriert) return;   // kalibriertes Leergewicht hat Vorrang
+  if (kandidat < FLASCHE_DA_G) return;   // so leicht ist keine Flasche (leeres Pad)
   if (!leergewichtGelernt || kandidat < leergewicht) {
     logZeile("LEER", "Leergewicht gelernt: " + String(kandidat, 0) + " g (Gewicht vor dem Nachfüllen" +
              (leergewichtGelernt ? ", kleiner als bisher " + String(leergewicht, 0) + " g)" : ")"));
@@ -1194,6 +1196,7 @@ void leergewichtKandidat(float kandidat) {
 
 void leergewichtUntergrenze(float w) {
   if (flascheKalibriert) return;   // kalibriertes Leergewicht hat Vorrang
+  if (w < FLASCHE_DA_G) return;    // so leicht ist keine Flasche (leeres Pad)
   if (w < leergewicht - 0.5f) {
     logZeile("LEER", "Flasche leichter als Leergewicht -> Leergewicht = " + String(w, 0) + " g");
     leergewicht = w;
@@ -1212,17 +1215,23 @@ int flascheninhaltMl() {
 void btSyncFenster(const String& grund);   // steht im Bluetooth-Teil
 
 void trinkenAuswerten() {
-  if (flascheSteht && gewicht < FLASCHE_WEG_G) {
+  // Abgehoben: Gewicht unter FLASCHE_WEG_G (sofort) ODER ruhig unter FLASCHE_DA_G.
+  // Ein RUHIGES Gewicht unter der "Flasche steht"-Schwelle ist keine Flasche (z. B. leeres Pad mit
+  // etwas Nullpunkt-Drift, 26..29 g). Früher zählte so ein Wert als "getrunken" und das Zurückstellen
+  // danach als "nachgefüllt" (Fehler vom 16.11.2026: +198 ml statt ~12 ml).
+  // Mit kalibrierter Flasche ebenso: deutlich leichter als die leere Flasche = nicht auf dem Pad.
+  bool unterLeer = flascheKalibriert && gewicht < leergewicht - LEER_TOLERANZ_G;
+  if (flascheSteht && (gewicht < FLASCHE_WEG_G || (gewichtRuhig && (gewicht < FLASCHE_DA_G || unterLeer)))) {
     flascheSteht = false;
     padLeerSeit = millis();
-    logZeile("WAAGE", "Flasche abgehoben – Änderungen werden ignoriert");
+    logZeile("WAAGE", "Flasche abgehoben (" + String(gewicht, 0) + " g) – Änderungen werden ignoriert");
     aktivitaet("Flasche abgehoben");
     return;
   }
   if (!gewichtRuhig) return;
 
   bool geradeAbgestellt = false;
-  if (!flascheSteht && gewicht >= FLASCHE_DA_G) {
+  if (!flascheSteht && gewicht >= FLASCHE_DA_G && !unterLeer) {
     flascheSteht = true;
     geradeAbgestellt = true;
     logZeile("WAAGE", "Flasche steht (" + String(gewicht, 0) + " g)");
@@ -2462,7 +2471,7 @@ void drawUI() {
 //  SERIELLE BEFEHLE
 // ============================================================================
 void hilfeAusgeben() {
-  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | profil <kg> <cm> | zeit <HH:MM> | tara | eichen <g> | hilfe"));
+  Serial.println(F("Befehle: status | reset | gewicht <kg> | groesse <cm> | profil <kg> <cm> | heute <ml> | zeit <HH:MM> | tara | eichen <g> | hilfe"));
   Serial.println(F("Flasche:  kalib | leer | voll"));
   Serial.println(F("Energie:  stromsparen 0 | stromsparen 1 | sync (Uhr per WLAN abgleichen)"));
 #if HYDRO_BLE
@@ -2621,6 +2630,21 @@ String befehlAusfuehren(String zeile, bool vonApp) {
         zielAktualisieren(true);
       } else {
         melden(F("Format: profil <kg> <cm>, z. B. \"profil 75 180\" (30..250 kg, 120..230 cm)"));
+      }
+    } else if (befehl == "heute") {
+      // V5 (App): "heute 1250" setzt den Tageszähler auf den Stand der App (Datenbank).
+      // Die App ist die Quelle: dort zählen auch Einträge von Hand, aus anderen Geräten und Löschungen.
+      long ml = wert.length() > 0 ? wert.toInt() : -1;
+      bool zahl = wert.length() > 0;
+      for (unsigned int i = 0; i < wert.length(); i++) if (!isDigit(wert[i])) zahl = false;
+      if (zahl && ml >= 0 && ml <= 20000) {
+        int alt = getrunkenHeute;
+        getrunkenHeute = (int)ml;
+        heuteGetrunken = getrunkenHeute > 0;
+        tageszaehlerSpeichern();
+        logZeile("TRINKEN", "Tageszähler von der App: " + String(alt) + " -> " + String(getrunkenHeute) + " ml");
+      } else {
+        melden(F("Format: heute <ml>, z. B. \"heute 1250\" (0..20000)"));
       }
     } else if (befehl == "zeit") {
       int dp = wert.indexOf(':');
@@ -2824,6 +2848,12 @@ void setup() {
   vollgewicht          = speicher.getFloat("voll", 0);
   flaschenKapazitaetMl = speicher.getInt("kapMl", 0);
   kapazitaetKalibriert = speicher.getBool("kapOk", false);
+  if (!flascheKalibriert && leergewicht < FLASCHE_DA_G) {
+    // Altlast: vor dem 16.11.2026 konnte das leere Pad (26..29 g) als Leergewicht gelernt werden
+    leergewicht = LEERGEWICHT_START_G;
+    leergewichtGelernt = false;
+    leergewichtSpeichern();
+  }
   zielAktualisieren(true);
 
   anzeigeInit();
